@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -36,41 +36,30 @@ export function SurpriseQuizModal({ quiz, ageGroup, onComplete, onClose }: Surpr
   const question = questions[currentQuestion]
   const progressPercent = ((currentQuestion + 1) / questions.length) * 100
 
+  // Use refs to store latest values and avoid stale closures
+  const answersRef = useRef(answers)
+  const selectedAnswerRef = useRef(selectedAnswer)
+  const currentQuestionRef = useRef(currentQuestion)
+  const questionsRef = useRef(questions)
+
+  // Update refs whenever state changes
   useEffect(() => {
-    if (results) return
+    answersRef.current = answers
+  }, [answers])
 
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          handleSubmitQuiz()
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
+  useEffect(() => {
+    selectedAnswerRef.current = selectedAnswer
+  }, [selectedAnswer])
 
-    return () => clearInterval(timer)
-  }, [results])
+  useEffect(() => {
+    currentQuestionRef.current = currentQuestion
+  }, [currentQuestion])
 
-  const handleNext = () => {
-    if (!selectedAnswer) return
+  useEffect(() => {
+    questionsRef.current = questions
+  }, [questions])
 
-    const newAnswers = [...answers, { question_id: question.id, answer: selectedAnswer }]
-    setAnswers(newAnswers)
-    setSelectedAnswer("")
-
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion((prev) => prev + 1)
-    } else {
-      submitQuiz(newAnswers)
-    }
-  }
-
-  const handleSubmitQuiz = () => {
-    const finalAnswers = selectedAnswer ? [...answers, { question_id: question.id, answer: selectedAnswer }] : answers
-    submitQuiz(finalAnswers)
-  }
-
+  // Define submitQuiz before useEffect so it's in scope and stable
   const submitQuiz = async (finalAnswers: Answer[]) => {
     setIsSubmitting(true)
 
@@ -105,6 +94,53 @@ export function SurpriseQuizModal({ quiz, ageGroup, onComplete, onClose }: Surpr
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  useEffect(() => {
+    if (results) return
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          // Use refs to get latest values when timer expires to avoid stale closures
+          const latestAnswers = answersRef.current
+          const latestSelectedAnswer = selectedAnswerRef.current
+          const latestQuestion = questionsRef.current[currentQuestionRef.current]
+          
+          // Build final answers with current state values from refs
+          const finalAnswers = latestSelectedAnswer
+            ? [...latestAnswers, { question_id: latestQuestion.id, answer: latestSelectedAnswer }]
+            : latestAnswers
+          
+          // Call submitQuiz with latest values
+          submitQuiz(finalAnswers)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [results])
+
+  const handleNext = () => {
+    if (!selectedAnswer) return
+
+    const newAnswers = [...answers, { question_id: question.id, answer: selectedAnswer }]
+    setAnswers(newAnswers)
+    setSelectedAnswer("")
+
+    if (currentQuestion < questions.length - 1) {
+      setCurrentQuestion((prev) => prev + 1)
+    } else {
+      submitQuiz(newAnswers)
+    }
+  }
+
+  const handleSubmitQuiz = () => {
+    const finalAnswers = selectedAnswer ? [...answers, { question_id: question.id, answer: selectedAnswer }] : answers
+    submitQuiz(finalAnswers)
   }
 
   const formatTime = (seconds: number) => {

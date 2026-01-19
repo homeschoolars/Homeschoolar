@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import os
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,10 +15,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Homeschoolars API", version="0.1.0", lifespan=lifespan)
 
-# Configure CORS
+# Configure CORS - use environment variable for production, default to localhost for development
+allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -47,4 +51,7 @@ def supabase_health_check():
         return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # Use PORT environment variable for platforms like Railway, Render, Fly.io
+    port = int(os.getenv("PORT", 8000))
+    reload = os.getenv("NODE_ENV", "development") == "development"
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=reload)

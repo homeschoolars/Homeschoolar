@@ -56,33 +56,7 @@ export default function StudentDashboard() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const router = useRouter()
 
-  useEffect(() => {
-    console.log("[v0] StudentDashboard mounted")
-    const storedChild = sessionStorage.getItem("student_child")
-    console.log("[v0] Stored child from sessionStorage:", storedChild)
-
-    if (!storedChild) {
-      console.log("[v0] No stored child, redirecting to login")
-      // DEBUG: Commented out redirect to see what's happening
-      // router.push("/login")
-      setLoadError("No child found in session storage. Keys: " + JSON.stringify(Object.keys(sessionStorage)))
-      return
-    }
-
-    try {
-      const childData = JSON.parse(storedChild) as Child
-      console.log("[v0] Parsed child data:", childData)
-      setChild(childData)
-      loadData(childData.id)
-    } catch (e) {
-      console.log("[v0] Error parsing child data:", e)
-      setLoadError("Error parsing child data: " + e)
-      setIsLoading(false)
-    }
-  }, [router])
-
   const loadData = async (childId: string) => {
-    console.log("[v0] Loading data for childId:", childId)
     try {
       const response = await fetch("/api/student/dashboard", {
         method: "POST",
@@ -90,57 +64,64 @@ export default function StudentDashboard() {
         body: JSON.stringify({ childId }),
       })
 
-      console.log("[v0] API response status:", response.status)
-
       if (!response.ok) {
         const errorText = await response.text()
-        console.log("[v0] API error response:", errorText)
         setLoadError(`API error: ${response.status} - ${errorText}`)
         setIsLoading(false)
         return
       }
 
       const data = await response.json()
-      console.log("[v0] API response data:", data)
 
       if (data.subjects) {
-        console.log("[v0] Setting subjects:", data.subjects.length)
         setSubjects(data.subjects)
       }
       if (data.assignments) {
-        console.log("[v0] Setting assignments:", data.assignments.length)
         setAssignments(data.assignments)
       }
       if (data.progress) {
-        console.log("[v0] Setting progress:", data.progress.length)
         setProgress(data.progress)
       }
 
       // Update child data from server (in case it changed)
       if (data.child) {
-        console.log("[v0] Setting child from API:", data.child)
         setChild(data.child)
         sessionStorage.setItem("student_child", JSON.stringify(data.child))
 
         // Check if assessment is needed
         if (!data.child.assessment_completed) {
-          console.log("[v0] Assessment not completed, showing assessment")
           setShowAssessment(true)
         } else {
           // Check for surprise quiz (20% chance)
           checkForSurpriseQuiz(data.child)
         }
-      } else {
-        console.log("[v0] No child data in API response")
       }
     } catch (error) {
-      console.error("[v0] Error loading data:", error)
+      console.error("Error loading data:", error)
       setLoadError(`Error loading data: ${error}`)
     } finally {
-      console.log("[v0] Loading complete, setting isLoading to false")
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    const storedChild = sessionStorage.getItem("student_child")
+
+    if (!storedChild) {
+      router.push("/login")
+      return
+    }
+
+    try {
+      const childData = JSON.parse(storedChild) as Child
+      setChild(childData)
+      loadData(childData.id)
+    } catch (e) {
+      setLoadError("Error parsing child data: " + (e instanceof Error ? e.message : String(e)))
+      setIsLoading(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router])
 
   const checkForSurpriseQuiz = async (childData: Child) => {
     // 20% chance of surprise quiz if last quiz was more than 1 hour ago
@@ -345,7 +326,7 @@ export default function StudentDashboard() {
               {assignments.map((assignment) => (
                 <Link href={`/student/worksheet/${assignment.id}`} key={assignment.id} className="block group">
                   <Card
-                    className="border-3 border-purple-200 hover:border-purple-400 transition-all hover:shadow-lg cursor-pointer h-full"
+                    className="border-[3px] border-purple-200 hover:border-purple-400 transition-all hover:shadow-lg cursor-pointer h-full"
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
@@ -361,7 +342,7 @@ export default function StudentDashboard() {
               ))}
             </div>
           ) : (
-            <Card className="border-3 border-dashed border-purple-300 bg-purple-50">
+            <Card className="border-[3px] border-dashed border-purple-300 bg-purple-50">
               <CardContent className="p-8 text-center">
                 <div className="text-5xl mb-4">🌟</div>
                 <h3 className="text-xl font-bold text-purple-700 mb-2">No worksheets assigned yet!</h3>
@@ -388,7 +369,7 @@ export default function StudentDashboard() {
               return (
                 <Link href={`/student/subject/${subject.id}`} key={subject.id} className="block group">
                   <Card
-                    className="border-3 hover:scale-105 transition-all cursor-pointer overflow-hidden h-full"
+                    className="border-[3px] hover:scale-105 transition-all cursor-pointer overflow-hidden h-full"
                     style={{ borderColor: subject.color || "#8B5CF6" }}
                   >
                     <CardHeader className="pb-2">
@@ -396,7 +377,7 @@ export default function StudentDashboard() {
                         className="w-14 h-14 rounded-xl flex items-center justify-center text-white mb-2 group-hover:scale-110 transition-transform"
                         style={{ backgroundColor: subject.color || "#8B5CF6" }}
                       >
-                        {subjectIcons[subject.icon || "book-open"]}
+                        {subjectIcons[subject.icon || "book-open"] || subjectIcons["book-open"]}
                       </div>
                       <CardTitle className="text-sm font-bold leading-tight">
                         {subject.name.split("(")[0].trim()}
@@ -431,7 +412,7 @@ export default function StudentDashboard() {
             ].map((achievement, index) => (
               <Card
                 key={index}
-                className={`border-3 text-center ${achievement.unlocked ? "border-yellow-300 bg-yellow-50" : "border-gray-200 bg-gray-50 opacity-60"
+                className={`border-[3px] text-center ${achievement.unlocked ? "border-yellow-300 bg-yellow-50" : "border-gray-200 bg-gray-50 opacity-60"
                   }`}
               >
                 <CardContent className="p-4">
