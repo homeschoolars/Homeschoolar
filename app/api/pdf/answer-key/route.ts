@@ -7,9 +7,9 @@ export async function POST(request: NextRequest) {
     const { worksheet } = await request.json()
 
     const buffer = await renderToBuffer(WorksheetPDF({ worksheet, includeAnswerKey: true }))
-    const pdfArrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
+    const pdfBytes = new Uint8Array(buffer)
 
-    return new NextResponse(pdfArrayBuffer, {
+    return new NextResponse(pdfBytes, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${worksheet.title.replace(/\s+/g, "-").toLowerCase()}-answer-key.pdf"`,

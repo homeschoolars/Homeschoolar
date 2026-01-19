@@ -7,9 +7,9 @@ export async function POST(request: NextRequest) {
     const { child, progress, assessments, subjects } = await request.json()
 
     const buffer = await renderToBuffer(AssessmentReportPDF({ child, progress, assessments, subjects }))
-    const pdfArrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
+    const pdfBytes = new Uint8Array(buffer)
 
-    return new NextResponse(pdfArrayBuffer, {
+    return new NextResponse(pdfBytes, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${child.name.replace(/\s+/g, "-").toLowerCase()}-assessment-report.pdf"`,

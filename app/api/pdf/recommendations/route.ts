@@ -7,9 +7,9 @@ export async function POST(request: NextRequest) {
     const { childName, recommendations } = await request.json()
 
     const buffer = await renderToBuffer(RecommendationsPDF({ childName, recommendations }))
-    const pdfArrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
+    const pdfBytes = new Uint8Array(buffer)
 
-    return new NextResponse(pdfArrayBuffer, {
+    return new NextResponse(pdfBytes, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${childName.replace(/\s+/g, "-").toLowerCase()}-recommendations.pdf"`,
