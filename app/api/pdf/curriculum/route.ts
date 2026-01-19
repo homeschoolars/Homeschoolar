@@ -7,8 +7,9 @@ export async function POST(request: NextRequest) {
     const { subjects, ageGroup, childName } = await request.json()
 
     const buffer = await renderToBuffer(CurriculumPDF({ subjects, ageGroup, childName }))
+    const pdfArrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
 
-    return new NextResponse(buffer, {
+    return new NextResponse(pdfArrayBuffer, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="curriculum-${ageGroup}-years.pdf"`,
