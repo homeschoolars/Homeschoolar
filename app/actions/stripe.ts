@@ -1,10 +1,11 @@
 "use server"
 
-import { stripe } from "@/lib/stripe"
+import { requireStripe } from "@/lib/stripe"
 import { SUBSCRIPTION_PLANS } from "@/lib/subscription-plans"
 import { createClient } from "@/lib/supabase/server"
 
 export async function startCheckoutSession(planId: string, billingPeriod: "monthly" | "yearly") {
+  const stripe = requireStripe()
   const plan = SUBSCRIPTION_PLANS.find((p) => p.id === planId)
   if (!plan) {
     throw new Error(`Plan "${planId}" not found`)
@@ -52,6 +53,7 @@ export async function startCheckoutSession(planId: string, billingPeriod: "month
 }
 
 export async function createPortalSession() {
+  const stripe = requireStripe()
   const supabase = await createClient()
   const {
     data: { user },

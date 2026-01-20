@@ -1,11 +1,26 @@
-import { stripe } from "@/lib/stripe"
-import { createClient } from "@supabase/supabase-js"
+import { requireStripe } from "@/lib/stripe"
+import type Stripe from "stripe"
 import { headers } from "next/headers"
 import { NextResponse } from "next/server"
-
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+import { createClient } from "@supabase/supabase-js"
 
 export async function POST(req: Request) {
+  let stripe
+  try {
+    stripe = requireStripe()
+  } catch (error) {
+    console.error("Stripe webhook received but Stripe is not configured:", error)
+    return NextResponse.json({ error: "Stripe is not configured" }, { status: 503 })
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!supabaseUrl || !serviceRoleKey) {
+    return NextResponse.json({ error: "Supabase is not configured" }, { status: 503 })
+  }
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey)
+
   const body = await req.text()
   const headersList = await headers()
   const signature = headersList.get("stripe-signature")!
@@ -64,7 +79,7 @@ export async function POST(req: Request) {
     }
 
     case "customer.subscription.updated": {
-      const subscription = event.data.object
+      const subscription = event.data.object as Stripe.Subscription & { current_period_end: number }
       const customerId = subscription.customer as string
 
       // Find user by customer ID

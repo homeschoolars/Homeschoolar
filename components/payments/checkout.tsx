@@ -26,6 +26,9 @@ export function Checkout({ planId, billingPeriod, trigger }: CheckoutProps) {
     setIsLoading(true)
     try {
       const clientSecret = await startCheckoutSession(planId, billingPeriod)
+      if (!clientSecret) {
+        throw new Error("Failed to initialize Stripe checkout session.")
+      }
       return clientSecret
     } finally {
       setIsLoading(false)

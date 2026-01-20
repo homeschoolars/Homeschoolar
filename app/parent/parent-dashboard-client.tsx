@@ -73,6 +73,7 @@ export default function ParentDashboardClient({
   const supabase = createClient()
 
   const selectedChild = children.find((c) => c.id === selectedChildId)
+  const curriculumAgeGroup = selectedChild?.age_group ?? "6-7"
 
   const generateLoginCode = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -490,7 +491,11 @@ export default function ParentDashboardClient({
                   <CardDescription>Download the full curriculum for any age group</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <CurriculumPDFActions subjects={subjects} />
+                  <CurriculumPDFActions
+                    subjects={subjects}
+                    ageGroup={curriculumAgeGroup}
+                    childName={selectedChild?.name}
+                  />
                 </CardContent>
               </Card>
 

@@ -1,11 +1,16 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 
-// Use service role to bypass RLS for student login validation
-const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-
 export async function POST(request: Request) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseUrl || !serviceRoleKey) {
+      return NextResponse.json({ error: "Supabase is not configured" }, { status: 503 })
+    }
+
+    // Use service role to bypass RLS for student login validation
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
     const json = await request.json()
     console.log("Received login request", json)
     const { loginCode } = json
