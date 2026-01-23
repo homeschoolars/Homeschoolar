@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -36,7 +38,17 @@ import {
   FileText,
   BarChart3,
 } from "lucide-react"
-import type { Profile, Child, Subject, Subscription, AgeGroup } from "@/lib/types"
+import type {
+  Profile,
+  Child,
+  Subject,
+  Subscription,
+  AttentionSpan,
+  LearningMode,
+  LearningStyle,
+  Religion,
+  ScreenTolerance,
+} from "@/lib/types"
 import { WorksheetGenerator } from "@/components/ai/worksheet-generator"
 import { RecommendationsPanel } from "@/components/ai/recommendations-panel"
 import { CurriculumPDFActions, AssessmentPDFActions } from "@/components/pdf/pdf-actions"
@@ -44,6 +56,15 @@ import { NotificationCenter } from "@/components/notifications/notification-cent
 import { ParentAnalytics } from "@/components/analytics/parent-analytics"
 import { signOut } from "next-auth/react"
 import { apiFetch } from "@/lib/api-client"
+import {
+  attentionSpanOptions,
+  interestPresets,
+  learningModeOptions,
+  learningStyleOptions,
+  religionOptions,
+  screenToleranceOptions,
+} from "@/lib/onboarding-options"
+import { calculateAgeYears, deriveAgeGroup } from "@/lib/onboarding-utils"
 
 interface ParentDashboardClientProps {
   profile: Profile | null
@@ -61,7 +82,21 @@ export default function ParentDashboardClient({
   const [children, setChildren] = useState<Child[]>(initialChildren)
   const [isAddingChild, setIsAddingChild] = useState(false)
   const [newChildName, setNewChildName] = useState("")
-  const [newChildAge, setNewChildAge] = useState<AgeGroup>("6-7")
+  const [newChildDob, setNewChildDob] = useState("")
+  const [newChildGender, setNewChildGender] = useState<"male" | "female" | "other" | "prefer_not_say">(
+    "prefer_not_say",
+  )
+  const [newChildReligion, setNewChildReligion] = useState<Religion>("muslim")
+  const [newChildEducation, setNewChildEducation] = useState("")
+  const [newChildInterestsPreset, setNewChildInterestsPreset] = useState<string[]>([])
+  const [newChildInterestsCustom, setNewChildInterestsCustom] = useState("")
+  const [newChildLearningStyles, setNewChildLearningStyles] = useState<LearningStyle[]>([])
+  const [newChildAttentionSpan, setNewChildAttentionSpan] = useState<AttentionSpan>("medium")
+  const [newChildScreenTolerance, setNewChildScreenTolerance] = useState<ScreenTolerance>("medium")
+  const [newChildNeedsEncouragement, setNewChildNeedsEncouragement] = useState(false)
+  const [newChildLearnsBetterWith, setNewChildLearnsBetterWith] = useState<LearningMode[]>([])
+  const [newChildStrengths, setNewChildStrengths] = useState("")
+  const [newChildChallenges, setNewChildChallenges] = useState("")
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [selectedChildId, setSelectedChildId] = useState<string | null>(
@@ -73,14 +108,32 @@ export default function ParentDashboardClient({
   const curriculumAgeGroup = selectedChild?.age_group ?? "6-7"
 
   const handleAddChild = async () => {
-    if (!newChildName.trim()) return
+    if (!newChildName.trim() || !newChildDob || newChildLearningStyles.length === 0 || newChildLearnsBetterWith.length === 0)
+      return
 
     setIsLoading(true)
     try {
       const response = await apiFetch("/api/children", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newChildName, age_group: newChildAge }),
+        body: JSON.stringify({
+          full_name: newChildName,
+          date_of_birth: newChildDob,
+          gender: newChildGender,
+          religion: newChildReligion,
+          current_education_level: newChildEducation || null,
+          interests: {
+            preset: newChildInterestsPreset,
+            custom: newChildInterestsCustom || null,
+          },
+          learning_styles: newChildLearningStyles,
+          attention_span: newChildAttentionSpan,
+          screen_tolerance: newChildScreenTolerance,
+          needs_encouragement: newChildNeedsEncouragement,
+          learns_better_with: newChildLearnsBetterWith,
+          strengths: newChildStrengths || null,
+          challenges: newChildChallenges || null,
+        }),
       })
       const data = await response.json()
       if (!response.ok) {
@@ -90,12 +143,33 @@ export default function ParentDashboardClient({
       setChildren([...children, data.child])
       if (!selectedChildId) setSelectedChildId(data.child.id)
       setNewChildName("")
+      setNewChildDob("")
+      setNewChildGender("prefer_not_say")
+      setNewChildReligion("muslim")
+      setNewChildEducation("")
+      setNewChildInterestsPreset([])
+      setNewChildInterestsCustom("")
+      setNewChildLearningStyles([])
+      setNewChildAttentionSpan("medium")
+      setNewChildScreenTolerance("medium")
+      setNewChildNeedsEncouragement(false)
+      setNewChildLearnsBetterWith([])
+      setNewChildStrengths("")
+      setNewChildChallenges("")
       setIsAddingChild(false)
     } catch (error) {
       console.error("Error adding child:", error)
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const toggleMultiSelect = <T extends string>(
+    list: T[],
+    value: T,
+    setter: (next: T[]) => void,
+  ) => {
+    setter(list.includes(value) ? list.filter((item) => item !== value) : [...list, value])
   }
 
   const copyLoginCode = (code: string) => {
@@ -283,34 +357,215 @@ export default function ParentDashboardClient({
                       Create a profile for your child to start their learning journey.
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4 py-4">
+                  <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-1">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="childName">Child&apos;s Name</Label>
+                        <Input
+                          id="childName"
+                          placeholder="Enter name"
+                          value={newChildName}
+                          onChange={(e) => setNewChildName(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="childDob">Date of Birth</Label>
+                        <Input
+                          id="childDob"
+                          type="date"
+                          value={newChildDob}
+                          onChange={(e) => setNewChildDob(e.target.value)}
+                        />
+                        {newChildDob && (
+                          <p className="text-xs text-teal-600">
+                            Age {calculateAgeYears(new Date(newChildDob))}{" "}
+                            {deriveAgeGroup(calculateAgeYears(new Date(newChildDob)))
+                              ? `• Group ${deriveAgeGroup(calculateAgeYears(new Date(newChildDob)))}`
+                              : ""}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="childGender">Gender</Label>
+                        <Select value={newChildGender} onValueChange={(v) => setNewChildGender(v as typeof newChildGender)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="prefer_not_say">Prefer not to say</SelectItem>
+                            <SelectItem value="female">Female</SelectItem>
+                            <SelectItem value="male">Male</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="childReligion">Religion</Label>
+                        <Select value={newChildReligion} onValueChange={(v) => setNewChildReligion(v as Religion)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {religionOptions.map((religion) => (
+                              <SelectItem key={religion} value={religion}>
+                                {religion === "muslim" ? "Muslim" : "Non-Muslim"}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="childName">Child&apos;s Name</Label>
+                      <Label htmlFor="childEducation">Current Education Level (optional)</Label>
                       <Input
-                        id="childName"
-                        placeholder="Enter name"
-                        value={newChildName}
-                        onChange={(e) => setNewChildName(e.target.value)}
+                        id="childEducation"
+                        placeholder="e.g. Kindergarten, Grade 3"
+                        value={newChildEducation}
+                        onChange={(e) => setNewChildEducation(e.target.value)}
                       />
                     </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="childAge">Age Group</Label>
-                      <Select value={newChildAge} onValueChange={(v) => setNewChildAge(v as AgeGroup)}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="4-5">4-5 years</SelectItem>
-                          <SelectItem value="6-7">6-7 years</SelectItem>
-                          <SelectItem value="8-9">8-9 years</SelectItem>
-                          <SelectItem value="10-11">10-11 years</SelectItem>
-                          <SelectItem value="12-13">12-13 years</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label>Interests</Label>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {interestPresets.map((interest) => (
+                          <label key={interest} className="flex items-center gap-2 text-sm">
+                            <Checkbox
+                              checked={newChildInterestsPreset.includes(interest)}
+                              onCheckedChange={() =>
+                                toggleMultiSelect(newChildInterestsPreset, interest, setNewChildInterestsPreset)
+                              }
+                            />
+                            {interest}
+                          </label>
+                        ))}
+                      </div>
+                      <Input
+                        placeholder="Other interest (optional)"
+                        value={newChildInterestsCustom}
+                        onChange={(e) => setNewChildInterestsCustom(e.target.value)}
+                      />
                     </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Learning Style</Label>
+                        <div className="space-y-2">
+                          {learningStyleOptions.map((style) => (
+                            <label key={style} className="flex items-center gap-2 text-sm">
+                              <Checkbox
+                                checked={newChildLearningStyles.includes(style)}
+                                onCheckedChange={() =>
+                                  toggleMultiSelect(newChildLearningStyles, style, setNewChildLearningStyles)
+                                }
+                              />
+                              {style.replace("_", "/")}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Attention Span</Label>
+                        <Select
+                          value={newChildAttentionSpan}
+                          onValueChange={(v) => setNewChildAttentionSpan(v as AttentionSpan)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {attentionSpanOptions.map((span) => (
+                              <SelectItem key={span} value={span}>
+                                {span}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Label className="mt-3">Screen Tolerance</Label>
+                        <Select
+                          value={newChildScreenTolerance}
+                          onValueChange={(v) => setNewChildScreenTolerance(v as ScreenTolerance)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {screenToleranceOptions.map((level) => (
+                              <SelectItem key={level} value={level}>
+                                {level}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <label className="flex items-center gap-2 text-sm mt-3">
+                          <Checkbox
+                            checked={newChildNeedsEncouragement}
+                            onCheckedChange={(checked) => setNewChildNeedsEncouragement(!!checked)}
+                          />
+                          Needs encouragement often
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Learns better with</Label>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {learningModeOptions.map((mode) => (
+                          <label key={mode} className="flex items-center gap-2 text-sm">
+                            <Checkbox
+                              checked={newChildLearnsBetterWith.includes(mode)}
+                              onCheckedChange={() =>
+                                toggleMultiSelect(newChildLearnsBetterWith, mode, setNewChildLearnsBetterWith)
+                              }
+                            />
+                            {mode.replace("_", " ")}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Strengths (optional)</Label>
+                        <Textarea
+                          value={newChildStrengths}
+                          onChange={(e) => setNewChildStrengths(e.target.value)}
+                          placeholder="What does the child enjoy most?"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Challenges (optional)</Label>
+                        <Textarea
+                          value={newChildChallenges}
+                          onChange={(e) => setNewChildChallenges(e.target.value)}
+                          placeholder="What does the child struggle with?"
+                        />
+                      </div>
+                    </div>
+
+                    {newChildDob && (
+                      <div className="rounded-lg border border-teal-200 bg-teal-50 p-3 text-xs text-teal-700">
+                        {calculateAgeYears(new Date(newChildDob)) < 8
+                          ? "Electives are locked for children under 8."
+                          : "Children ages 8-13 will choose exactly 5 electives during curriculum setup."}
+                      </div>
+                    )}
+
                     <Button
                       onClick={handleAddChild}
-                      disabled={isLoading || !newChildName.trim()}
+                      disabled={
+                        isLoading ||
+                        !newChildName.trim() ||
+                        !newChildDob ||
+                        newChildLearningStyles.length === 0 ||
+                        newChildLearnsBetterWith.length === 0
+                      }
                       className="w-full bg-teal-600 hover:bg-teal-700"
                     >
                       {isLoading ? "Adding..." : "Add Child"}

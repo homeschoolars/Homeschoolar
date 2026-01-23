@@ -1,35 +1,51 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireRole } from "@/lib/auth-helpers"
-import { createChild } from "@/services/parent-service"
-import { toPrismaAgeGroup } from "@/lib/age-group"
+import { createChildWithProfile } from "@/services/onboarding-service"
 import { serializeChild } from "@/lib/serializers"
 
 const createChildSchema = z.object({
-  name: z.string().min(1),
-  age_group: z.enum(["4-5", "6-7", "8-9", "10-11", "12-13"]),
+  full_name: z.string().min(1),
+  date_of_birth: z.string().min(1),
+  gender: z.enum(["male", "female", "other", "prefer_not_say"]).optional().nullable(),
+  religion: z.enum(["muslim", "non_muslim"]),
+  current_education_level: z.string().optional().nullable(),
+  interests: z.object({
+    preset: z.array(z.string()).optional(),
+    custom: z.string().optional().nullable(),
+  }),
+  learning_styles: z.array(z.enum(["visual", "auditory", "reading_writing", "kinesthetic"])).min(1),
+  attention_span: z.enum(["short", "medium", "long"]),
+  screen_tolerance: z.enum(["low", "medium", "high"]),
+  needs_encouragement: z.boolean(),
+  learns_better_with: z.array(z.enum(["games", "stories", "challenges", "step_by_step"])).min(1),
+  strengths: z.string().optional().nullable(),
+  challenges: z.string().optional().nullable(),
 })
-
-function generateLoginCode() {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-  let code = ""
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return code
-}
 
 export async function POST(request: Request) {
   try {
     const session = await requireRole("parent")
     const body = createChildSchema.parse(await request.json())
 
-    const loginCode = generateLoginCode()
-    const child = await createChild({
+    const child = await createChildWithProfile({
       parentId: session.user.id,
-      name: body.name,
-      ageGroup: toPrismaAgeGroup(body.age_group),
-      loginCode,
+      eventUserId: session.user.id,
+      child: {
+        fullName: body.full_name,
+        dateOfBirth: body.date_of_birth,
+        gender: body.gender ?? null,
+        religion: body.religion,
+        currentEducationLevel: body.current_education_level ?? null,
+        interests: body.interests,
+        learningStyles: body.learning_styles,
+        attentionSpan: body.attention_span,
+        screenTolerance: body.screen_tolerance,
+        needsEncouragement: body.needs_encouragement,
+        learnsBetterWith: body.learns_better_with,
+        strengths: body.strengths ?? null,
+        challenges: body.challenges ?? null,
+      },
     })
 
     return NextResponse.json({ child: serializeChild(child) })
