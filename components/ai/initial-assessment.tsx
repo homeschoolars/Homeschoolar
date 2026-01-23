@@ -41,6 +41,7 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
   const [isLoading, setIsLoading] = useState(false)
   const [results, setResults] = useState<AssessmentResult | null>(null)
   const [completedSubjects, setCompletedSubjects] = useState<string[]>([])
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const currentSubject = subjects[currentSubjectIndex]
   const currentQuestion = questions[currentQuestionIndex]
@@ -49,6 +50,10 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
 
   const startAssessment = async () => {
     setStep("assessment")
+    if (!currentSubject) {
+      setLoadError("No subjects assigned yet. Please contact your parent or teacher.")
+      return
+    }
     await loadSubjectAssessment(currentSubject)
   }
 
@@ -58,6 +63,7 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
     setCurrentQuestionIndex(0)
     setAnswers([])
     setSelectedAnswer("")
+    setLoadError(null)
 
     try {
       const response = await apiFetch("/api/ai/initial-assessment", {
@@ -71,13 +77,23 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
         }),
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        setAssessmentId(data.assessment.id)
-        setQuestions(data.assessment.questions)
+      if (!response.ok) {
+        const errorText = await response.text()
+        setLoadError(`Unable to load questions. ${errorText || "Please try again."}`)
+        return
+      }
+
+      const data = await response.json()
+      const fetchedQuestions = data.assessment?.questions ?? []
+      setAssessmentId(data.assessment?.id ?? null)
+      setQuestions(fetchedQuestions)
+
+      if (!fetchedQuestions.length) {
+        setLoadError("No questions were generated for this subject. Please try again.")
       }
     } catch (error) {
       console.error("Error loading assessment:", error)
+      setLoadError("Unable to load questions right now. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -247,6 +263,19 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
     )
   }
 
+  if (!currentSubject) {
+    return (
+      <Card className="max-w-2xl mx-auto border-2 border-purple-200">
+        <CardHeader className="text-center bg-gradient-to-r from-purple-50 to-pink-50">
+          <CardTitle className="text-2xl">Assessment Unavailable</CardTitle>
+          <CardDescription className="text-base">
+            No subjects are assigned yet. Please contact your parent or teacher.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    )
+  }
+
   // Assessment in progress
   return (
     <Card className="max-w-2xl mx-auto border-2 border-purple-200">
@@ -270,6 +299,13 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
           <div className="text-center py-12">
             <Loader2 className="w-12 h-12 mx-auto text-purple-500 animate-spin mb-4" />
             <p className="text-gray-600">{results ? "Loading next subject..." : "Preparing questions..."}</p>
+          </div>
+        ) : loadError ? (
+          <div className="text-center py-8 space-y-4">
+            <p className="text-sm text-red-600">{loadError}</p>
+            <Button onClick={() => loadSubjectAssessment(currentSubject)} className="w-full">
+              Retry
+            </Button>
           </div>
         ) : results ? (
           <div className="text-center py-8">
