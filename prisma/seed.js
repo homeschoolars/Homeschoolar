@@ -41,6 +41,37 @@ async function main() {
     },
   });
 
+  await prisma.parent.upsert({
+    where: { userId: parentUser.id },
+    update: {},
+    create: {
+      userId: parentUser.id,
+      fullName: "Parent User",
+      relationship: "guardian",
+      email: parentUser.email,
+      phone: "+10000000000",
+      country: "Pakistan",
+      timezone: "Asia/Karachi",
+    },
+  });
+
+  await prisma.parent.upsert({
+    where: { userId: parentUserTwo.id },
+    update: {},
+    create: {
+      userId: parentUserTwo.id,
+      fullName: "Second Parent",
+      relationship: "mother",
+      email: parentUserTwo.email,
+      phone: "+10000000001",
+      country: "Pakistan",
+      timezone: "Asia/Karachi",
+    },
+  });
+
+  const today = new Date();
+  const yearsAgo = (years) => new Date(today.getFullYear() - years, today.getMonth(), today.getDate());
+
   const existingSubject = await prisma.subject.findFirst({
     where: { name: "Mathematics" },
   });
@@ -103,6 +134,114 @@ async function main() {
       parentId: parentUserTwo.id,
       interests: ["Math", "Robotics"],
     },
+  });
+
+  await prisma.childProfile.upsert({
+    where: { childId: child.id },
+    update: {},
+    create: {
+      childId: child.id,
+      dateOfBirth: yearsAgo(9),
+      ageYears: 9,
+      religion: "muslim",
+      educationLevel: "Grade 3",
+      strengths: "Enjoys math puzzles",
+      challenges: "Needs encouragement with writing",
+    },
+  });
+
+  await prisma.learningPreference.upsert({
+    where: { childId: child.id },
+    update: {},
+    create: {
+      childId: child.id,
+      learningStyles: ["visual", "kinesthetic"],
+      attentionSpan: "medium",
+      screenTolerance: "medium",
+      needsEncouragement: true,
+      learnsBetterWith: ["games", "step_by_step"],
+    },
+  });
+
+  await prisma.childInterest.createMany({
+    data: ["Math", "Science"].map((label) => ({
+      childId: child.id,
+      label,
+      source: "preset",
+    })),
+    skipDuplicates: true,
+  });
+
+  await prisma.childProfile.upsert({
+    where: { childId: childTwo.id },
+    update: {},
+    create: {
+      childId: childTwo.id,
+      dateOfBirth: yearsAgo(6),
+      ageYears: 6,
+      religion: "non_muslim",
+      educationLevel: "Kindergarten",
+      strengths: "Curious about nature",
+      challenges: "Short attention span",
+    },
+  });
+
+  await prisma.learningPreference.upsert({
+    where: { childId: childTwo.id },
+    update: {},
+    create: {
+      childId: childTwo.id,
+      learningStyles: ["auditory", "visual"],
+      attentionSpan: "short",
+      screenTolerance: "low",
+      needsEncouragement: false,
+      learnsBetterWith: ["stories"],
+    },
+  });
+
+  await prisma.childInterest.createMany({
+    data: ["Science", "Art"].map((label) => ({
+      childId: childTwo.id,
+      label,
+      source: "preset",
+    })),
+    skipDuplicates: true,
+  });
+
+  await prisma.childProfile.upsert({
+    where: { childId: childThree.id },
+    update: {},
+    create: {
+      childId: childThree.id,
+      dateOfBirth: yearsAgo(11),
+      ageYears: 11,
+      religion: "muslim",
+      educationLevel: "Grade 5",
+      strengths: "Logical reasoning",
+      challenges: "Prefers hands-on tasks",
+    },
+  });
+
+  await prisma.learningPreference.upsert({
+    where: { childId: childThree.id },
+    update: {},
+    create: {
+      childId: childThree.id,
+      learningStyles: ["reading_writing", "visual"],
+      attentionSpan: "long",
+      screenTolerance: "high",
+      needsEncouragement: false,
+      learnsBetterWith: ["challenges"],
+    },
+  });
+
+  await prisma.childInterest.createMany({
+    data: ["Math", "Robotics"].map((label) => ({
+      childId: childThree.id,
+      label,
+      source: "preset",
+    })),
+    skipDuplicates: true,
   });
 
   const worksheet = await prisma.worksheet.create({

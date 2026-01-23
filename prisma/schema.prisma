@@ -81,6 +81,56 @@ enum PaymentGateway {
   easypaisa
 }
 
+enum ParentRelationship {
+  father
+  mother
+  guardian
+  other
+}
+
+enum Gender {
+  male
+  female
+  other
+  prefer_not_say
+}
+
+enum Religion {
+  muslim
+  non_muslim
+}
+
+enum AttentionSpan {
+  short
+  medium
+  long
+}
+
+enum ScreenTolerance {
+  low
+  medium
+  high
+}
+
+enum LearningStyle {
+  visual
+  auditory
+  reading_writing
+  kinesthetic
+}
+
+enum LearningMode {
+  games
+  stories
+  challenges
+  step_by_step
+}
+
+enum InterestSource {
+  preset
+  custom
+}
+
 model User {
   id           String    @id @default(uuid())
   email        String    @unique
@@ -102,11 +152,29 @@ model User {
   assignedWorksheets WorksheetAssignment[] @relation("WorksheetAssigner")
   analytics     AnalyticsEvent[]
   preferences   NotificationPreference?
+  parentProfile Parent?
 
   accounts Account[]
   sessions Session[]
 
   @@map("profiles")
+}
+
+model Parent {
+  id           String             @id @default(uuid())
+  userId       String             @unique @map("user_id")
+  fullName     String             @map("full_name")
+  relationship ParentRelationship
+  email        String
+  phone        String?
+  country      String
+  timezone     String
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @default(now()) @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("parents")
 }
 
 model Account {
@@ -174,8 +242,84 @@ model Child {
   curriculumPaths  CurriculumPath[]
   analytics        AnalyticsEvent[]
   subscriptions    Subscription[]
+  profile          ChildProfile?
+  preferences      LearningPreference?
+  interestsV2      ChildInterest[]
+  initialAssessments InitialAssessment[]
 
   @@map("students")
+  @@index([parentId])
+  @@index([ageGroup])
+}
+
+model ChildProfile {
+  id              String    @id @default(uuid())
+  childId         String    @unique @map("child_id")
+  dateOfBirth     DateTime  @map("date_of_birth")
+  ageYears        Int       @map("age_years")
+  gender          Gender?
+  religion        Religion
+  educationLevel  String?   @map("education_level")
+  strengths       String?
+  challenges      String?
+  aiSummary       Json?     @map("ai_summary")
+  aiReasoning     Json?     @map("ai_reasoning")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @default(now()) @map("updated_at")
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@map("child_profiles")
+  @@index([ageYears])
+  @@index([religion])
+}
+
+model LearningPreference {
+  id                String          @id @default(uuid())
+  childId           String          @unique @map("child_id")
+  learningStyles    LearningStyle[] @map("learning_styles")
+  attentionSpan     AttentionSpan   @map("attention_span")
+  screenTolerance   ScreenTolerance @map("screen_tolerance")
+  needsEncouragement Boolean        @default(false) @map("needs_encouragement")
+  learnsBetterWith  LearningMode[]  @map("learns_better_with")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @default(now()) @map("updated_at")
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@map("learning_preferences")
+}
+
+model ChildInterest {
+  id        String         @id @default(uuid())
+  childId   String         @map("child_id")
+  label     String
+  source    InterestSource @default(preset)
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@map("child_interests")
+  @@index([childId])
+  @@index([label])
+}
+
+model InitialAssessment {
+  id                String   @id @default(uuid())
+  childId           String   @map("child_id")
+  subjectId         String?  @map("subject_id")
+  rawResponses      Json?    @map("raw_responses")
+  subjectConfidence Json?    @map("subject_confidence")
+  evaluatedSkills   Json?    @map("evaluated_skills")
+  aiReasoning       Json?    @map("ai_reasoning")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @default(now()) @map("updated_at")
+
+  child   Child   @relation(fields: [childId], references: [id], onDelete: Cascade)
+  subject Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+
+  @@map("initial_assessments")
+  @@index([childId])
 }
 
 model Subject {
@@ -192,6 +336,7 @@ model Subject {
   assessments Assessment[]
   quizzes SurpriseQuiz[]
   curriculumPaths CurriculumPath[]
+  initialAssessments InitialAssessment[]
 
   @@map("subjects")
 }

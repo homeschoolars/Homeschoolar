@@ -7,6 +7,14 @@ export type SubscriptionStatus = "pending" | "active" | "cancelled" | "expired" 
 export type LearningLevel = "beginner" | "intermediate" | "advanced"
 export type RecommendationType = "subject" | "topic" | "worksheet" | "activity"
 export type QuestionType = "multiple_choice" | "text" | "true_false" | "fill_blank"
+export type ParentRelationship = "father" | "mother" | "guardian" | "other"
+export type Gender = "male" | "female" | "other" | "prefer_not_say"
+export type Religion = "muslim" | "non_muslim"
+export type AttentionSpan = "short" | "medium" | "long"
+export type ScreenTolerance = "low" | "medium" | "high"
+export type LearningStyle = "visual" | "auditory" | "reading_writing" | "kinesthetic"
+export type LearningMode = "games" | "stories" | "challenges" | "step_by_step"
+export type InterestSource = "preset" | "custom"
 
 export interface Profile {
   id: string
@@ -14,6 +22,19 @@ export interface Profile {
   full_name: string | null
   role: UserRole
   avatar_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ParentProfile {
+  id: string
+  user_id: string
+  full_name: string
+  relationship: ParentRelationship
+  email: string
+  phone: string | null
+  country: string
+  timezone: string
   created_at: string
   updated_at: string
 }
@@ -31,6 +52,76 @@ export interface Child {
   assessment_completed: boolean
   last_quiz_at: string | null
   created_at: string
+  updated_at: string
+  profile?: ChildProfile | null
+  preferences?: LearningPreference | null
+  interests_v2?: ChildInterest[]
+}
+
+export interface ChildProfile {
+  id: string
+  child_id: string
+  date_of_birth: string
+  age_years: number
+  gender: Gender | null
+  religion: Religion
+  education_level: string | null
+  strengths: string | null
+  challenges: string | null
+  ai_summary: Record<string, unknown> | null
+  ai_reasoning: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+}
+
+export interface LearningPreference {
+  id: string
+  child_id: string
+  learning_styles: LearningStyle[]
+  attention_span: AttentionSpan
+  screen_tolerance: ScreenTolerance
+  needs_encouragement: boolean
+  learns_better_with: LearningMode[]
+  created_at: string
+  updated_at: string
+}
+
+export interface ChildInterest {
+  id: string
+  child_id: string
+  label: string
+  source: InterestSource
+  created_at: string
+}
+
+export interface InitialAssessment {
+  id: string
+  child_id: string
+  subject_id: string | null
+  raw_responses: Record<string, unknown> | null
+  subject_confidence: Record<string, unknown> | null
+  evaluated_skills: Record<string, unknown> | null
+  ai_reasoning: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+}
+
+export interface AiProfileSummary {
+  child_id: string
+  age_years: number
+  age_group: AgeGroup
+  religion: Religion
+  learning_styles: LearningStyle[]
+  attention_span: AttentionSpan
+  screen_tolerance: ScreenTolerance
+  needs_encouragement: boolean
+  learns_better_with: LearningMode[]
+  interests: string[]
+  strengths: string | null
+  challenges: string | null
+  islamic_studies_enabled: boolean
+  electives_locked: boolean
+  electives_required: number | null
   updated_at: string
 }
 
