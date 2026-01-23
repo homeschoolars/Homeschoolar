@@ -33,7 +33,9 @@ export function Header() {
             height={48}
             className="group-hover:scale-105 transition-transform"
           />
-          <span className="font-heading text-xl font-bold text-rainbow hidden sm:inline">HomeSchoolar</span>
+          <span className="hidden font-heading text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple via-pink to-orange sm:inline sm:text-3xl">
+            Homeschoolar
+          </span>
           <Sparkles className="h-4 w-4 text-yellow animate-pulse hidden sm:block" />
         </Link>
 
