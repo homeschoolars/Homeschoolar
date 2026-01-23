@@ -157,6 +157,206 @@ const assessmentResultSchema = z.object({
   suggested_starting_topics: z.array(z.string()),
 })
 
+function buildFallbackAssessmentQuestions(subjectName: string) {
+  const normalized = subjectName.toLowerCase()
+  const base = subjectName.split("(")[0].trim() || "this subject"
+
+  const create = (
+    id: string,
+    type: "multiple_choice" | "true_false",
+    question: string,
+    correct_answer: string,
+    points: number,
+    options?: string[],
+    skill_tested = "core concepts",
+  ) => ({
+    id,
+    type,
+    question,
+    options,
+    correct_answer,
+    points,
+    skill_tested,
+  })
+
+  if (normalized.includes("math")) {
+    return [
+      create("fallback-1", "multiple_choice", "What is 2 + 2?", "4", 1, ["3", "4", "5", "6"], "addition"),
+      create("fallback-2", "multiple_choice", "What is 5 - 3?", "2", 1, ["1", "2", "3", "4"], "subtraction"),
+      create("fallback-3", "multiple_choice", "What is 3 × 2?", "6", 2, ["5", "6", "7", "8"], "multiplication"),
+      create("fallback-4", "true_false", "True or False: 9 is greater than 12.", "False", 2, undefined, "number comparison"),
+      create("fallback-5", "multiple_choice", "Which shape has 3 sides?", "Triangle", 2, ["Square", "Circle", "Triangle", "Rectangle"], "shapes"),
+      create("fallback-6", "multiple_choice", "If you have 1 apple and get 2 more, how many apples?", "3", 2, ["2", "3", "4", "5"], "addition"),
+      create("fallback-7", "true_false", "True or False: 0 is less than 1.", "True", 2, undefined, "number sense"),
+      create("fallback-8", "multiple_choice", "What is 7 + 1?", "8", 3, ["7", "8", "9", "10"], "addition"),
+      create("fallback-9", "multiple_choice", "What is 10 ÷ 2?", "5", 3, ["4", "5", "6", "7"], "division"),
+      create("fallback-10", "multiple_choice", "Which number is even?", "6", 3, ["5", "6", "7", "9"], "even/odd"),
+    ]
+  }
+
+  if (normalized.includes("science")) {
+    return [
+      create(
+        "fallback-1",
+        "multiple_choice",
+        "Which of these is a living thing?",
+        "Tree",
+        1,
+        ["Rock", "Tree", "Chair", "Cloud"],
+        "living vs non-living",
+      ),
+      create("fallback-2", "true_false", "True or False: The sun is a star.", "True", 1, undefined, "basic astronomy"),
+      create(
+        "fallback-3",
+        "multiple_choice",
+        "Which of these is a planet?",
+        "Earth",
+        2,
+        ["Earth", "Sun", "Moon", "Star"],
+        "space science",
+      ),
+      create("fallback-4", "multiple_choice", "Water freezes into:", "Ice", 2, ["Steam", "Ice", "Clouds", "Rain"], "states of matter"),
+      create(
+        "fallback-5",
+        "true_false",
+        "True or False: Plants need sunlight to grow.",
+        "True",
+        2,
+        undefined,
+        "plant needs",
+      ),
+      create("fallback-6", "multiple_choice", "Which sense helps you hear?", "Ears", 2, ["Eyes", "Ears", "Nose", "Hands"], "senses"),
+      create(
+        "fallback-7",
+        "true_false",
+        "True or False: Fish breathe with lungs like humans.",
+        "False",
+        3,
+        undefined,
+        "animal science",
+      ),
+      create("fallback-8", "multiple_choice", "Which of these is a gas?", "Air", 3, ["Air", "Water", "Ice", "Wood"], "states of matter"),
+      create(
+        "fallback-9",
+        "multiple_choice",
+        "Which part of a plant absorbs water?",
+        "Roots",
+        3,
+        ["Leaves", "Roots", "Flowers", "Stem"],
+        "plant parts",
+      ),
+      create(
+        "fallback-10",
+        "true_false",
+        "True or False: Washing hands helps keep us healthy.",
+        "True",
+        3,
+        undefined,
+        "health & hygiene",
+      ),
+    ]
+  }
+
+  if (normalized.includes("english") || normalized.includes("language") || normalized.includes("literacy")) {
+    return [
+      create("fallback-1", "multiple_choice", "Which word is a noun?", "Cat", 1, ["Cat", "Run", "Quickly", "Blue"], "nouns"),
+      create("fallback-2", "multiple_choice", "Which word is a verb?", "Run", 1, ["Happy", "Run", "Blue", "Tall"], "verbs"),
+      create("fallback-3", "true_false", "True or False: 'Happy' is an adjective.", "True", 2, undefined, "adjectives"),
+      create("fallback-4", "multiple_choice", "What is the plural of 'book'?", "Books", 2, ["Book", "Books", "Bookes", "Book's"], "plurals"),
+      create("fallback-5", "multiple_choice", "Which letter is a vowel?", "A", 2, ["B", "C", "A", "D"], "phonics"),
+      create(
+        "fallback-6",
+        "true_false",
+        "True or False: A sentence should start with a capital letter.",
+        "True",
+        2,
+        undefined,
+        "capitalization",
+      ),
+      create("fallback-7", "multiple_choice", "Which word means the same as 'big'?", "Large", 3, ["Tiny", "Large", "Small", "Short"], "synonyms"),
+      create("fallback-8", "multiple_choice", "Which is a punctuation mark?", "Period", 3, ["Letter", "Word", "Period", "Sound"], "punctuation"),
+      create("fallback-9", "true_false", "True or False: 'They is' is correct grammar.", "False", 3, undefined, "grammar"),
+      create("fallback-10", "multiple_choice", "Choose the correct word: I ___ happy.", "am", 3, ["am", "is", "are", "be"], "grammar"),
+    ]
+  }
+
+  if (normalized.includes("social") || normalized.includes("history") || normalized.includes("geography")) {
+    return [
+      create("fallback-1", "multiple_choice", "A map shows:", "Places", 1, ["Recipes", "Places", "Music", "Stories"], "maps"),
+      create("fallback-2", "true_false", "True or False: A city is smaller than a town.", "False", 1, undefined, "communities"),
+      create(
+        "fallback-3",
+        "multiple_choice",
+        "Which is a community helper?",
+        "Firefighter",
+        2,
+        ["Firefighter", "Painter", "Runner", "Singer"],
+        "community helpers",
+      ),
+      create(
+        "fallback-4",
+        "multiple_choice",
+        "A flag is a symbol of a:",
+        "Country",
+        2,
+        ["Animal", "Country", "Book", "Game"],
+        "symbols",
+      ),
+      create(
+        "fallback-5",
+        "true_false",
+        "True or False: We should follow traffic rules.",
+        "True",
+        2,
+        undefined,
+        "citizenship",
+      ),
+      create("fallback-6", "multiple_choice", "Which is a continent?", "Asia", 2, ["Asia", "Nile", "Sahara", "Amazon"], "continents"),
+      create("fallback-7", "multiple_choice", "Which is an ocean?", "Pacific", 3, ["Pacific", "Everest", "Nile", "Sahara"], "oceans"),
+      create("fallback-8", "true_false", "True or False: Earth has one moon.", "True", 3, undefined, "Earth & space"),
+      create(
+        "fallback-9",
+        "multiple_choice",
+        "People who live in the same area are called:",
+        "Community",
+        3,
+        ["Community", "Mountains", "Weather", "Animals"],
+        "community",
+      ),
+      create(
+        "fallback-10",
+        "true_false",
+        "True or False: A globe is a model of Earth.",
+        "True",
+        3,
+        undefined,
+        "geography basics",
+      ),
+    ]
+  }
+
+  return [
+    create(
+      "fallback-1",
+      "multiple_choice",
+      `Which option is most related to ${base}?`,
+      base,
+      1,
+      [base, "Music", "Art", "Sports"],
+      "subject awareness",
+    ),
+    create("fallback-2", "multiple_choice", "Which number is bigger?", "8", 1, ["8", "3", "1", "2"], "number sense"),
+    create("fallback-3", "true_false", "True or False: 5 is greater than 9.", "False", 2, undefined, "number comparison"),
+    create("fallback-4", "multiple_choice", "Which shape has 4 sides?", "Square", 2, ["Circle", "Triangle", "Square", "Star"], "shapes"),
+    create("fallback-5", "multiple_choice", "What comes after 6?", "7", 2, ["5", "6", "7", "8"], "counting"),
+    create("fallback-6", "true_false", "True or False: We should be kind to others.", "True", 2, undefined, "character"),
+    create("fallback-7", "multiple_choice", "Which is a healthy habit?", "Washing hands", 3, ["Washing hands", "Skipping sleep", "Not drinking water", "Too much candy"], "health"),
+    create("fallback-8", "multiple_choice", "Which is used to write?", "Pencil", 3, ["Pencil", "Shoe", "Ball", "Cup"], "everyday tools"),
+    create("fallback-9", "true_false", "True or False: The sky is usually blue on a clear day.", "True", 3, undefined, "observations"),
+    create("fallback-10", "multiple_choice", "Which is a living thing?", "Dog", 3, ["Rock", "Dog", "Chair", "Cloud"], "living vs non-living"),
+  ]
+}
+
 const recommendationSchema = z.object({
   recommendations: z.array(
     z.object({
@@ -402,18 +602,38 @@ export async function generateInitialAssessment({
 
   const prompt = buildInitialAssessmentPrompt({ ageGroup: age_group, subjectName: subject_name })
 
-  const result = await generateObject({
-    model: google("gemini-1.5-flash"),
-    schema: assessmentSchema,
-    prompt,
-    maxOutputTokens: 3000,
-  })
+  let questions: Array<{
+    id: string
+    type: "multiple_choice" | "true_false"
+    question: string
+    options?: string[]
+    correct_answer: string
+    points: number
+    skill_tested: string
+  }> = []
+
+  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    questions = buildFallbackAssessmentQuestions(subject_name)
+  } else {
+    try {
+      const result = await generateObject({
+        model: google("gemini-1.5-flash"),
+        schema: assessmentSchema,
+        prompt,
+        maxOutputTokens: 3000,
+      })
+      questions = result.object.questions
+    } catch (error) {
+      console.error("AI assessment generation failed. Using fallback questions.", error)
+      questions = buildFallbackAssessmentQuestions(subject_name)
+    }
+  }
 
   const assessment = await prisma.assessment.create({
     data: {
       childId: child_id,
       subjectId: subject_id,
-      questions: result.object.questions,
+      questions,
     },
   })
 
