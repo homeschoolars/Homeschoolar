@@ -573,8 +573,8 @@ model OrphanVerification {
   createdAt          DateTime               @default(now()) @map("created_at")
 
   child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
-  submittedBy User @relation(fields: [submittedByParentId], references: [id], onDelete: Cascade)
-  reviewedBy User? @relation(fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
+  submittedBy User @relation("OrphanSubmittedBy", fields: [submittedByParentId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("OrphanReviewedBy", fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
 
   @@map("orphan_verifications")
   @@index([childId])
