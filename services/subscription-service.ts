@@ -63,6 +63,10 @@ export async function upsertSubscription({
   planType: SubscriptionPlanType
   status?: "pending" | "active" | "past_due" | "cancelled" | "expired"
 }) {
+  const existing = await prisma.subscription.findFirst({ where: { userId: parentId } })
+  if (existing?.type === "orphan") {
+    throw new Error("Orphan plan cannot be upgraded to paid")
+  }
   const childCount = await getParentChildCount(parentId)
   if (childCount <= 0) {
     throw new Error("At least one child is required to subscribe")
@@ -86,6 +90,8 @@ export async function upsertSubscription({
       amount: pricing.finalAmount,
       currency: currency,
       status,
+      type: "paid",
+      isFree: false,
       startedAt: now,
       expiresAt,
     },
@@ -102,6 +108,8 @@ export async function upsertSubscription({
       amount: pricing.finalAmount,
       currency: currency,
       status,
+      type: "paid",
+      isFree: false,
       startedAt: now,
       expiresAt,
       startDate: now,
@@ -127,9 +135,20 @@ export async function updateSubscriptionChildCount(parentId: string) {
   if (!subscription) {
     return null
   }
-  const planType =
-    subscription.planType ?? (subscription.plan === "yearly" || subscription.plan === "monthly" ? subscription.plan : "monthly")
   const childCount = await getParentChildCount(parentId)
+  if (subscription.type === "orphan") {
+    if (childCount > 1) {
+      throw new Error("Orphan plan supports one child only")
+    }
+    const updated = await prisma.subscription.update({
+      where: { id: subscription.id },
+      data: { childCount },
+    })
+    return { subscription: updated, pricing: buildPricing({ childCount, planType: "monthly", currency: "USD" }) }
+  }
+  const planType =
+    subscription.planType ??
+    (subscription.plan === "yearly" || subscription.plan === "monthly" ? subscription.plan : "monthly")
   if (childCount <= 0) {
     throw new Error("At least one child is required")
   }
@@ -164,6 +183,9 @@ export async function changeSubscriptionPlan(parentId: string, planType: Subscri
   if (!subscription) {
     throw new Error("Subscription not found")
   }
+  if (subscription.type === "orphan") {
+    throw new Error("Orphan plan cannot be changed")
+  }
   const currency = await getParentCurrency(parentId)
   const childCount = await getParentChildCount(parentId)
   const pricing = buildPricing({ childCount, planType, currency })
@@ -184,6 +206,8 @@ export async function changeSubscriptionPlan(parentId: string, planType: Subscri
       amount: pricing.finalAmount,
       currency: currency,
       status: "pending",
+      type: "paid",
+      isFree: false,
       startedAt: now,
       expiresAt,
     },

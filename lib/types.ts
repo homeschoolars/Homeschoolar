@@ -7,12 +7,16 @@ export type SubscriptionStatus = "pending" | "active" | "cancelled" | "expired" 
 export type SubscriptionPlanType = "monthly" | "yearly"
 export type BillingCurrency = "USD" | "PKR"
 export type PaymentProvider = "payoneer" | "jazzcash" | "easypaisa" | "manual"
+export type SubscriptionType = "trial" | "paid" | "orphan"
 export type LearningLevel = "beginner" | "intermediate" | "advanced"
 export type RecommendationType = "subject" | "topic" | "worksheet" | "activity"
 export type QuestionType = "multiple_choice" | "text" | "true_false" | "fill_blank"
 export type ParentRelationship = "father" | "mother" | "guardian" | "other"
 export type Gender = "male" | "female" | "other" | "prefer_not_say"
 export type Religion = "muslim" | "non_muslim"
+export type OrphanStatus = "pending" | "verified" | "rejected"
+export type OrphanDocumentType = "death_certificate" | "ngo_letter" | "other"
+export type OrphanVerificationStatus = "pending" | "approved" | "rejected"
 export type AttentionSpan = "short" | "medium" | "long"
 export type ScreenTolerance = "low" | "medium" | "high"
 export type LearningStyle = "visual" | "auditory" | "reading_writing" | "kinesthetic"
@@ -52,6 +56,8 @@ export interface Child {
   current_level: LearningLevel
   learning_style: string | null
   interests: string[] | null
+  is_orphan: boolean
+  orphan_status: OrphanStatus
   assessment_completed: boolean
   last_quiz_at: string | null
   created_at: string
@@ -59,6 +65,19 @@ export interface Child {
   profile?: ChildProfile | null
   preferences?: LearningPreference | null
   interests_v2?: ChildInterest[]
+}
+
+export interface OrphanVerification {
+  id: string
+  child_id: string
+  submitted_by_parent_id: string
+  document_type: OrphanDocumentType
+  document_url: string
+  status: OrphanVerificationStatus
+  reviewed_by_admin_id: string | null
+  reviewed_at: string | null
+  rejection_reason: string | null
+  created_at: string
 }
 
 export interface ChildProfile {
@@ -233,12 +252,14 @@ export interface Subscription {
   discount_amount: number | null
   final_amount: number | null
   billing_currency: BillingCurrency | null
+  type: SubscriptionType
+  trial_ends_at: string | null
+  is_free: boolean
   status: SubscriptionStatus
   stripe_customer_id: string | null
   stripe_subscription_id: string | null
   current_period_start: string | null
   current_period_end: string | null
-  trial_ends_at: string | null
   created_at: string
   updated_at: string
   started_at: string | null

@@ -55,6 +55,19 @@ type AdminSubscription = {
 }
 
 type TierSummary = Record<string, { count: number; revenue_usd: number; revenue_pkr: number }>
+type OrphanQueueItem = {
+  id: string
+  child_id: string
+  child_name: string
+  parent_id: string
+  parent_name: string
+  document_type: string
+  document_url: string
+  created_at: string
+}
+type OrphanMetrics = {
+  verified_count: number
+}
 
 export default function AdminDashboardClient({
   stats,
@@ -65,6 +78,8 @@ export default function AdminDashboardClient({
   const [pendingWorksheets, setPendingWorksheets] = useState(initialPending)
   const [subscriptions, setSubscriptions] = useState<AdminSubscription[]>([])
   const [tierSummary, setTierSummary] = useState<TierSummary>({})
+  const [orphanQueue, setOrphanQueue] = useState<OrphanQueueItem[]>([])
+  const [orphanMetrics, setOrphanMetrics] = useState<OrphanMetrics | null>(null)
   const router = useRouter()
   const handleApproveWorksheet = async (worksheetId: string) => {
     const response = await apiFetch(`/api/admin/worksheets/${worksheetId}`, {
@@ -97,8 +112,17 @@ export default function AdminDashboardClient({
     setTierSummary(data.tier_summary ?? {})
   }
 
+  const loadOrphanQueue = async () => {
+    const response = await apiFetch("/api/admin/orphan/review", { method: "GET" })
+    if (!response.ok) return
+    const data = await response.json()
+    setOrphanQueue(data.queue ?? [])
+    setOrphanMetrics(data.metrics ?? null)
+  }
+
   useEffect(() => {
     loadSubscriptions()
+    loadOrphanQueue()
   }, [])
 
   const updateSubscription = async (id: string, payload: Record<string, unknown>) => {
@@ -132,6 +156,17 @@ export default function AdminDashboardClient({
       body: JSON.stringify({ reason: "Admin initiated refund" }),
     })
     await loadSubscriptions()
+  }
+
+  const handleReviewOrphan = async (verificationId: string, status: "approved" | "rejected") => {
+    const rejectionReason =
+      status === "rejected" ? window.prompt("Provide a rejection reason for the parent:") : undefined
+    await apiFetch("/api/admin/orphan/review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ verificationId, status, rejectionReason }),
+    })
+    await loadOrphanQueue()
   }
 
   return (
@@ -248,6 +283,9 @@ export default function AdminDashboardClient({
             </TabsTrigger>
             <TabsTrigger value="subscriptions" className="flex items-center gap-1">
               <CreditCard className="w-4 h-4" /> Subscriptions
+            </TabsTrigger>
+            <TabsTrigger value="orphans" className="flex items-center gap-1">
+              <Users className="w-4 h-4" /> Orphan Queue
             </TabsTrigger>
             <TabsTrigger value="users">Recent Users</TabsTrigger>
           </TabsList>
@@ -435,6 +473,71 @@ export default function AdminDashboardClient({
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="orphans">
+            <Card>
+              <CardHeader>
+                <CardTitle>Orphan Verification Queue</CardTitle>
+                <CardDescription>
+                  Approve or reject submitted documents. Verified students: {orphanMetrics?.verified_count ?? 0}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {orphanQueue.length === 0 ? (
+                  <p className="text-sm text-gray-500">No pending submissions.</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Child</TableHead>
+                        <TableHead>Parent</TableHead>
+                        <TableHead>Document</TableHead>
+                        <TableHead>Submitted</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {orphanQueue.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>{item.child_name}</TableCell>
+                          <TableCell>{item.parent_name}</TableCell>
+                          <TableCell className="capitalize">{item.document_type.replace("_", " ")}</TableCell>
+                          <TableCell>{new Date(item.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(item.document_url, "_blank")}
+                              >
+                                View
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-green-600"
+                                onClick={() => handleReviewOrphan(item.id, "approved")}
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600"
+                                onClick={() => handleReviewOrphan(item.id, "rejected")}
+                              >
+                                Reject
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="users">

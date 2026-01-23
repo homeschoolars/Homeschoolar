@@ -60,6 +60,10 @@ async function logPaymentEvent(userId: string | null, eventType: string, eventDa
 }
 
 export async function createPayment(params: CreatePaymentParams): Promise<CreatePaymentResult> {
+  const existing = await prisma.subscription.findFirst({ where: { userId: params.userId } })
+  if (existing?.type === "orphan") {
+    throw new Error("Orphan plan cannot initiate billing")
+  }
   const gateway = resolveGateway(params.currency, params.gateway)
   const referenceId = `${params.userId}_${Date.now()}`
 

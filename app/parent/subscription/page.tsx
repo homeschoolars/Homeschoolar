@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowLeft, CreditCard, Calendar, CheckCircle } from "lucide-react"
+import { TrialCTA } from "@/components/payments/trial-cta"
 
 export default async function SubscriptionPage() {
   const session = await auth()
@@ -23,6 +24,13 @@ export default async function SubscriptionPage() {
 
   const currentPlan = subscription?.plan_type ?? (subscription?.plan as "monthly" | "yearly" | undefined)
   const isActive = subscription?.status === "active"
+  const isTrial = subscription?.type === "trial"
+  const isOrphan = subscription?.type === "orphan"
+  const trialEndsAt = subscription?.trial_ends_at ? new Date(subscription.trial_ends_at) : null
+  const trialDaysLeft =
+    trialEndsAt && trialEndsAt.getTime() > Date.now()
+      ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+      : 0
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -61,7 +69,7 @@ export default async function SubscriptionPage() {
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-2xl font-bold capitalize">{subscription.plan}</span>
+                    <span className="text-2xl font-bold capitalize">{subscription.type}</span>
                     <Badge className="bg-teal-500">Active</Badge>
                   </div>
                   {subscription.current_period_end && (
@@ -70,13 +78,20 @@ export default async function SubscriptionPage() {
                       Renews on {new Date(subscription.current_period_end).toLocaleDateString()}
                     </p>
                   )}
+                  {isTrial && trialEndsAt && (
+                    <p className="text-sm text-gray-600 flex items-center gap-1">
+                      Trial ends in {trialDaysLeft} {trialDaysLeft === 1 ? "day" : "days"}
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" asChild>
-                    <Link href="/parent/subscription/manage">
-                      <CreditCard className="w-4 h-4 mr-2" /> Manage Billing
-                    </Link>
-                  </Button>
+                  {!isOrphan && (
+                    <Button variant="outline" asChild>
+                      <Link href="/parent/subscription/manage">
+                        <CreditCard className="w-4 h-4 mr-2" /> Manage Billing
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -84,11 +99,34 @@ export default async function SubscriptionPage() {
         )}
 
         {/* Pricing Section */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-center mb-6">
-            {isActive ? "Change Your Plan" : "Choose Your Plan"}
+        <div className="mb-8 space-y-4">
+          <h2 className="text-xl font-semibold text-center">
+            {isOrphan
+              ? "Orphan Education Plan"
+              : isTrial && trialDaysLeft > 0
+                ? "Upgrade Your Trial"
+                : "Choose Your Plan"}
           </h2>
-          <PricingSection currentPlan={currentPlan ?? null} />
+          {isOrphan ? (
+            <Card className="border-teal-200 bg-teal-50/50">
+              <CardContent className="p-6 text-center space-y-2">
+                <p className="text-sm text-gray-600">This account is on the orphan education plan.</p>
+                <p className="text-lg font-semibold text-teal-700">Full access at no cost.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {isTrial && trialDaysLeft === 0 && (
+                <Card className="border-amber-200 bg-amber-50/50">
+                  <CardContent className="p-4 text-center text-sm text-amber-700">
+                    Your free trial has ended. Please choose a paid plan to continue full access.
+                  </CardContent>
+                </Card>
+              )}
+              {!isActive && !isTrial && <TrialCTA />}
+              <PricingSection currentPlan={currentPlan ?? null} />
+            </>
+          )}
         </div>
 
         {/* FAQ */}

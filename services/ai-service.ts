@@ -22,6 +22,7 @@ import {
   buildCompleteAssessmentPrompt,
   buildRecommendCurriculumPrompt,
 } from "@/services/ai-prompts"
+import { enforceSubscriptionAccess } from "@/services/subscription-access"
 
 const DAILY_AI_LIMIT = Number(process.env.AI_DAILY_LIMIT ?? "50")
 
@@ -380,6 +381,7 @@ export async function generateWorksheet(body: GenerateWorksheetRequest, userId: 
     childLevel: child_level,
   })
 
+  await enforceSubscriptionAccess({ userId, feature: "ai" })
   await enforceDailyLimit(userId, "generate-worksheet")
 
   const result = await generateObject({
@@ -437,6 +439,7 @@ export async function gradeSubmission(body: GradeSubmissionRequest, userId: stri
     questions: questionsWithAnswers,
   })
 
+  await enforceSubscriptionAccess({ userId, feature: "ai" })
   await enforceDailyLimit(userId, "grade-submission")
 
   const result = await generateObject({
@@ -471,6 +474,7 @@ export async function generateQuiz({
   userId?: string
 }) {
   const resolvedUserId = userId ?? (await getParentIdFromChild(child_id))
+  await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
   await enforceDailyLimit(resolvedUserId, "generate-quiz")
 
   let targetSubject = subject_name
@@ -539,6 +543,7 @@ export async function gradeQuiz({
     throw new Error("Quiz not found")
   }
   const resolvedUserId = userId ?? (await getParentIdFromChild(quiz.childId))
+  await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
   await enforceDailyLimit(resolvedUserId, "grade-quiz")
 
   const questions = quiz.questions as unknown as QuizQuestion[]
@@ -598,6 +603,7 @@ export async function generateInitialAssessment({
   userId?: string
 }) {
   const resolvedUserId = userId ?? (await getParentIdFromChild(child_id))
+  await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
   await enforceDailyLimit(resolvedUserId, "initial-assessment")
 
   const prompt = buildInitialAssessmentPrompt({ ageGroup: age_group, subjectName: subject_name })
@@ -679,6 +685,7 @@ export async function completeAssessment({
   })
 
   const resolvedUserId = userId ?? (await getParentIdFromChild(assessment.childId))
+  await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
   await enforceDailyLimit(resolvedUserId, "complete-assessment")
 
   const prompt = buildCompleteAssessmentPrompt({
@@ -753,6 +760,7 @@ export async function recommendCurriculum({ child_id, userId }: { child_id: stri
     throw new Error("Child not found")
   }
   const resolvedUserId = userId ?? (await getParentIdFromChild(child_id))
+  await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
   await enforceDailyLimit(resolvedUserId, "recommend-curriculum")
 
   const progress = await prisma.progress.findMany({

@@ -85,6 +85,30 @@ enum NotificationType {
   achievement
 }
 
+enum OrphanStatus {
+  pending
+  verified
+  rejected
+}
+
+enum OrphanDocumentType {
+  death_certificate
+  ngo_letter
+  other
+}
+
+enum OrphanVerificationStatus {
+  pending
+  approved
+  rejected
+}
+
+enum SubscriptionType {
+  trial
+  paid
+  orphan
+}
+
 enum PaymentStatus {
   pending
   succeeded
@@ -186,6 +210,7 @@ model Parent {
   phone        String?
   country      String
   timezone     String
+  trialUsedAt  DateTime?          @map("trial_used_at")
   createdAt    DateTime           @default(now()) @map("created_at")
   updatedAt    DateTime           @default(now()) @map("updated_at")
 
@@ -244,6 +269,8 @@ model Child {
   currentLevel        LearningLevel @default(beginner) @map("current_level")
   learningStyle       String?       @map("learning_style")
   interests           String[]
+  isOrphan            Boolean       @default(false) @map("is_orphan")
+  orphanStatus        OrphanStatus   @default(rejected) @map("orphan_status")
   assessmentCompleted Boolean       @default(false) @map("assessment_completed")
   lastQuizAt          DateTime?     @map("last_quiz_at")
   createdAt           DateTime      @default(now()) @map("created_at")
@@ -263,6 +290,7 @@ model Child {
   preferences      LearningPreference?
   interestsV2      ChildInterest[]
   initialAssessments InitialAssessment[]
+  orphanVerifications OrphanVerification[]
 
   @@map("students")
   @@index([parentId])
@@ -448,6 +476,9 @@ model Subscription {
   discountAmount       Int?               @map("discount_amount")
   finalAmount          Int?               @map("final_amount")
   billingCurrency      BillingCurrency?   @map("billing_currency")
+  type                 SubscriptionType   @default(paid)
+  trialEndsAt          DateTime?           @map("trial_ends_at")
+  isFree               Boolean             @default(false) @map("is_free")
   status               SubscriptionStatus @default(active)
   stripeCustomerId     String?            @map("stripe_customer_id")
   stripeSubscriptionId String?            @map("stripe_subscription_id")
@@ -528,6 +559,27 @@ model Payment {
 
   @@unique([provider, providerPaymentId])
   @@map("payments")
+}
+
+model OrphanVerification {
+  id                 String                  @id @default(uuid())
+  childId            String                  @map("child_id")
+  submittedByParentId String                @map("submitted_by_parent_id")
+  documentType       OrphanDocumentType
+  documentUrl        String                 @map("document_url")
+  status             OrphanVerificationStatus @default(pending)
+  reviewedByAdminId  String?                @map("reviewed_by_admin_id")
+  reviewedAt         DateTime?              @map("reviewed_at")
+  rejectionReason    String?                @map("rejection_reason")
+  createdAt          DateTime               @default(now()) @map("created_at")
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+  submittedBy User @relation(fields: [submittedByParentId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation(fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
+
+  @@map("orphan_verifications")
+  @@index([childId])
+  @@index([status])
 }
 
 model SubscriptionPlan {

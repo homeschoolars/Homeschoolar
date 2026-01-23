@@ -14,6 +14,10 @@ export async function startCheckoutSession(planType: "monthly" | "yearly") {
   if (!user || (user.role !== "parent" && user.role !== "admin")) {
     throw new Error("Not authorized")
   }
+  const existing = await prisma.subscription.findFirst({ where: { userId: user.id } })
+  if (existing?.type === "orphan") {
+    throw new Error("Orphan plan cannot initiate billing")
+  }
 
   const childCount = await getParentChildCount(user.id)
   const pricing = buildPricing({ childCount, planType, currency: "USD" })

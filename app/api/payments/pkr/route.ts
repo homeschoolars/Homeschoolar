@@ -25,6 +25,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Plan type mismatch" }, { status: 400 })
     }
 
+    const existing = await prisma.subscription.findFirst({ where: { userId: session.user.id } })
+    if (existing?.type === "orphan") {
+      return NextResponse.json({ error: "Orphan plan cannot initiate billing" }, { status: 400 })
+    }
+
     const childCount = await getParentChildCount(session.user.id)
     const pricing = buildPricing({ childCount, planType: body.planType, currency: "PKR" })
     const subscriptionResult = await upsertSubscription({

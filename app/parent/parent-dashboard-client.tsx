@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -37,6 +37,7 @@ import {
   Sparkles,
   FileText,
   BarChart3,
+  Upload,
 } from "lucide-react"
 import type {
   Profile,
@@ -102,6 +103,13 @@ export default function ParentDashboardClient({
   const [selectedChildId, setSelectedChildId] = useState<string | null>(
     initialChildren.length > 0 ? initialChildren[0].id : null,
   )
+  const [orphanDialogOpen, setOrphanDialogOpen] = useState(false)
+  const [orphanChildId, setOrphanChildId] = useState<string | null>(null)
+  const [orphanDocType, setOrphanDocType] = useState<"death_certificate" | "ngo_letter" | "other">("ngo_letter")
+  const [orphanDocFile, setOrphanDocFile] = useState<File | null>(null)
+  const [orphanSubmitting, setOrphanSubmitting] = useState(false)
+  const [orphanMessage, setOrphanMessage] = useState<string | null>(null)
+  const orphanInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   const selectedChild = children.find((c) => c.id === selectedChildId)
@@ -183,11 +191,52 @@ export default function ParentDashboardClient({
     router.push("/login")
   }
 
+  const handleOrphanSubmit = async () => {
+    if (!orphanChildId || !orphanDocFile) return
+    setOrphanSubmitting(true)
+    setOrphanMessage(null)
+    try {
+      const fileBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = () => reject(new Error("Failed to read document"))
+        reader.readAsDataURL(orphanDocFile)
+      })
+
+      const response = await apiFetch("/api/orphan/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          childId: orphanChildId,
+          documentType: orphanDocType,
+          documentName: orphanDocFile.name,
+          documentBase64: fileBase64,
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || "Submission failed")
+      }
+      setOrphanMessage("Document submitted. Awaiting admin review.")
+      setOrphanDocFile(null)
+      setOrphanDialogOpen(false)
+    } catch (error) {
+      setOrphanMessage(error instanceof Error ? error.message : "Submission failed")
+    } finally {
+      setOrphanSubmitting(false)
+    }
+  }
+
   const subscriptionStatus = subscription?.status || "none"
-  const trialEndsAt = subscription?.trial_ends_at
-    ? new Date(subscription.trial_ends_at)
-    : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
-  const hasActiveSubscription = subscriptionStatus === "active" || subscription?.plan === "trial"
+  const isTrial = subscription?.type === "trial"
+  const isOrphan = subscription?.type === "orphan"
+  const trialEndsAt = subscription?.trial_ends_at ? new Date(subscription.trial_ends_at) : null
+  const trialDaysLeft =
+    trialEndsAt && trialEndsAt.getTime() > Date.now()
+      ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+      : 0
+  const hasActiveSubscription =
+    (subscriptionStatus === "active" && subscription?.type === "paid") || (isTrial && trialDaysLeft > 0) || isOrphan
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -233,25 +282,29 @@ export default function ParentDashboardClient({
         </div>
 
         {/* Subscription Banner */}
-        {subscriptionStatus === "active" || subscription?.plan === "trial" ? (
+        {hasActiveSubscription ? (
           <Card className="mb-8 bg-gradient-to-r from-teal-500 to-cyan-500 text-white border-0">
             <CardContent className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <CreditCard className="w-6 h-6" />
                 <div>
                   <p className="font-semibold">
-                    {subscription?.plan === "trial"
-                      ? `Free Trial - ${Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} days left`
-                      : `${subscription?.plan?.charAt(0).toUpperCase()}${subscription?.plan?.slice(1)} Plan`}
+                    {isOrphan
+                      ? "Orphan Education Plan"
+                      : isTrial
+                        ? `Free Trial - ${trialDaysLeft} days left`
+                        : `${subscription?.plan_type?.toUpperCase() || "PAID"} Plan`}
                   </p>
-                  <p className="text-sm text-teal-100">Full access to all features</p>
+                  <p className="text-sm text-teal-100">
+                    {isOrphan ? "Full access at no cost" : "Full access to all features"}
+                  </p>
                 </div>
               </div>
-              <Button variant="secondary" size="sm" asChild>
-                <Link href="/parent/subscription">
-                  {subscription?.plan === "trial" ? "Upgrade Now" : "Manage Plan"}
-                </Link>
-              </Button>
+              {!isOrphan && (
+                <Button variant="secondary" size="sm" asChild>
+                  <Link href="/parent/subscription">{isTrial ? "Upgrade Now" : "Manage Plan"}</Link>
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -576,6 +629,50 @@ export default function ParentDashboardClient({
               </Dialog>
             </div>
 
+            <Dialog open={orphanDialogOpen} onOpenChange={setOrphanDialogOpen}>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Submit Orphan Verification</DialogTitle>
+                  <DialogDescription>Upload official or NGO documentation for review.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Document Type</Label>
+                    <Select value={orphanDocType} onValueChange={(v) => setOrphanDocType(v as typeof orphanDocType)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="death_certificate">Death Certificate</SelectItem>
+                        <SelectItem value="ngo_letter">NGO Letter</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Document Upload</Label>
+                    <Input
+                      ref={orphanInputRef}
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      onChange={(e) => setOrphanDocFile(e.target.files?.[0] ?? null)}
+                    />
+                  </div>
+
+                  {orphanMessage && <p className="text-sm text-teal-600">{orphanMessage}</p>}
+
+                  <Button
+                    onClick={handleOrphanSubmit}
+                    disabled={!orphanChildId || !orphanDocFile || orphanSubmitting}
+                    className="w-full bg-teal-600 hover:bg-teal-700"
+                  >
+                    {orphanSubmitting ? "Submitting..." : "Submit for Review"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             {children.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {children.map((child) => (
@@ -630,6 +727,20 @@ export default function ParentDashboardClient({
                             {child.assessment_completed ? "Completed" : "Pending"}
                           </span>
                         </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-500">Orphan Status:</span>
+                          <span
+                            className={`font-medium ${
+                              child.orphan_status === "verified"
+                                ? "text-green-600"
+                                : child.orphan_status === "pending"
+                                  ? "text-amber-600"
+                                  : "text-gray-500"
+                            }`}
+                          >
+                            {child.orphan_status}
+                          </span>
+                        </div>
                         <div className="space-y-1">
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-500">Progress</span>
@@ -643,6 +754,19 @@ export default function ParentDashboardClient({
                               View Details <ChevronRight className="w-4 h-4 ml-1" />
                             </Link>
                           </Button>
+                          {child.orphan_status !== "verified" && (
+                            <Button
+                              variant="outline"
+                              className="flex-1 bg-transparent"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setOrphanChildId(child.id)
+                                setOrphanDialogOpen(true)
+                              }}
+                            >
+                              <Upload className="w-4 h-4 mr-1" /> Verify Orphan
+                            </Button>
+                          )}
                           <AssessmentPDFActions child={child} progress={[]} assessments={[]} subjects={subjects} />
                         </div>
                       </div>

@@ -163,6 +163,10 @@ export async function createChildWithProfile({
   child: ChildSignupInput
   eventUserId?: string | null
 }) {
+  const existingSubscription = await prisma.subscription.findFirst({ where: { userId: parentId } })
+  if (existingSubscription?.type === "orphan") {
+    throw new Error("Orphan plan does not allow adding more children")
+  }
   const childRecord = await prisma.$transaction((tx) =>
     createChildWithProfileInternal({ tx, parentId, child, eventUserId }),
   )
