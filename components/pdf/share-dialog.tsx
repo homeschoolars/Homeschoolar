@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Share2, Mail, Loader2, Check, AlertCircle } from "lucide-react"
+import { apiFetch } from "@/lib/api-client"
 
 interface ShareDialogProps {
   pdfType: "worksheet" | "answer-key" | "curriculum" | "assessment" | "recommendations"
@@ -38,7 +39,7 @@ export function ShareDialog({ pdfType, data, title, children }: ShareDialogProps
     setStatus("idle")
 
     try {
-      const response = await fetch("/api/share/email", {
+      const response = await apiFetch("/api/share/email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

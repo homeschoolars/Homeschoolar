@@ -2,7 +2,8 @@
 
 import { requireStripe } from "@/lib/stripe"
 import { SUBSCRIPTION_PLANS } from "@/lib/subscription-plans"
-import { createClient } from "@/lib/supabase/server"
+import { auth } from "@/auth"
+import { prisma } from "@/lib/prisma"
 
 export async function startCheckoutSession(planId: string, billingPeriod: "monthly" | "yearly") {
   const stripe = requireStripe()
@@ -16,15 +17,16 @@ export async function startCheckoutSession(planId: string, billingPeriod: "month
     throw new Error("Cannot checkout for free plan")
   }
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const authSession = await auth()
+  const user = authSession?.user
+  if (!user || (user.role !== "parent" && user.role !== "admin")) {
+    throw new Error("Not authorized")
+  }
 
-  const session = await stripe.checkout.sessions.create({
+  const checkoutSession = await stripe.checkout.sessions.create({
     ui_mode: "embedded",
     redirect_on_completion: "never",
-    customer_email: user?.email,
+    customer_email: user?.email ?? undefined,
     line_items: [
       {
         price_data: {
@@ -49,32 +51,31 @@ export async function startCheckoutSession(planId: string, billingPeriod: "month
     },
   })
 
-  return session.client_secret
+  return checkoutSession.client_secret
 }
 
 export async function createPortalSession() {
   const stripe = requireStripe()
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const authSession = await auth()
+  const user = authSession?.user
 
-  if (!user) throw new Error("Not authenticated")
+  if (!user || (user.role !== "parent" && user.role !== "admin")) {
+    throw new Error("Not authenticated")
+  }
 
-  const { data: subscription } = await supabase
-    .from("subscriptions")
-    .select("stripe_customer_id")
-    .eq("user_id", user.id)
-    .single()
+  const subscription = await prisma.subscription.findFirst({
+    where: { userId: user.id },
+    select: { stripeCustomerId: true },
+  })
 
-  if (!subscription?.stripe_customer_id) {
+  if (!subscription?.stripeCustomerId) {
     throw new Error("No Stripe customer found")
   }
 
-  const session = await stripe.billingPortal.sessions.create({
-    customer: subscription.stripe_customer_id,
+  const portalSession = await stripe.billingPortal.sessions.create({
+    customer: subscription.stripeCustomerId,
     return_url: `${process.env.NEXT_PUBLIC_APP_URL || ""}/parent`,
   })
 
-  return session.url
+  return portalSession.url
 }

@@ -1,0 +1,523 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  student
+  parent
+  admin
+}
+
+enum AgeGroup {
+  AGE_4_5  @map("4-5")
+  AGE_6_7  @map("6-7")
+  AGE_8_9  @map("8-9")
+  AGE_10_11 @map("10-11")
+  AGE_12_13 @map("12-13")
+}
+
+enum Difficulty {
+  easy
+  medium
+  hard
+}
+
+enum AssignmentStatus {
+  pending
+  in_progress
+  completed
+  graded
+}
+
+enum SubscriptionPlanId {
+  trial
+  monthly
+  yearly
+}
+
+enum SubscriptionStatus {
+  pending
+  active
+  cancelled
+  expired
+  past_due
+}
+
+enum LearningLevel {
+  beginner
+  intermediate
+  advanced
+}
+
+enum RecommendationType {
+  subject
+  topic
+  worksheet
+  activity
+}
+
+enum NotificationType {
+  info
+  success
+  warning
+  achievement
+}
+
+enum PaymentStatus {
+  pending
+  succeeded
+  failed
+  refunded
+}
+
+enum PaymentGateway {
+  payoneer
+  jazzcash
+  easypaisa
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  emailVerified DateTime? @map("email_verified")
+  name         String?   @map("full_name")
+  role         UserRole  @default(parent)
+  image        String?   @map("avatar_url")
+  passwordHash String?   @map("password_hash")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @default(now()) @map("updated_at")
+
+  children      Child[]
+  subscriptions Subscription[]
+  notifications Notification[]
+  payments      Payment[]
+  verifiedPayments Payment[] @relation("PaymentVerifier")
+  paymentTransactions PaymentTransaction[]
+  createdWorksheets Worksheet[] @relation("WorksheetCreator")
+  assignedWorksheets WorksheetAssignment[] @relation("WorksheetAssigner")
+  analytics     AnalyticsEvent[]
+  preferences   NotificationPreference?
+
+  accounts Account[]
+  sessions Session[]
+
+  @@map("profiles")
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Child {
+  id                  String        @id @default(uuid())
+  parentId            String        @map("parent_id")
+  name                String
+  ageGroup            AgeGroup      @map("age_group")
+  avatarUrl           String?       @map("avatar_url")
+  loginCode           String        @unique @map("login_code")
+  currentLevel        LearningLevel @default(beginner) @map("current_level")
+  learningStyle       String?       @map("learning_style")
+  interests           String[]
+  assessmentCompleted Boolean       @default(false) @map("assessment_completed")
+  lastQuizAt          DateTime?     @map("last_quiz_at")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @default(now()) @map("updated_at")
+
+  parent      User                 @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  assignments      WorksheetAssignment[]
+  submissions      WorksheetSubmission[]
+  progress         Progress[]
+  assessments      Assessment[]
+  quizzes          SurpriseQuiz[]
+  recommendations  AIRecommendation[]
+  curriculumPaths  CurriculumPath[]
+  analytics        AnalyticsEvent[]
+  subscriptions    Subscription[]
+
+  @@map("students")
+}
+
+model Subject {
+  id           String    @id @default(uuid())
+  name         String
+  description  String?
+  icon         String?
+  color        String?
+  displayOrder Int       @default(0) @map("display_order")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  worksheets Worksheet[]
+  progress   Progress[]
+  assessments Assessment[]
+  quizzes SurpriseQuiz[]
+  curriculumPaths CurriculumPath[]
+
+  @@map("subjects")
+}
+
+model Worksheet {
+  id           String      @id @default(uuid())
+  title        String
+  description  String?
+  subjectId    String      @map("subject_id")
+  ageGroup     AgeGroup    @map("age_group")
+  difficulty   Difficulty  @default(medium)
+  questions    Json        @default("[]")
+  answerKey    Json?       @map("answer_key")
+  explanations Json?       @map("explanations")
+  aiPrompt     String?     @map("ai_prompt")
+  isAiGenerated Boolean    @default(false) @map("is_ai_generated")
+  isApproved   Boolean     @default(false) @map("is_approved")
+  createdBy    String?     @map("created_by")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @default(now()) @map("updated_at")
+
+  subject      Subject             @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  creator      User?               @relation("WorksheetCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  assignments  WorksheetAssignment[]
+  analytics    AnalyticsEvent[]
+
+  @@map("worksheets")
+}
+
+model WorksheetAssignment {
+  id          String           @id @default(uuid())
+  worksheetId String           @map("worksheet_id")
+  childId     String           @map("child_id")
+  assignedBy  String           @map("assigned_by")
+  dueDate     DateTime?        @map("due_date")
+  status      AssignmentStatus @default(pending)
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  worksheet Worksheet @relation(fields: [worksheetId], references: [id], onDelete: Cascade)
+  child     Child     @relation(fields: [childId], references: [id], onDelete: Cascade)
+  assigner  User      @relation("WorksheetAssigner", fields: [assignedBy], references: [id], onDelete: Cascade)
+  submissions WorksheetSubmission[]
+
+  @@unique([worksheetId, childId])
+  @@map("worksheet_assignments")
+}
+
+model WorksheetSubmission {
+  id          String   @id @default(uuid())
+  assignmentId String  @map("assignment_id")
+  childId     String   @map("child_id")
+  answers     Json     @default("[]")
+  score       Decimal? @db.Decimal(5, 2)
+  maxScore    Decimal? @map("max_score") @db.Decimal(5, 2)
+  aiFeedback  String?  @map("ai_feedback")
+  submittedAt DateTime @default(now()) @map("submitted_at")
+  gradedAt    DateTime? @map("graded_at")
+
+  assignment WorksheetAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@map("worksheet_submissions")
+}
+
+model Progress {
+  id                 String   @id @default(uuid())
+  childId            String   @map("child_id")
+  subjectId          String   @map("subject_id")
+  totalWorksheets    Int      @default(0) @map("total_worksheets")
+  completedWorksheets Int     @default(0) @map("completed_worksheets")
+  totalScore         Decimal  @default(0) @map("total_score") @db.Decimal(10, 2)
+  averageScore       Decimal  @default(0) @map("average_score") @db.Decimal(5, 2)
+  lastActivityAt     DateTime? @map("last_activity_at")
+  updatedAt          DateTime @default(now()) @map("updated_at")
+
+  child   Child   @relation(fields: [childId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, subjectId])
+  @@map("progress")
+}
+
+model Subscription {
+  id                   String             @id @default(uuid())
+  userId               String             @map("user_id")
+  childId              String?            @map("child_id")
+  plan                 SubscriptionPlanId
+  status               SubscriptionStatus @default(active)
+  stripeCustomerId     String?            @map("stripe_customer_id")
+  stripeSubscriptionId String?            @map("stripe_subscription_id")
+  paypalSubscriptionId String?            @map("paypal_subscription_id")
+  paymentProvider      String?            @default("stripe") @map("payment_provider")
+  amountPaid           Int                @default(0) @map("amount_paid")
+  currency             String             @default("usd")
+  gateway              PaymentGateway?    @map("gateway")
+  amount               Int?               @map("amount")
+  metadata             Json?              @default("{}")
+  startDate            DateTime?          @map("start_date")
+  endDate              DateTime?          @map("end_date")
+  currentPeriodStart   DateTime?          @map("current_period_start")
+  currentPeriodEnd     DateTime?          @map("current_period_end")
+  trialEndsAt          DateTime?          @map("trial_ends_at")
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @default(now()) @map("updated_at")
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  child Child? @relation(fields: [childId], references: [id], onDelete: SetNull)
+  payments Payment[]
+  transactions PaymentTransaction[]
+
+  @@unique([userId])
+  @@map("subscriptions")
+}
+
+model PaymentTransaction {
+  id             String         @id @default(uuid())
+  userId         String?        @map("user_id")
+  subscriptionId String?        @map("subscription_id")
+  gateway        PaymentGateway @map("gateway")
+  amount         Int
+  currency       String
+  status         PaymentStatus  @default(pending)
+  externalId     String?        @map("external_id")
+  referenceId    String?        @map("reference_id")
+  metadata       Json?          @default("{}")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @default(now()) @map("updated_at")
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@unique([gateway, externalId])
+  @@unique([gateway, referenceId])
+  @@map("payment_transactions")
+}
+
+model Payment {
+  id               String       @id @default(uuid())
+  userId           String?      @map("user_id")
+  subscriptionId   String?      @map("subscription_id")
+  provider         String       @default("stripe")
+  paymentMethod    String?      @map("payment_method")
+  providerPaymentId String?     @map("provider_payment_id")
+  amount           Int
+  currency         String       @default("usd")
+  status           PaymentStatus @default(pending)
+  description      String?
+  metadata         Json?        @default("{}")
+  verifiedAt       DateTime?    @map("verified_at")
+  verifiedBy       String?      @map("verified_by")
+  rejectionReason  String?      @map("rejection_reason")
+  createdAt        DateTime     @default(now()) @map("created_at")
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  verifier     User?         @relation("PaymentVerifier", fields: [verifiedBy], references: [id], onDelete: SetNull)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, providerPaymentId])
+  @@map("payments")
+}
+
+model SubscriptionPlan {
+  id             String   @id
+  name           String
+  description    String?
+  priceMonthly   Int      @default(0) @map("price_monthly")
+  priceYearly    Int      @default(0) @map("price_yearly")
+  features       Json?    @default("[]")
+  aiWorksheetLimit Int    @default(-1) @map("ai_worksheet_limit")
+  aiQuizLimit      Int    @default(-1) @map("ai_quiz_limit")
+  maxChildren      Int    @default(-1) @map("max_children")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("subscription_plans")
+}
+
+model Notification {
+  id          String          @id @default(uuid())
+  userId      String          @map("user_id")
+  title       String
+  message     String
+  type        NotificationType @default(info)
+  isRead      Boolean         @default(false) @map("is_read")
+  actionUrl   String?         @map("action_url")
+  actionLabel String?         @map("action_label")
+  metadata    Json?           @default("{}")
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id                    String   @id @default(uuid())
+  userId                String   @unique @map("user_id")
+  emailQuizResults      Boolean  @default(true) @map("email_quiz_results")
+  emailProgressUpdates  Boolean  @default(true) @map("email_progress_updates")
+  emailAiRecommendations Boolean @default(true) @map("email_ai_recommendations")
+  emailSubscriptionAlerts Boolean @default(true) @map("email_subscription_alerts")
+  emailWeeklySummary    Boolean  @default(true) @map("email_weekly_summary")
+  inappQuizAlerts       Boolean  @default(true) @map("inapp_quiz_alerts")
+  inappWorksheetCompleted Boolean @default(true) @map("inapp_worksheet_completed")
+  inappRecommendations  Boolean  @default(true) @map("inapp_recommendations")
+  inappAchievements     Boolean  @default(true) @map("inapp_achievements")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @default(now()) @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+model Assessment {
+  id              String   @id @default(uuid())
+  childId         String   @map("child_id")
+  subjectId       String   @map("subject_id")
+  questions       Json
+  answers         Json?
+  score           Int?
+  recommendedLevel String? @map("recommended_level")
+  completedAt     DateTime? @map("completed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  child   Child   @relation(fields: [childId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@map("assessments")
+}
+
+model SurpriseQuiz {
+  id         String   @id @default(uuid())
+  childId    String   @map("child_id")
+  subjectId  String?  @map("subject_id")
+  questions  Json
+  answers    Json?
+  score      Int?
+  maxScore   Int?     @map("max_score")
+  feedback   String?
+  startedAt  DateTime @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  child   Child   @relation(fields: [childId], references: [id], onDelete: Cascade)
+  subject Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+
+  @@map("surprise_quizzes")
+}
+
+model AIRecommendation {
+  id          String             @id @default(uuid())
+  childId     String             @map("child_id")
+  type        RecommendationType
+  title       String
+  description String?
+  reason      String?
+  priority    Int                @default(0)
+  isDismissed Boolean            @default(false) @map("is_dismissed")
+  createdAt   DateTime           @default(now()) @map("created_at")
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@map("ai_recommendations")
+}
+
+model CurriculumPath {
+  id            String   @id @default(uuid())
+  childId       String   @map("child_id")
+  subjectId     String   @map("subject_id")
+  currentTopic  String?  @map("current_topic")
+  completedTopics String[] @map("completed_topics")
+  nextTopics    String[] @map("next_topics")
+  masteryLevel  Int      @default(0) @map("mastery_level")
+  updatedAt     DateTime @default(now()) @map("updated_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  child   Child   @relation(fields: [childId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, subjectId])
+  @@map("curriculum_paths")
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  childId   String?  @map("child_id")
+  worksheetId String? @map("worksheet_id")
+  eventType String   @map("event_type")
+  eventData Json?    @default("{}") @map("event_data")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  child     Child?    @relation(fields: [childId], references: [id], onDelete: SetNull)
+  worksheet Worksheet? @relation(fields: [worksheetId], references: [id], onDelete: SetNull)
+
+  @@map("analytics_events")
+}
+
+model DailyStat {
+  id                 String   @id @default(uuid())
+  date               DateTime @db.Date
+  activeUsers        Int      @default(0) @map("active_users")
+  newSignups         Int      @default(0) @map("new_signups")
+  worksheetsCompleted Int     @default(0) @map("worksheets_completed")
+  quizzesTaken       Int      @default(0) @map("quizzes_taken")
+  aiGenerations      Int      @default(0) @map("ai_generations")
+  revenueCents       Int      @default(0) @map("revenue_cents")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@unique([date])
+  @@map("daily_stats")
+}
+
+model SubscriptionStat {
+  id                  String   @id @default(uuid())
+  month               DateTime @db.Date
+  totalSubscribers    Int      @default(0) @map("total_subscribers")
+  newSubscribers      Int      @default(0) @map("new_subscribers")
+  churnedSubscribers  Int      @default(0) @map("churned_subscribers")
+  mrrCents            Int      @default(0) @map("mrr_cents")
+  trialConversions    Int      @default(0) @map("trial_conversions")
+  planDistribution    Json?    @default("{}") @map("plan_distribution")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@unique([month])
+  @@map("subscription_stats")
+}

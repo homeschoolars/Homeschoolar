@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Upload, Copy, Check, Loader2, Smartphone, Building2, Wallet } from "lucide-react"
 import { PKR_PAYMENT_METHODS, type PaymentMethod, formatPricePKR } from "@/lib/subscription-plans"
-import { createBrowserClient } from "@/lib/supabase/client"
+import { apiFetch } from "@/lib/api-client"
 
 interface PKRCheckoutProps {
   planId: string
@@ -51,46 +51,31 @@ export function PKRCheckout({ planId, billingPeriod, pricePKR, trigger }: PKRChe
 
     setIsSubmitting(true)
     try {
-      const supabase = createBrowserClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
-        alert("Please log in to continue")
-        return
-      }
-
-      // Upload screenshot to storage
-      const fileName = `${user.id}/${Date.now()}-${screenshot.name}`
-      const { error: uploadError } = await supabase.storage.from("payment-receipts").upload(fileName, screenshot)
-
-      if (uploadError) {
-        console.error("Upload error:", uploadError)
-        // Continue anyway - we'll store the reference
-      }
-
-      // Create pending payment record
-      const { error: paymentError } = await supabase.from("payments").insert({
-        user_id: user.id,
-        amount: pricePKR,
-        currency: "PKR",
-        payment_method: selectedMethod,
-        status: "pending",
-        metadata: {
-          plan_id: planId,
-          billing_period: billingPeriod,
-          transaction_id: transactionId,
-          sender_number: senderNumber,
-          notes: notes,
-          receipt_file: fileName,
-        },
+      const receiptBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = () => reject(new Error("Failed to read receipt file"))
+        reader.readAsDataURL(screenshot)
       })
 
-      if (paymentError) {
-        console.error("Payment error:", paymentError)
-        alert("Failed to submit payment. Please try again.")
-        return
+      const response = await apiFetch("/api/payments/pkr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId,
+          billingPeriod,
+          amount: pricePKR,
+          paymentMethod: selectedMethod,
+          transactionId,
+          senderNumber,
+          notes,
+          receiptName: screenshot.name,
+          receiptBase64,
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to submit payment")
       }
 
       setSubmitted(true)

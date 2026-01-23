@@ -1,60 +1,41 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Bell, Check, Info, AlertTriangle, Trophy, CheckCheck } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import type { Notification } from "@/lib/types"
+import { apiFetch } from "@/lib/api-client"
 
 export function NotificationCenter() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()
 
   const unreadCount = notifications.filter((n) => !n.is_read).length
 
   useEffect(() => {
     fetchNotifications()
-
-    // Subscribe to real-time notifications
-    const channel = supabase
-      .channel("notifications")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-        },
-        (payload) => {
-          setNotifications((prev) => [payload.new as Notification, ...prev])
-        },
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
   }, [])
 
   const fetchNotifications = async () => {
     setIsLoading(true)
-    const { data } = await supabase
-      .from("notifications")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(20)
-
-    if (data) setNotifications(data)
+    const response = await apiFetch("/api/notifications")
+    const data = await response.json()
+    if (response.ok && data.notifications) {
+      setNotifications(data.notifications)
+    }
     setIsLoading(false)
   }
 
   const markAsRead = async (id: string) => {
-    await supabase.from("notifications").update({ is_read: true }).eq("id", id)
+    await apiFetch("/api/notifications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [id] }),
+    })
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)))
   }
 
@@ -62,7 +43,11 @@ export function NotificationCenter() {
     const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id)
     if (unreadIds.length === 0) return
 
-    await supabase.from("notifications").update({ is_read: true }).in("id", unreadIds)
+    await apiFetch("/api/notifications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: unreadIds }),
+    })
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
   }
 

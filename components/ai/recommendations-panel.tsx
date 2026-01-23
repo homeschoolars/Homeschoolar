@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Lightbulb, BookOpen, Target, Sparkles, X, RefreshCw, Loader2 } from "lucide-react"
 import type { AIRecommendation } from "@/lib/types"
+import { apiFetch } from "@/lib/api-client"
 
 interface RecommendationsPanelProps {
   childId: string
@@ -38,7 +39,7 @@ export function RecommendationsPanel({ childId, childName }: RecommendationsPane
   const loadRecommendations = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch("/api/ai/recommend-curriculum", {
+      const response = await apiFetch("/api/ai/recommend-curriculum", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ child_id: childId }),

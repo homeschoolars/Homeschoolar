@@ -30,6 +30,7 @@ import {
 import type { Child, Subject, WorksheetAssignment, Progress as ProgressType, SurpriseQuiz } from "@/lib/types"
 import { SurpriseQuizModal } from "@/components/ai/surprise-quiz-modal"
 import { InitialAssessment } from "@/components/ai/initial-assessment"
+import { apiFetch } from "@/lib/api-client"
 
 const subjectIcons: Record<string, React.ReactNode> = {
   "book-open": <BookOpen className="w-6 h-6" />,
@@ -58,7 +59,7 @@ export default function StudentDashboard() {
 
   const loadData = async (childId: string) => {
     try {
-      const response = await fetch("/api/student/dashboard", {
+      const response = await apiFetch("/api/student/dashboard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ childId }),
@@ -138,7 +139,7 @@ export default function StudentDashboard() {
     setShowQuizPrompt(false)
 
     try {
-      const response = await fetch("/api/ai/generate-quiz", {
+      const response = await apiFetch("/api/ai/generate-quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

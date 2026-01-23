@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { createBrowserClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -11,13 +10,13 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Users, FileText, Settings, LogOut, Check, X, Eye, UserPlus, Sparkles, Bell, Banknote } from "lucide-react"
-import type { User } from "@supabase/supabase-js"
 import type { Profile, Worksheet, Subject } from "@/lib/types"
 import { WorksheetGenerator } from "@/components/ai/worksheet-generator"
 import { PKRPaymentVerification } from "@/components/admin/pkr-payment-verification"
+import { signOut } from "next-auth/react"
+import { apiFetch } from "@/lib/api-client"
 
 interface AdminDashboardClientProps {
-  user: User
   stats: {
     usersCount: number
     childrenCount: number
@@ -29,7 +28,6 @@ interface AdminDashboardClientProps {
 }
 
 export default function AdminDashboardClient({
-  user,
   stats,
   pendingWorksheets: initialPending,
   recentUsers,
@@ -37,26 +35,26 @@ export default function AdminDashboardClient({
 }: AdminDashboardClientProps) {
   const [pendingWorksheets, setPendingWorksheets] = useState(initialPending)
   const router = useRouter()
-  const supabase = createBrowserClient()
-
   const handleApproveWorksheet = async (worksheetId: string) => {
-    const { error } = await supabase.from("worksheets").update({ is_approved: true }).eq("id", worksheetId)
-
-    if (!error) {
+    const response = await apiFetch(`/api/admin/worksheets/${worksheetId}`, {
+      method: "PATCH",
+    })
+    if (response.ok) {
       setPendingWorksheets(pendingWorksheets.filter((w) => w.id !== worksheetId))
     }
   }
 
   const handleRejectWorksheet = async (worksheetId: string) => {
-    const { error } = await supabase.from("worksheets").delete().eq("id", worksheetId)
-
-    if (!error) {
+    const response = await apiFetch(`/api/admin/worksheets/${worksheetId}`, {
+      method: "DELETE",
+    })
+    if (response.ok) {
       setPendingWorksheets(pendingWorksheets.filter((w) => w.id !== worksheetId))
     }
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    await signOut({ callbackUrl: "/login" })
     router.push("/login")
   }
 

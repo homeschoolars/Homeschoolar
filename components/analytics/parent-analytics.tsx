@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -23,6 +22,7 @@ import {
 } from "recharts"
 import { Trophy, Target, TrendingUp, Clock, Star } from "lucide-react"
 import type { Child, Subject } from "@/lib/types"
+import { apiFetch } from "@/lib/api-client"
 
 interface ParentAnalyticsProps {
   children: Child[]
@@ -32,38 +32,17 @@ interface ParentAnalyticsProps {
 export function ParentAnalytics({ children, subjects }: ParentAnalyticsProps) {
   const [selectedChildId, setSelectedChildId] = useState(children[0]?.id || "")
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()
+  const [summary, setSummary] = useState({
+    averageScore: 0,
+    worksheetsCompleted: 0,
+    improvementPercent: 0,
+    weeklyActivityCount: 0,
+  })
+  const [progressData, setProgressData] = useState<Array<{ week: string; score: number }>>([])
+  const [subjectScores, setSubjectScores] = useState<Array<{ subject: string; score: number; fullMark: number }>>([])
+  const [weeklyActivity, setWeeklyActivity] = useState<Array<{ day: string; worksheets: number; quizzes: number }>>([])
 
   const selectedChild = children.find((c) => c.id === selectedChildId)
-
-  // Mock data - in production, fetch from database
-  const progressData = [
-    { week: "Week 1", score: 65 },
-    { week: "Week 2", score: 72 },
-    { week: "Week 3", score: 68 },
-    { week: "Week 4", score: 78 },
-    { week: "Week 5", score: 82 },
-    { week: "Week 6", score: 85 },
-  ]
-
-  const subjectScores = [
-    { subject: "English", score: 85, fullMark: 100 },
-    { subject: "Math", score: 72, fullMark: 100 },
-    { subject: "Science", score: 78, fullMark: 100 },
-    { subject: "Social Studies", score: 68, fullMark: 100 },
-    { subject: "Islamic Studies", score: 90, fullMark: 100 },
-    { subject: "Life Skills", score: 82, fullMark: 100 },
-  ]
-
-  const weeklyActivity = [
-    { day: "Mon", worksheets: 3, quizzes: 1 },
-    { day: "Tue", worksheets: 2, quizzes: 2 },
-    { day: "Wed", worksheets: 4, quizzes: 1 },
-    { day: "Thu", worksheets: 2, quizzes: 0 },
-    { day: "Fri", worksheets: 3, quizzes: 2 },
-    { day: "Sat", worksheets: 1, quizzes: 0 },
-    { day: "Sun", worksheets: 0, quizzes: 0 },
-  ]
 
   const achievements = [
     { name: "First Worksheet", earned: true, icon: "📝" },
@@ -81,7 +60,27 @@ export function ParentAnalytics({ children, subjects }: ParentAnalyticsProps) {
 
   const fetchChildProgress = async () => {
     setIsLoading(true)
-    // Fetch actual progress data from database
+    const response = await apiFetch("/api/analytics/parent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ childId: selectedChildId }),
+    })
+    const data = (await response.json()) as {
+      summary: {
+        averageScore: number
+        worksheetsCompleted: number
+        improvementPercent: number
+        weeklyActivityCount: number
+      }
+      progressData: Array<{ week: string; score: number }>
+      subjectScores: Array<{ subject: string; score: number; fullMark: number }>
+      weeklyActivity: Array<{ day: string; worksheets: number; quizzes: number }>
+    }
+
+    setSummary(data.summary)
+    setProgressData(data.progressData || [])
+    setSubjectScores(data.subjectScores || [])
+    setWeeklyActivity(data.weeklyActivity || [])
     setIsLoading(false)
   }
 
@@ -123,7 +122,7 @@ export function ParentAnalytics({ children, subjects }: ParentAnalyticsProps) {
                 <Trophy className="w-5 h-5 text-teal-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-teal-700">78%</p>
+                <p className="text-2xl font-bold text-teal-700">{summary.averageScore}%</p>
                 <p className="text-xs text-gray-500">Average Score</p>
               </div>
             </div>
@@ -137,7 +136,7 @@ export function ParentAnalytics({ children, subjects }: ParentAnalyticsProps) {
                 <Target className="w-5 h-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-purple-700">24</p>
+                <p className="text-2xl font-bold text-purple-700">{summary.worksheetsCompleted}</p>
                 <p className="text-xs text-gray-500">Worksheets Done</p>
               </div>
             </div>
@@ -151,7 +150,7 @@ export function ParentAnalytics({ children, subjects }: ParentAnalyticsProps) {
                 <TrendingUp className="w-5 h-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-amber-700">+12%</p>
+                <p className="text-2xl font-bold text-amber-700">+{summary.improvementPercent}%</p>
                 <p className="text-xs text-gray-500">Improvement</p>
               </div>
             </div>
@@ -165,7 +164,7 @@ export function ParentAnalytics({ children, subjects }: ParentAnalyticsProps) {
                 <Clock className="w-5 h-5 text-pink-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-pink-700">5.2h</p>
+                <p className="text-2xl font-bold text-pink-700">{summary.weeklyActivityCount}</p>
                 <p className="text-xs text-gray-500">This Week</p>
               </div>
             </div>

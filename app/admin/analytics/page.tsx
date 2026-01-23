@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { AdminAnalytics } from "@/components/analytics/admin-analytics"
 import { Button } from "@/components/ui/button"
@@ -7,19 +7,13 @@ import Image from "next/image"
 import { ArrowLeft, Bell, Settings } from "lucide-react"
 
 export default async function AdminAnalyticsPage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+  const session = await auth()
+  const user = session?.user
   if (!user) {
     redirect("/login")
   }
 
-  // Verify admin role
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
-
-  if (profile?.role !== "admin") {
+  if (user.role !== "admin") {
     redirect("/parent")
   }
 

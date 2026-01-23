@@ -8,13 +8,15 @@ import { Pricing } from "@/components/landing/pricing"
 import { FAQ } from "@/components/landing/faq"
 import { Footer } from "@/components/landing/footer"
 import { FloatingDecorations } from "@/components/landing/floating-decorations"
+import { AnimatedBackground } from "@/components/ui/animated-background"
 
 export default function HomePage() {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="relative flex min-h-screen flex-col overflow-hidden">
+      <AnimatedBackground className="opacity-80" />
       <FloatingDecorations />
       <Header />
-      <main className="flex-1">
+      <main className="relative z-10 flex-1">
         <Hero />
         <AgeSelector />
         <Features />

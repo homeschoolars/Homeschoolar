@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { ClipboardCheck, Loader2, ChevronRight, Trophy, Target, Lightbulb } from "lucide-react"
 import type { Subject, AgeGroup, Question, Answer } from "@/lib/types"
+import { apiFetch } from "@/lib/api-client"
 
 interface InitialAssessmentProps {
   childId: string
@@ -59,7 +60,7 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
     setSelectedAnswer("")
 
     try {
-      const response = await fetch("/api/ai/initial-assessment", {
+      const response = await apiFetch("/api/ai/initial-assessment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -100,7 +101,7 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/ai/complete-assessment", {
+      const response = await apiFetch("/api/ai/complete-assessment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

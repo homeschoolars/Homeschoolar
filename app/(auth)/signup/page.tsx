@@ -2,7 +2,6 @@
 
 import type React from "react"
 
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,6 +11,8 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Sparkles, Star } from "lucide-react"
+import { signIn } from "next-auth/react"
+import { apiFetch } from "@/lib/api-client"
 
 export default function SignupPage() {
   const [email, setEmail] = useState("")
@@ -24,7 +25,6 @@ export default function SignupPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    const supabase = createClient()
     setIsLoading(true)
     setError(null)
 
@@ -41,18 +41,21 @@ export default function SignupPage() {
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const response = await apiFetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, fullName }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || "Registration failed")
+      }
+
+      await signIn("credentials", {
         email,
         password,
-        options: {
-          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/parent`,
-          data: {
-            full_name: fullName,
-            role: "parent",
-          },
-        },
+        redirect: false,
       })
-      if (error) throw error
       router.push("/signup/success")
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
@@ -78,7 +81,7 @@ export default function SignupPage() {
               alt="HomeSchoolar Logo"
               width={80}
               height={80}
-              className="group-hover:scale-105 transition-transform"
+              className="group-hover:scale-105 transition-transform animate-float"
             />
             <span className="text-2xl font-bold bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 bg-clip-text text-transparent">
               HomeSchoolar
@@ -86,7 +89,7 @@ export default function SignupPage() {
           </Link>
         </div>
 
-        <Card className="border-2 border-purple-200 shadow-xl bg-white/80 backdrop-blur">
+        <Card className="border-2 border-purple-200 shadow-xl bg-white/80 backdrop-blur animate-pop-in">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
               Create Your Account

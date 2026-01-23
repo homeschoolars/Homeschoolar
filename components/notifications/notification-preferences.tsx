@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Mail, Bell, Loader2 } from "lucide-react"
+import { apiFetch } from "@/lib/api-client"
 
 interface Preferences {
   email_quiz_results: boolean
@@ -36,22 +36,16 @@ export function NotificationPreferences() {
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const supabase = createClient()
 
   useEffect(() => {
     fetchPreferences()
   }, [])
 
   const fetchPreferences = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { data } = await supabase.from("notification_preferences").select("*").eq("user_id", user.id).single()
-
-    if (data) {
-      setPreferences(data)
+    const response = await apiFetch("/api/notifications/preferences")
+    const data = await response.json()
+    if (response.ok && data.preferences) {
+      setPreferences(data.preferences)
     }
     setIsLoading(false)
   }
@@ -61,15 +55,10 @@ export function NotificationPreferences() {
     setPreferences((prev) => ({ ...prev, [key]: newValue }))
 
     setIsSaving(true)
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return
-
-    await supabase.from("notification_preferences").upsert({
-      user_id: user.id,
-      [key]: newValue,
-      updated_at: new Date().toISOString(),
+    await apiFetch("/api/notifications/preferences", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, value: newValue }),
     })
     setIsSaving(false)
   }

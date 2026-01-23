@@ -14,25 +14,8 @@ export const metadata: Metadata = {
     "Personalized worksheets, progress tracking, and curriculum management for homeschooled children ages 4-13. Powered by AI.",
   keywords: ["homeschool", "education", "AI learning", "worksheets", "curriculum", "children education"],
   icons: {
-    icon: [
-      {
-        url: "/logo.png",
-        sizes: "any",
-      },
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
-    apple: "/apple-icon.png",
+    icon: [{ url: "/logo.png", sizes: "any" }],
+    apple: "/logo.png",
     shortcut: "/logo.png",
   },
 }

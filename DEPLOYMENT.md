@@ -4,11 +4,10 @@ This guide will help you deploy the HomeSchoolar application to production.
 
 ## Prerequisites
 
-1. **Supabase Account** - For database and authentication
+1. **PostgreSQL Database** - Hosted on Supabase, Neon, RDS, or similar
 2. **Google Cloud Account** - For Gemini AI API key
 3. **Stripe Account** - For payment processing
-4. **Vercel Account** (recommended) or other hosting provider for Next.js
-5. **Backend Hosting** - Railway, Render, Fly.io, or similar for FastAPI backend
+4. **Hosting Provider** - Vercel, Cloud Run, or similar for Next.js
 
 ## Step 1: Environment Variables
 
@@ -20,10 +19,11 @@ cp env.example .env.local
 
 ### Required Environment Variables
 
-#### Supabase
-- `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key (public)
-- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (keep secret!)
+#### Database
+- `DATABASE_URL` - PostgreSQL connection string
+#### Auth.js
+- `AUTH_SECRET` - Auth.js secret
+- `AUTH_URL` - Public URL of your deployment
 
 #### AI (Google Gemini)
 - `GOOGLE_GENERATIVE_AI_API_KEY` - Your Google Generative AI API key
@@ -34,7 +34,7 @@ cp env.example .env.local
 - `STRIPE_WEBHOOK_SECRET` - Webhook signing secret (starts with `whsec_`)
 
 #### Backend API
-- `BACKEND_URL` - Your production backend URL (e.g., `https://api.homeschoolar.com`)
+- `BACKEND_URL` - Optional external backend URL if you run a separate API
 - `NEXT_PUBLIC_BACKEND_URL` - Same as above for client-side requests
 - `ALLOWED_ORIGINS` - Comma-separated list of allowed frontend origins
 
@@ -46,44 +46,15 @@ cp env.example .env.local
 
 1. **Run database migrations:**
    ```bash
-   # Execute SQL scripts in the scripts/ directory in order:
-   # 001_create_schema.sql
-   # 002_seed_subjects.sql (or your seed files)
-   # etc.
+   npx prisma migrate deploy
    ```
 
-2. **Verify database connection:**
+2. **Generate Prisma client:**
    ```bash
-   node scripts/verify_db.js
+   npx prisma generate
    ```
 
-## Step 3: Deploy Backend (FastAPI)
-
-### Option A: Railway
-1. Connect your GitHub repository
-2. Set root directory to `backend/`
-3. Set start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-4. Add environment variables:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `ALLOWED_ORIGINS` (comma-separated, e.g., `https://homeschoolar.vercel.app`)
-
-### Option B: Render
-1. Create new Web Service
-2. Connect repository
-3. Root directory: `backend/`
-4. Build command: `pip install -r requirements.txt`
-5. Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-6. Add environment variables as above
-
-### Option C: Fly.io
-```bash
-cd backend
-fly launch
-# Follow prompts and set environment variables
-```
-
-## Step 4: Deploy Frontend (Next.js)
+## Step 3: Deploy Next.js
 
 ### Vercel (Recommended)
 
@@ -129,7 +100,7 @@ npm start
    - `customer.subscription.deleted`
 5. Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET`
 
-## Step 6: Verify Deployment
+## Step 5: Verify Deployment
 
 ### Check Frontend
 - [ ] Homepage loads correctly
@@ -137,25 +108,20 @@ npm start
 - [ ] User authentication functions
 - [ ] Dashboard loads
 
-### Check Backend
-- [ ] Health endpoint works: `https://your-backend.com/health`
-- [ ] Supabase connection works: `https://your-backend.com/health/supabase`
-- [ ] CORS allows your frontend domain
-
 ### Check Features
 - [ ] AI worksheet generation works
 - [ ] Student dashboard loads
 - [ ] Payment flow works (test mode)
 - [ ] Database queries work
 
-## Step 7: Production Checklist
+## Step 6: Production Checklist
 
 - [ ] All environment variables set in production
 - [ ] Database migrations run on production database
 - [ ] Stripe webhooks configured with production URL
 - [ ] Google Gemini API key configured
 - [ ] CORS configured for production domain
-- [ ] Backend URL configured in frontend
+- [ ] Auth.js secret configured
 - [ ] Error logging/monitoring set up (e.g., Sentry)
 - [ ] Database backups enabled
 - [ ] SSL certificates configured (should be automatic with Vercel)
@@ -179,15 +145,14 @@ npm start
 - Verify Node.js version matches requirements (v18+)
 
 ### Database Connection Issues
-- Verify Supabase credentials are correct
-- Check that service role key has proper permissions
-- Ensure database tables exist (run migrations)
+- Verify `DATABASE_URL` is correct
+- Ensure migrations are applied
 
 ## Security Notes
 
 1. **Never commit `.env.local` or `.env` files**
 2. **Use different API keys for development and production**
-3. **Restrict `SUPABASE_SERVICE_ROLE_KEY` access - it bypasses RLS**
+3. **Never expose database credentials to the client**
 4. **Use environment variables in your hosting platform, not in code**
 5. **Enable 2FA on all service accounts**
 

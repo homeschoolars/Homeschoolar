@@ -1,54 +1,40 @@
-import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
+import { z } from "zod"
+import { findChildByLoginCode } from "@/services/student-service"
+import { serializeChild } from "@/lib/serializers"
 
 export async function POST(request: Request) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!supabaseUrl || !serviceRoleKey) {
-      return NextResponse.json({ error: "Supabase is not configured" }, { status: 503 })
-    }
-
-    // Use service role to bypass RLS for student login validation
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
-    const json = await request.json()
-    console.log("Received login request", json)
-    const { loginCode } = json
+    const body = z.object({ loginCode: z.string().min(1) }).parse(await request.json())
+    const loginCode = body.loginCode.toUpperCase().trim()
 
     if (!loginCode || typeof loginCode !== "string") {
       return NextResponse.json({ error: "Login code is required" }, { status: 400 })
     }
 
-    // Query children table using service role to bypass RLS
-    const { data: child, error } = await supabaseAdmin
-      .from("children")
-      .select("*")
-      .eq("login_code", loginCode.toUpperCase().trim())
-      .maybeSingle()
-
-    if (error) {
-      console.error("Database error:", error)
-      return NextResponse.json({ error: "Unable to verify code. Please try again." }, { status: 500 })
-    }
+    const child = await findChildByLoginCode(loginCode)
 
     if (!child) {
       return NextResponse.json({ error: "Invalid student code. Please check and try again." }, { status: 404 })
     }
 
+    const serialized = serializeChild(child)
+
     // Return child data (without sensitive parent info)
     return NextResponse.json({
       success: true,
       child: {
-        id: child.id,
-        name: child.name,
-        age_group: child.age_group,
-        current_level: child.current_level,
-        assessment_completed: child.assessment_completed,
-        login_code: child.login_code,
+        id: serialized.id,
+        name: serialized.name,
+        age_group: serialized.age_group,
+        current_level: serialized.current_level,
+        assessment_completed: serialized.assessment_completed,
+        login_code: serialized.login_code,
       },
     })
   } catch (error) {
     console.error("Student login error:", error)
-    return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 })
+    const message = error instanceof Error ? error.message : "An unexpected error occurred"
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

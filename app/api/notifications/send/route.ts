@@ -1,43 +1,48 @@
-import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { Resend } from "resend"
+import { prisma } from "@/lib/prisma"
+import { requireSession } from "@/lib/auth-helpers"
+import { z } from "zod"
 
 export async function POST(req: Request) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!supabaseUrl || !serviceRoleKey) {
-      return NextResponse.json({ error: "Supabase is not configured" }, { status: 503 })
+    const session = await requireSession()
+    const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
+    const body = z
+      .object({
+        userId: z.string(),
+        title: z.string(),
+        message: z.string(),
+        type: z.enum(["info", "success", "warning", "achievement"]).optional(),
+        sendEmail: z.boolean().optional(),
+        emailSubject: z.string().optional(),
+      })
+      .parse(await req.json())
+    const { userId, title, message, type = "info", sendEmail = false, emailSubject } = body
+    if (session.user.role !== "admin" && userId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const supabase = createClient(supabaseUrl, serviceRoleKey)
-    const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
-    const { userId, title, message, type = "info", sendEmail = false, emailSubject } = await req.json()
-
     // Create in-app notification
-    const { data: notification, error } = await supabase
-      .from("notifications")
-      .insert({
-        user_id: userId,
+    const notification = await prisma.notification.create({
+      data: {
+        userId,
         title,
         message,
         type,
-      })
-      .select()
-      .single()
-
-    if (error) throw error
+      },
+    })
 
     // Send email if requested and Resend is configured
     if (sendEmail && resend) {
       // Get user email
-      const { data: profile } = await supabase.from("profiles").select("email, full_name").eq("id", userId).single()
+      const profile = await prisma.user.findUnique({ where: { id: userId } })
 
       // Check user preferences
-      const { data: prefs } = await supabase.from("notification_preferences").select("*").eq("user_id", userId).single()
+      const prefs = await prisma.notificationPreference.findUnique({ where: { userId } })
 
       // Only send if user has email notifications enabled
-      const shouldSendEmail = prefs?.email_quiz_results ?? true
+      const shouldSendEmail = prefs?.emailQuizResults ?? true
 
       if (profile?.email && shouldSendEmail) {
         await resend.emails.send({

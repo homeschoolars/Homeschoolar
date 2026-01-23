@@ -2,7 +2,6 @@
 
 import type React from "react"
 
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,6 +12,8 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Sparkles, Star, Users, GraduationCap } from "lucide-react"
+import { signIn, getSession } from "next-auth/react"
+import { apiFetch } from "@/lib/api-client"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -24,19 +25,21 @@ export default function LoginPage() {
 
   const handleParentLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    const supabase = createClient()
     setIsLoading(true)
     setError(null)
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const result = await signIn("credentials", {
         email,
         password,
+        redirect: false,
       })
-      if (error) throw error
+      if (!result || result.error) {
+        throw new Error(result?.error || "Invalid credentials")
+      }
 
-      // Redirect based on role
-      const role = data.user?.user_metadata?.role || "parent"
+      const session = await getSession()
+      const role = session?.user?.role || "parent"
       router.push(role === "admin" ? "/admin" : "/parent")
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
@@ -51,7 +54,7 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      const response = await fetch("/api/auth/student-login", {
+      const response = await apiFetch("/api/auth/student-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ loginCode: studentCode.toUpperCase().trim() }),
@@ -101,7 +104,7 @@ export default function LoginPage() {
               alt="HomeSchoolar Logo"
               width={80}
               height={80}
-              className="group-hover:scale-105 transition-transform"
+              className="group-hover:scale-105 transition-transform animate-float"
             />
             <span className="text-2xl font-bold bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 bg-clip-text text-transparent">
               HomeSchoolar
@@ -109,7 +112,7 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        <Card className="border-2 border-purple-200 shadow-xl bg-white/80 backdrop-blur">
+        <Card className="border-2 border-purple-200 shadow-xl bg-white/80 backdrop-blur animate-pop-in">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
               Welcome Back!

@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/server"
+import { auth } from "@/auth"
+import { prisma } from "@/lib/prisma"
+import { serializeSubscription } from "@/lib/serializers"
 import { redirect } from "next/navigation"
 import { PricingSection } from "@/components/payments/pricing-section"
 import { Button } from "@/components/ui/button"
@@ -9,16 +11,15 @@ import Image from "next/image"
 import { ArrowLeft, CreditCard, Calendar, CheckCircle } from "lucide-react"
 
 export default async function SubscriptionPage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const session = await auth()
+  const user = session?.user
 
   if (!user) {
     redirect("/login")
   }
 
-  const { data: subscription } = await supabase.from("subscriptions").select("*").eq("user_id", user.id).single()
+  const dbSubscription = await prisma.subscription.findFirst({ where: { userId: user.id } })
+  const subscription = dbSubscription ? serializeSubscription(dbSubscription) : null
 
   const currentPlan = subscription?.plan || "none"
   const isActive = subscription?.status === "active"

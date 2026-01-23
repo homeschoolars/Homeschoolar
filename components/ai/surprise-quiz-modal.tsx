@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Sparkles, Clock, Star, Trophy, Loader2, PartyPopper } from "lucide-react"
 import type { SurpriseQuiz, QuizQuestion, Answer } from "@/lib/types"
 import confetti from "canvas-confetti"
+import { apiFetch } from "@/lib/api-client"
 
 interface SurpriseQuizModalProps {
   quiz: SurpriseQuiz
@@ -64,7 +65,7 @@ export function SurpriseQuizModal({ quiz, ageGroup, onComplete, onClose }: Surpr
     setIsSubmitting(true)
 
     try {
-      const response = await fetch("/api/ai/grade-quiz", {
+      const response = await apiFetch("/api/ai/grade-quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

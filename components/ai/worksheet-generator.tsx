@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider"
 import { Sparkles, Loader2, Check, BookOpen } from "lucide-react"
 import type { Subject, AgeGroup, Difficulty, Worksheet } from "@/lib/types"
+import { apiFetch } from "@/lib/api-client"
 
 interface WorksheetGeneratorProps {
   subjects: Subject[]
@@ -44,7 +45,7 @@ export function WorksheetGenerator({
     try {
       const subject = subjects.find((s) => s.id === selectedSubject)
 
-      const response = await fetch("/api/ai/generate-worksheet", {
+      const response = await apiFetch("/api/ai/generate-worksheet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

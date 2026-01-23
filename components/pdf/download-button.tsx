@@ -5,6 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Download, Loader2 } from "lucide-react"
+import { apiFetch } from "@/lib/api-client"
 
 interface DownloadButtonProps {
   pdfType: "worksheet" | "answer-key" | "curriculum" | "assessment" | "recommendations"
@@ -30,7 +31,7 @@ export function DownloadButton({
   const handleDownload = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch(`/api/pdf/${pdfType}`, {
+      const response = await apiFetch(`/api/pdf/${pdfType}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -37,16 +36,16 @@ import {
   FileText,
   BarChart3,
 } from "lucide-react"
-import type { User } from "@supabase/supabase-js"
 import type { Profile, Child, Subject, Subscription, AgeGroup } from "@/lib/types"
 import { WorksheetGenerator } from "@/components/ai/worksheet-generator"
 import { RecommendationsPanel } from "@/components/ai/recommendations-panel"
 import { CurriculumPDFActions, AssessmentPDFActions } from "@/components/pdf/pdf-actions"
 import { NotificationCenter } from "@/components/notifications/notification-center"
 import { ParentAnalytics } from "@/components/analytics/parent-analytics"
+import { signOut } from "next-auth/react"
+import { apiFetch } from "@/lib/api-client"
 
 interface ParentDashboardClientProps {
-  user: User
   profile: Profile | null
   children: Child[]
   subjects: Subject[]
@@ -54,7 +53,6 @@ interface ParentDashboardClientProps {
 }
 
 export default function ParentDashboardClient({
-  user,
   profile,
   children: initialChildren,
   subjects,
@@ -70,41 +68,27 @@ export default function ParentDashboardClient({
     initialChildren.length > 0 ? initialChildren[0].id : null,
   )
   const router = useRouter()
-  const supabase = createClient()
 
   const selectedChild = children.find((c) => c.id === selectedChildId)
   const curriculumAgeGroup = selectedChild?.age_group ?? "6-7"
-
-  const generateLoginCode = () => {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    let code = ""
-    for (let i = 0; i < 6; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length))
-    }
-    return code
-  }
 
   const handleAddChild = async () => {
     if (!newChildName.trim()) return
 
     setIsLoading(true)
     try {
-      const loginCode = generateLoginCode()
-      const { data, error } = await supabase
-        .from("children")
-        .insert({
-          parent_id: user.id,
-          name: newChildName,
-          age_group: newChildAge,
-          login_code: loginCode,
-        })
-        .select()
-        .single()
+      const response = await apiFetch("/api/children", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newChildName, age_group: newChildAge }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to add child")
+      }
 
-      if (error) throw error
-
-      setChildren([...children, data])
-      if (!selectedChildId) setSelectedChildId(data.id)
+      setChildren([...children, data.child])
+      if (!selectedChildId) setSelectedChildId(data.child.id)
       setNewChildName("")
       setIsAddingChild(false)
     } catch (error) {
@@ -121,7 +105,7 @@ export default function ParentDashboardClient({
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    await signOut({ callbackUrl: "/login" })
     router.push("/login")
   }
 

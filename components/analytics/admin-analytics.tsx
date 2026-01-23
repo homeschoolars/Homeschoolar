@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -21,6 +20,7 @@ import {
   ResponsiveContainer,
 } from "recharts"
 import { Users, DollarSign, FileText, TrendingUp, Sparkles, BookOpen } from "lucide-react"
+import { apiFetch } from "@/lib/api-client"
 
 const COLORS = ["#14b8a6", "#8b5cf6", "#f59e0b", "#ec4899", "#3b82f6"]
 
@@ -31,6 +31,15 @@ interface Stats {
   worksheetsGenerated: number
   quizzesTaken: number
   avgCompletionRate: number
+}
+
+interface AdminAnalyticsResponse {
+  stats: Stats
+  userGrowthData: Array<{ date: string; users: number; subscribers: number }>
+  revenueData: Array<{ date: string; revenue: number }>
+  planDistribution: Array<{ name: string; value: number }>
+  subjectEngagement: Array<{ subject: string; started: number; completed: number }>
+  aiUsageData: Array<{ date: string; worksheets: number; quizzes: number; recommendations: number }>
 }
 
 export function AdminAnalytics() {
@@ -44,50 +53,11 @@ export function AdminAnalytics() {
   })
   const [timeRange, setTimeRange] = useState("30d")
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()
-
-  // Mock data for charts - in production, fetch from database
-  const userGrowthData = [
-    { date: "Jan", users: 120, subscribers: 45 },
-    { date: "Feb", users: 180, subscribers: 72 },
-    { date: "Mar", users: 250, subscribers: 98 },
-    { date: "Apr", users: 340, subscribers: 145 },
-    { date: "May", users: 420, subscribers: 189 },
-    { date: "Jun", users: 520, subscribers: 234 },
-  ]
-
-  const revenueData = [
-    { date: "Jan", revenue: 2400 },
-    { date: "Feb", revenue: 3800 },
-    { date: "Mar", revenue: 5200 },
-    { date: "Apr", revenue: 7600 },
-    { date: "May", revenue: 9800 },
-    { date: "Jun", revenue: 12400 },
-  ]
-
-  const planDistribution = [
-    { name: "Trial", value: 35, color: "#f59e0b" },
-    { name: "Monthly", value: 45, color: "#14b8a6" },
-    { name: "Yearly", value: 20, color: "#8b5cf6" },
-  ]
-
-  const subjectEngagement = [
-    { subject: "English", completed: 450, started: 520 },
-    { subject: "Math", completed: 380, started: 450 },
-    { subject: "Science", completed: 320, started: 400 },
-    { subject: "Social Studies", completed: 280, started: 350 },
-    { subject: "Islamic Studies", completed: 420, started: 480 },
-  ]
-
-  const aiUsageData = [
-    { date: "Mon", worksheets: 45, quizzes: 23, recommendations: 67 },
-    { date: "Tue", worksheets: 52, quizzes: 31, recommendations: 78 },
-    { date: "Wed", worksheets: 48, quizzes: 28, recommendations: 72 },
-    { date: "Thu", worksheets: 61, quizzes: 35, recommendations: 89 },
-    { date: "Fri", worksheets: 55, quizzes: 29, recommendations: 82 },
-    { date: "Sat", worksheets: 38, quizzes: 18, recommendations: 54 },
-    { date: "Sun", worksheets: 42, quizzes: 21, recommendations: 61 },
-  ]
+  const [userGrowthData, setUserGrowthData] = useState<AdminAnalyticsResponse["userGrowthData"]>([])
+  const [revenueData, setRevenueData] = useState<AdminAnalyticsResponse["revenueData"]>([])
+  const [planDistribution, setPlanDistribution] = useState<AdminAnalyticsResponse["planDistribution"]>([])
+  const [subjectEngagement, setSubjectEngagement] = useState<AdminAnalyticsResponse["subjectEngagement"]>([])
+  const [aiUsageData, setAiUsageData] = useState<AdminAnalyticsResponse["aiUsageData"]>([])
 
   useEffect(() => {
     fetchStats()
@@ -96,21 +66,20 @@ export function AdminAnalytics() {
   const fetchStats = async () => {
     setIsLoading(true)
 
-    // Fetch actual counts from database
-    const [{ count: usersCount }, { count: subscribersCount }, { count: worksheetsCount }] = await Promise.all([
-      supabase.from("profiles").select("*", { count: "exact", head: true }),
-      supabase.from("subscriptions").select("*", { count: "exact", head: true }).eq("status", "active"),
-      supabase.from("worksheets").select("*", { count: "exact", head: true }),
-    ])
+    const response = await apiFetch(`/api/admin/analytics?range=${timeRange}`)
+    const data = (await response.json()) as AdminAnalyticsResponse
 
-    setStats({
-      totalUsers: usersCount || 0,
-      activeSubscribers: subscribersCount || 0,
-      totalRevenue: 12400, // Would come from payments table
-      worksheetsGenerated: worksheetsCount || 0,
-      quizzesTaken: 156,
-      avgCompletionRate: 78,
-    })
+    setStats(data.stats)
+    setUserGrowthData(data.userGrowthData || [])
+    setRevenueData(data.revenueData || [])
+    setPlanDistribution(
+      (data.planDistribution || []).map((entry, index) => ({
+        ...entry,
+        color: COLORS[index % COLORS.length],
+      })),
+    )
+    setSubjectEngagement(data.subjectEngagement || [])
+    setAiUsageData(data.aiUsageData || [])
 
     setIsLoading(false)
   }
@@ -271,8 +240,8 @@ export function AdminAnalytics() {
                         dataKey="value"
                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       >
-                        {planDistribution.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        {planDistribution.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip />

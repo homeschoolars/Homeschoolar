@@ -345,3 +345,132 @@
 .bg-gradient-fun {
   background: linear-gradient(135deg, oklch(0.97 0.03 280) 0%, oklch(0.98 0.02 200) 50%, oklch(0.97 0.03 145) 100%);
 }
+
+/* Interactive animated background */
+@keyframes bg-pan {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-2%, -1%, 0) scale(1.03);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes blob-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -18px, 0);
+  }
+}
+
+@keyframes sparkle-drift {
+  0% {
+    opacity: 0.2;
+    transform: translate3d(0, 0, 0) scale(0.8);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translate3d(12px, -18px, 0) scale(1.05);
+  }
+  100% {
+    opacity: 0.2;
+    transform: translate3d(-6px, 10px, 0) scale(0.9);
+  }
+}
+
+.animated-bg {
+  --bg-x: 50%;
+  --bg-y: 40%;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.animated-bg__gradient {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(60% 45% at var(--bg-x) var(--bg-y), rgba(255, 182, 239, 0.35), transparent 60%),
+    radial-gradient(55% 50% at 20% 85%, rgba(167, 243, 208, 0.35), transparent 60%),
+    radial-gradient(50% 45% at 80% 15%, rgba(191, 219, 254, 0.4), transparent 60%),
+    linear-gradient(135deg, rgba(255, 245, 252, 0.8), rgba(240, 249, 255, 0.85));
+  animation: bg-pan 18s ease-in-out infinite;
+  filter: blur(0px);
+}
+
+.animated-bg__glow {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(24px);
+  opacity: 0.6;
+  animation: blob-float 8s ease-in-out infinite;
+}
+
+.animated-bg__glow--one {
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(249, 168, 212, 0.45), transparent 60%);
+  top: 8%;
+  left: 6%;
+}
+
+.animated-bg__glow--two {
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(165, 180, 252, 0.45), transparent 60%);
+  bottom: 10%;
+  right: 8%;
+  animation-delay: 1.5s;
+}
+
+.animated-bg__glow--three {
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(110, 231, 183, 0.4), transparent 60%);
+  top: 40%;
+  right: 30%;
+  animation-delay: 0.7s;
+}
+
+.animated-bg__sparkle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
+  opacity: 0.5;
+  animation: sparkle-drift 6s ease-in-out infinite;
+}
+
+.animated-bg__sparkle--one {
+  top: 18%;
+  right: 20%;
+}
+
+.animated-bg__sparkle--two {
+  bottom: 20%;
+  left: 25%;
+  animation-delay: 1.2s;
+}
+
+.animated-bg__sparkle--three {
+  top: 55%;
+  left: 70%;
+  animation-delay: 2.1s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animated-bg__gradient,
+  .animated-bg__glow,
+  .animated-bg__sparkle {
+    animation: none !important;
+  }
+}

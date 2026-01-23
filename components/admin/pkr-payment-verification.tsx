@@ -16,8 +16,8 @@ import {
 } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Check, X, Eye, Loader2, Smartphone, Wallet, Building2 } from "lucide-react"
-import { createBrowserClient } from "@/lib/supabase/client"
 import { formatPricePKR } from "@/lib/subscription-plans"
+import { apiFetch } from "@/lib/api-client"
 
 interface PendingPayment {
   id: string
@@ -33,7 +33,8 @@ interface PendingPayment {
     transaction_id: string
     sender_number: string
     notes: string
-    receipt_file: string
+    receipt_name?: string
+    receipt_base64?: string
   }
   created_at: string
   status: string
@@ -52,47 +53,18 @@ export function PKRPaymentVerification() {
   }, [])
 
   const fetchPendingPayments = async () => {
-    const supabase = createBrowserClient()
-    const { data, error } = await supabase
-      .from("payments")
-      .select(`
-        id,
-        user_id,
-        amount,
-        currency,
-        payment_method,
-        metadata,
-        created_at,
-        status,
-        profiles!inner(full_name, email)
-      `)
-      .eq("currency", "PKR")
-      .eq("status", "pending")
-      .order("created_at", { ascending: false })
-
-    if (!error && data) {
-      const formattedData = data.map((p: any) => ({
-        ...p,
-        full_name: p.profiles.full_name,
-        email: p.profiles.email,
-      }))
-      setPayments(formattedData)
+    const response = await apiFetch("/api/admin/payments/pkr")
+    const data = await response.json()
+    if (response.ok && data.payments) {
+      setPayments(data.payments)
     }
     setLoading(false)
   }
 
   const viewReceipt = async (payment: PendingPayment) => {
     setSelectedPayment(payment)
-    const supabase = createBrowserClient()
-
-    if (payment.metadata?.receipt_file) {
-      const { data } = await supabase.storage
-        .from("payment-receipts")
-        .createSignedUrl(payment.metadata.receipt_file, 300) // 5 min expiry
-
-      if (data?.signedUrl) {
-        setReceiptUrl(data.signedUrl)
-      }
+    if (payment.metadata?.receipt_base64) {
+      setReceiptUrl(payment.metadata.receipt_base64)
     }
   }
 
@@ -100,20 +72,11 @@ export function PKRPaymentVerification() {
     if (!selectedPayment) return
     setProcessing(true)
 
-    const supabase = createBrowserClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    // Update payment status
-    await supabase
-      .from("payments")
-      .update({
-        status: "completed",
-        verified_at: new Date().toISOString(),
-        verified_by: user?.id,
-      })
-      .eq("id", selectedPayment.id)
+    await apiFetch("/api/admin/payments/pkr", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentId: selectedPayment.id, status: "succeeded" }),
+    })
 
     // Update user's subscription
     const endDate = new Date()
@@ -123,20 +86,26 @@ export function PKRPaymentVerification() {
       endDate.setMonth(endDate.getMonth() + 1)
     }
 
-    await supabase.from("subscriptions").upsert({
-      user_id: selectedPayment.user_id,
-      plan_id: selectedPayment.metadata.plan_id,
-      status: "active",
-      current_period_start: new Date().toISOString(),
-      current_period_end: endDate.toISOString(),
+    await apiFetch("/api/admin/subscriptions/pkr", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: selectedPayment.user_id,
+        planId: selectedPayment.metadata.plan_id,
+        periodEnd: endDate.toISOString(),
+      }),
     })
 
-    // Send notification
-    await supabase.from("notifications").insert({
-      user_id: selectedPayment.user_id,
-      type: "system",
-      title: "Payment Verified!",
-      message: `Your PKR payment of ${formatPricePKR(selectedPayment.amount)} has been verified. Your subscription is now active!`,
+    await apiFetch("/api/notifications/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: selectedPayment.user_id,
+        title: "Payment Verified!",
+        message: `Your PKR payment of ${formatPricePKR(selectedPayment.amount)} has been verified. Your subscription is now active!`,
+        type: "success",
+        sendEmail: true,
+      }),
     })
 
     setProcessing(false)
@@ -149,27 +118,22 @@ export function PKRPaymentVerification() {
     if (!selectedPayment || !rejectionReason) return
     setProcessing(true)
 
-    const supabase = createBrowserClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    await apiFetch("/api/admin/payments/pkr", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentId: selectedPayment.id, status: "failed", rejectionReason }),
+    })
 
-    await supabase
-      .from("payments")
-      .update({
-        status: "failed",
-        verified_at: new Date().toISOString(),
-        verified_by: user?.id,
-        rejection_reason: rejectionReason,
-      })
-      .eq("id", selectedPayment.id)
-
-    // Send notification
-    await supabase.from("notifications").insert({
-      user_id: selectedPayment.user_id,
-      type: "system",
-      title: "Payment Issue",
-      message: `Your PKR payment could not be verified. Reason: ${rejectionReason}. Please contact support or try again.`,
+    await apiFetch("/api/notifications/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: selectedPayment.user_id,
+        title: "Payment Issue",
+        message: `Your PKR payment could not be verified. Reason: ${rejectionReason}. Please contact support or try again.`,
+        type: "warning",
+        sendEmail: true,
+      }),
     })
 
     setProcessing(false)

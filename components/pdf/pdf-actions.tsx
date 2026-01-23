@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { FileDown, MoreVertical, Printer, Share2 } from "lucide-react"
 import type { Worksheet, Child, Subject, Progress, AIRecommendation, Assessment } from "@/lib/types"
+import { apiFetch } from "@/lib/api-client"
 
 interface WorksheetPDFActionsProps {
   worksheet: Worksheet
@@ -21,7 +22,7 @@ interface WorksheetPDFActionsProps {
 export function WorksheetPDFActions({ worksheet, childName }: WorksheetPDFActionsProps) {
   const handlePrint = async () => {
     // Generate PDF and open in new tab for printing
-    const response = await fetch("/api/pdf/worksheet", {
+    const response = await apiFetch("/api/pdf/worksheet", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ worksheet, childName }),
