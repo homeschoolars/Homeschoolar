@@ -187,6 +187,7 @@ export default function ParentDashboardClient({
   const trialEndsAt = subscription?.trial_ends_at
     ? new Date(subscription.trial_ends_at)
     : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+  const hasActiveSubscription = subscriptionStatus === "active" || subscription?.plan === "trial"
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -666,7 +667,20 @@ export default function ParentDashboardClient({
           </TabsContent>
 
           <TabsContent value="ai-tools" className="space-y-6">
-            {children.length > 0 ? (
+            {!hasActiveSubscription ? (
+              <Card className="border-dashed border-2">
+                <CardContent className="p-8 text-center">
+                  <Sparkles className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">Subscription required</h3>
+                  <p className="text-gray-500 mb-4">
+                    Activate your subscription to access AI tools and personalized content.
+                  </p>
+                  <Button asChild className="bg-teal-600 hover:bg-teal-700">
+                    <Link href="/parent/subscription">View Plans</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : children.length > 0 ? (
               <div className="grid gap-6 lg:grid-cols-2">
                 {/* Child Selector */}
                 <div className="lg:col-span-2">
@@ -719,41 +733,56 @@ export default function ParentDashboardClient({
           </TabsContent>
 
           <TabsContent value="documents" className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {/* Curriculum PDF */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="w-5 h-5 text-teal-600" />
-                    Curriculum Guide
-                  </CardTitle>
-                  <CardDescription>Download the full curriculum for any age group</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <CurriculumPDFActions
-                    subjects={subjects}
-                    ageGroup={curriculumAgeGroup}
-                    childName={selectedChild?.name}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Assessment Reports */}
-              {children.map((child) => (
-                <Card key={child.id}>
+            {hasActiveSubscription ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {/* Curriculum PDF */}
+                <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-purple-600" />
-                      {child.name}&apos;s Report
+                      <BookOpen className="w-5 h-5 text-teal-600" />
+                      Curriculum Guide
                     </CardTitle>
-                    <CardDescription>Assessment results and progress report</CardDescription>
+                    <CardDescription>Download the full curriculum for any age group</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <AssessmentPDFActions child={child} progress={[]} assessments={[]} subjects={subjects} />
+                    <CurriculumPDFActions
+                      subjects={subjects}
+                      ageGroup={curriculumAgeGroup}
+                      childName={selectedChild?.name}
+                    />
                   </CardContent>
                 </Card>
-              ))}
-            </div>
+
+                {/* Assessment Reports */}
+                {children.map((child) => (
+                  <Card key={child.id}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-purple-600" />
+                        {child.name}&apos;s Report
+                      </CardTitle>
+                      <CardDescription>Assessment results and progress report</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <AssessmentPDFActions child={child} progress={[]} assessments={[]} subjects={subjects} />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="border-dashed border-2">
+                <CardContent className="p-8 text-center">
+                  <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">Subscription required</h3>
+                  <p className="text-gray-500 mb-4">
+                    Documents and reports unlock after you activate a subscription.
+                  </p>
+                  <Button asChild className="bg-teal-600 hover:bg-teal-700">
+                    <Link href="/parent/subscription">View Plans</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </main>

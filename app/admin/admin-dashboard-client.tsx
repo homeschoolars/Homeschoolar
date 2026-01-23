@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -9,12 +9,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Users, FileText, Settings, LogOut, Check, X, Eye, UserPlus, Sparkles, Bell, Banknote } from "lucide-react"
+import {
+  Users,
+  FileText,
+  Settings,
+  LogOut,
+  Check,
+  X,
+  Eye,
+  UserPlus,
+  Sparkles,
+  Bell,
+  Banknote,
+  CreditCard,
+} from "lucide-react"
 import type { Profile, Worksheet, Subject } from "@/lib/types"
 import { WorksheetGenerator } from "@/components/ai/worksheet-generator"
 import { PKRPaymentVerification } from "@/components/admin/pkr-payment-verification"
 import { signOut } from "next-auth/react"
 import { apiFetch } from "@/lib/api-client"
+import { formatPrice, formatPricePKR } from "@/lib/subscription-plans"
 
 interface AdminDashboardClientProps {
   stats: {
@@ -27,6 +41,21 @@ interface AdminDashboardClientProps {
   subjects?: Subject[]
 }
 
+type AdminSubscription = {
+  id: string
+  user_id: string
+  user_email: string | null
+  user_name: string | null
+  child_count: number
+  plan_type: string
+  status: string
+  currency: string
+  final_amount: number | null
+  created_at: string
+}
+
+type TierSummary = Record<string, { count: number; revenue_usd: number; revenue_pkr: number }>
+
 export default function AdminDashboardClient({
   stats,
   pendingWorksheets: initialPending,
@@ -34,6 +63,8 @@ export default function AdminDashboardClient({
   subjects = [],
 }: AdminDashboardClientProps) {
   const [pendingWorksheets, setPendingWorksheets] = useState(initialPending)
+  const [subscriptions, setSubscriptions] = useState<AdminSubscription[]>([])
+  const [tierSummary, setTierSummary] = useState<TierSummary>({})
   const router = useRouter()
   const handleApproveWorksheet = async (worksheetId: string) => {
     const response = await apiFetch(`/api/admin/worksheets/${worksheetId}`, {
@@ -56,6 +87,51 @@ export default function AdminDashboardClient({
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/login" })
     router.push("/login")
+  }
+
+  const loadSubscriptions = async () => {
+    const response = await apiFetch("/api/admin/subscriptions", { method: "GET" })
+    if (!response.ok) return
+    const data = await response.json()
+    setSubscriptions(data.subscriptions ?? [])
+    setTierSummary(data.tier_summary ?? {})
+  }
+
+  useEffect(() => {
+    loadSubscriptions()
+  }, [])
+
+  const updateSubscription = async (id: string, payload: Record<string, unknown>) => {
+    const response = await apiFetch(`/api/admin/subscriptions/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) return
+    await loadSubscriptions()
+  }
+
+  const handleCancelSubscription = async (id: string) => {
+    await updateSubscription(id, { status: "cancelled" })
+  }
+
+  const handleOverrideSubscription = async (id: string, currency: string) => {
+    const amountInput = window.prompt(
+      `Enter new final amount in ${currency} minor units (e.g., cents or rupees):`,
+    )
+    if (!amountInput) return
+    const amount = Number(amountInput)
+    if (!Number.isFinite(amount) || amount <= 0) return
+    await updateSubscription(id, { final_amount: Math.round(amount) })
+  }
+
+  const handleRefundSubscription = async (id: string) => {
+    await apiFetch(`/api/admin/subscriptions/${id}/refund`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "Admin initiated refund" }),
+    })
+    await loadSubscriptions()
   }
 
   return (
@@ -170,6 +246,9 @@ export default function AdminDashboardClient({
             <TabsTrigger value="pkr-payments" className="flex items-center gap-1">
               <Banknote className="w-4 h-4" /> PKR Payments
             </TabsTrigger>
+            <TabsTrigger value="subscriptions" className="flex items-center gap-1">
+              <CreditCard className="w-4 h-4" /> Subscriptions
+            </TabsTrigger>
             <TabsTrigger value="users">Recent Users</TabsTrigger>
           </TabsList>
 
@@ -257,6 +336,105 @@ export default function AdminDashboardClient({
 
           <TabsContent value="pkr-payments">
             <PKRPaymentVerification />
+          </TabsContent>
+
+          <TabsContent value="subscriptions">
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Revenue by Child Tier</CardTitle>
+                  <CardDescription>Subscription counts and revenue totals per child count.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {Object.keys(tierSummary).length === 0 ? (
+                    <p className="text-sm text-gray-500">No subscription data available.</p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Child Count</TableHead>
+                          <TableHead>Subscriptions</TableHead>
+                          <TableHead>Revenue (USD)</TableHead>
+                          <TableHead>Revenue (PKR)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Object.entries(tierSummary).map(([tier, summary]) => (
+                          <TableRow key={tier}>
+                            <TableCell>{tier}</TableCell>
+                            <TableCell>{summary.count}</TableCell>
+                            <TableCell>{formatPrice(summary.revenue_usd)}</TableCell>
+                            <TableCell>{formatPricePKR(summary.revenue_pkr)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Subscriptions</CardTitle>
+                  <CardDescription>Manage subscriptions and overrides.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>User</TableHead>
+                        <TableHead>Children</TableHead>
+                        <TableHead>Plan</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {subscriptions.map((sub) => (
+                        <TableRow key={sub.id}>
+                          <TableCell>
+                            <div className="text-sm font-medium">{sub.user_name || "Parent"}</div>
+                            <div className="text-xs text-gray-500">{sub.user_email}</div>
+                          </TableCell>
+                          <TableCell>{sub.child_count}</TableCell>
+                          <TableCell className="capitalize">{sub.plan_type}</TableCell>
+                          <TableCell>
+                            <Badge variant={sub.status === "active" ? "default" : "outline"}>{sub.status}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            {sub.currency === "PKR"
+                              ? formatPricePKR(sub.final_amount ?? 0)
+                              : formatPrice(sub.final_amount ?? 0)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOverrideSubscription(sub.id, sub.currency)}
+                              >
+                                Override
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleCancelSubscription(sub.id)}
+                              >
+                                Cancel
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={() => handleRefundSubscription(sub.id)}>
+                                Refund
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="users">

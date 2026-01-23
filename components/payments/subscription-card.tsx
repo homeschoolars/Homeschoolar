@@ -4,63 +4,65 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Check, Star, CreditCard } from "lucide-react"
+import { Check } from "lucide-react"
 import { Checkout } from "./checkout"
 import { PayPalCheckout } from "./paypal-checkout"
 import { PKRCheckout } from "./pkr-checkout"
-import { type SubscriptionPlan, formatPrice, formatPricePKR } from "@/lib/subscription-plans"
+import { SUBSCRIPTION_FEATURES, formatPrice, formatPricePKR } from "@/lib/subscription-plans"
+import type { SubscriptionPricingPreview, SubscriptionPlanType } from "@/lib/types"
 
 interface SubscriptionCardProps {
-  plan: SubscriptionPlan
-  currentPlan?: string
+  pricing: SubscriptionPricingPreview
+  currentPlan?: SubscriptionPlanType | null
   billingPeriod: "monthly" | "yearly"
 }
 
-export function SubscriptionCard({ plan, currentPlan, billingPeriod }: SubscriptionCardProps) {
-  const [paymentMethod, setPaymentMethod] = useState<"international" | "pakistan">("international")
+export function SubscriptionCard({ pricing, currentPlan, billingPeriod }: SubscriptionCardProps) {
   const [intlMethod, setIntlMethod] = useState<"stripe" | "paypal">("stripe")
-
-  const priceUSD = billingPeriod === "yearly" ? plan.priceYearly : plan.priceMonthly
-  const pricePKR = billingPeriod === "yearly" ? plan.priceYearlyPKR : plan.priceMonthlyPKR
-  const isCurrentPlan = currentPlan === plan.id
-  const isFree = priceUSD === 0
+  const price = billingPeriod === "yearly" ? pricing.yearly_price : pricing.monthly_price
+  const perChild = billingPeriod === "yearly" ? pricing.per_child_yearly : pricing.per_child_monthly
+  const isCurrentPlan = currentPlan === billingPeriod
+  const isPKR = pricing.currency === "PKR"
+  const paymentMethod = isPKR ? "pakistan" : "international"
 
   return (
-    <Card
-      className={`relative ${
-        plan.popular ? "border-2 border-teal-500 shadow-lg shadow-teal-100" : ""
-      } ${isCurrentPlan ? "ring-2 ring-green-500" : ""}`}
-    >
-      {plan.popular && (
-        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-teal-500">
-          <Star className="w-3 h-3 mr-1" /> Most Popular
-        </Badge>
-      )}
+    <Card className={`relative ${isCurrentPlan ? "ring-2 ring-green-500" : ""}`}>
       {isCurrentPlan && <Badge className="absolute -top-3 right-4 bg-green-500">Current Plan</Badge>}
 
       <CardHeader className="text-center pb-2">
-        <CardTitle className="text-xl">{plan.name}</CardTitle>
-        <CardDescription>{plan.description}</CardDescription>
+        <CardTitle className="text-xl">Family Plan</CardTitle>
+        <CardDescription>
+          {pricing.child_count} {pricing.child_count === 1 ? "child" : "children"} on your account
+        </CardDescription>
       </CardHeader>
 
       <CardContent className="text-center">
         {/* Price Display with Currency Toggle */}
         <div className="mb-4">
-          {paymentMethod === "international" ? (
+          {paymentMethod === "international" && !isPKR ? (
             <div>
-              <span className="text-4xl font-bold">{formatPrice(priceUSD)}</span>
-              {!isFree && <span className="text-gray-500">/{billingPeriod === "yearly" ? "year" : "month"}</span>}
+              <span className="text-4xl font-bold">{formatPrice(price)}</span>
+              <span className="text-gray-500">/{billingPeriod === "yearly" ? "year" : "month"}</span>
             </div>
           ) : (
             <div>
-              <span className="text-3xl font-bold text-green-600">{formatPricePKR(pricePKR)}</span>
-              {!isFree && <span className="text-gray-500">/{billingPeriod === "yearly" ? "year" : "month"}</span>}
+              <span className="text-3xl font-bold text-green-600">{formatPricePKR(price)}</span>
+              <span className="text-gray-500">/{billingPeriod === "yearly" ? "year" : "month"}</span>
             </div>
+          )}
+          <p className="mt-2 text-xs text-gray-500">
+            Per child: {isPKR ? formatPricePKR(perChild) : formatPrice(perChild)} /
+            {billingPeriod === "yearly" ? "year" : "month"}
+          </p>
+          {billingPeriod === "yearly" && pricing.savings_amount > 0 && (
+            <p className="mt-1 text-xs text-teal-600">
+              You save {isPKR ? formatPricePKR(pricing.savings_amount) : formatPrice(pricing.savings_amount)} yearly
+            </p>
           )}
         </div>
 
         <ul className="space-y-3 text-left">
-          {plan.features.map((feature, i) => (
+          {SUBSCRIPTION_FEATURES.map((feature, i) => (
             <li key={i} className="flex items-start gap-2">
               <Check className="w-5 h-5 text-teal-500 shrink-0 mt-0.5" />
               <span className="text-sm text-gray-600">{feature}</span>
@@ -74,33 +76,9 @@ export function SubscriptionCard({ plan, currentPlan, billingPeriod }: Subscript
           <Button disabled className="w-full">
             Current Plan
           </Button>
-        ) : isFree ? (
-          <Button variant="outline" className="w-full bg-transparent">
-            Start Free Trial
-          </Button>
         ) : (
           <>
-            {/* Region/Payment Type Toggle */}
-            <div className="flex w-full rounded-lg border p-1 mb-2">
-              <button
-                onClick={() => setPaymentMethod("international")}
-                className={`flex-1 py-1.5 text-xs rounded-md transition-colors flex items-center justify-center gap-1 ${
-                  paymentMethod === "international" ? "bg-teal-500 text-white" : "text-gray-600 hover:bg-gray-100"
-                }`}
-              >
-                <CreditCard className="w-3 h-3" /> International
-              </button>
-              <button
-                onClick={() => setPaymentMethod("pakistan")}
-                className={`flex-1 py-1.5 text-xs rounded-md transition-colors flex items-center justify-center gap-1 ${
-                  paymentMethod === "pakistan" ? "bg-green-500 text-white" : "text-gray-600 hover:bg-gray-100"
-                }`}
-              >
-                🇵🇰 Pakistan
-              </button>
-            </div>
-
-            {paymentMethod === "international" ? (
+            {paymentMethod === "international" && !isPKR ? (
               <>
                 {/* International Payment Methods */}
                 <div className="flex w-full rounded-lg border p-1 mb-2">
@@ -123,14 +101,14 @@ export function SubscriptionCard({ plan, currentPlan, billingPeriod }: Subscript
                 </div>
 
                 {intlMethod === "stripe" ? (
-                  <Checkout planId={plan.id} billingPeriod={billingPeriod} />
+                  <Checkout planType={billingPeriod} />
                 ) : (
-                  <PayPalCheckout planId={plan.id} billingPeriod={billingPeriod} />
+                  <PayPalCheckout billingPeriod={billingPeriod} amount={price} currency="USD" />
                 )}
               </>
             ) : (
               /* Pakistan Payment Methods */
-              <PKRCheckout planId={plan.id} billingPeriod={billingPeriod} pricePKR={pricePKR} />
+              <PKRCheckout planType={billingPeriod} billingPeriod={billingPeriod} pricePKR={price} />
             )}
           </>
         )}

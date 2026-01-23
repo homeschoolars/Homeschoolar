@@ -71,6 +71,13 @@ export function serializeSubscription(subscription: DbSubscription): Subscriptio
     id: subscription.id,
     user_id: subscription.userId,
     plan: subscription.plan,
+    plan_type: subscription.planType ?? null,
+    child_count: subscription.childCount,
+    base_monthly_price: subscription.baseMonthlyPrice ?? null,
+    discount_percentage: subscription.discountPercentage,
+    discount_amount: subscription.discountAmount ?? null,
+    final_amount: subscription.finalAmount ?? null,
+    billing_currency: subscription.billingCurrency ?? null,
     status: subscription.status,
     stripe_customer_id: subscription.stripeCustomerId ?? null,
     stripe_subscription_id: subscription.stripeSubscriptionId ?? null,
@@ -79,6 +86,10 @@ export function serializeSubscription(subscription: DbSubscription): Subscriptio
     trial_ends_at: subscription.trialEndsAt?.toISOString() ?? null,
     created_at: subscription.createdAt.toISOString(),
     updated_at: subscription.updatedAt.toISOString(),
+    started_at: subscription.startedAt?.toISOString() ?? null,
+    expires_at: subscription.expiresAt?.toISOString() ?? null,
+    coupon_code: subscription.couponCode ?? null,
+    pricing_metadata: (subscription.pricingMetadata as Record<string, unknown>) ?? null,
   }
 }
 

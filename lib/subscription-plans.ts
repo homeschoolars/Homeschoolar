@@ -1,62 +1,11 @@
-export interface SubscriptionPlan {
-  id: string
-  name: string
-  description: string
-  priceMonthly: number // in cents (USD)
-  priceYearly: number // in cents (USD)
-  priceMonthlyPKR: number // in PKR
-  priceYearlyPKR: number // in PKR
-  features: string[]
-  popular?: boolean
-}
-
-export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
-  {
-    id: "trial",
-    name: "Free Trial",
-    description: "14-day full access",
-    priceMonthly: 0,
-    priceYearly: 0,
-    priceMonthlyPKR: 0,
-    priceYearlyPKR: 0,
-    features: ["All AI features", "Unlimited worksheets", "Up to 3 children", "Email support"],
-  },
-  {
-    id: "monthly",
-    name: "Monthly",
-    description: "Full access, billed monthly",
-    priceMonthly: 3000, // $30.00
-    priceYearly: 0,
-    priceMonthlyPKR: 8500, // PKR 8,500
-    priceYearlyPKR: 0,
-    features: [
-      "All AI features",
-      "Unlimited worksheets",
-      "Unlimited children",
-      "Priority support",
-      "PDF exports",
-      "Email sharing",
-    ],
-    popular: true,
-  },
-  {
-    id: "yearly",
-    name: "Yearly",
-    description: "Full access, save 17%",
-    priceMonthly: 0,
-    priceYearly: 30000, // $300.00
-    priceMonthlyPKR: 0,
-    priceYearlyPKR: 85000, // PKR 85,000
-    features: [
-      "All AI features",
-      "Unlimited worksheets",
-      "Unlimited children",
-      "Priority support",
-      "PDF exports",
-      "Email sharing",
-      "Early access to new features",
-    ],
-  },
+export const SUBSCRIPTION_FEATURES = [
+  "All AI features",
+  "Unlimited worksheets",
+  "Multi-child management",
+  "Priority support",
+  "PDF exports",
+  "Email sharing",
+  "Progress analytics",
 ]
 
 export type PaymentMethod = "stripe" | "paypal" | "jazzcash" | "easypaisa" | "bank_transfer"
@@ -92,10 +41,6 @@ export const PKR_PAYMENT_METHODS: PKRPaymentDetails[] = [
     instructions: "Transfer to Meezan Bank account and upload receipt. IBAN: PK36MEZN0099340012345678",
   },
 ]
-
-export function getPlanById(id: string): SubscriptionPlan | undefined {
-  return SUBSCRIPTION_PLANS.find((plan) => plan.id === id)
-}
 
 export function formatPrice(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`

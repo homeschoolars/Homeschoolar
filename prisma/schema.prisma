@@ -48,6 +48,23 @@ enum SubscriptionStatus {
   past_due
 }
 
+enum SubscriptionPlanType {
+  monthly
+  yearly
+}
+
+enum BillingCurrency {
+  USD
+  PKR
+}
+
+enum PaymentProvider {
+  payoneer
+  jazzcash
+  easypaisa
+  manual
+}
+
 enum LearningLevel {
   beginner
   intermediate
@@ -424,6 +441,13 @@ model Subscription {
   userId               String             @map("user_id")
   childId              String?            @map("child_id")
   plan                 SubscriptionPlanId
+  planType             SubscriptionPlanType? @map("plan_type")
+  childCount           Int                @default(1) @map("child_count")
+  baseMonthlyPrice     Int?               @map("base_monthly_price")
+  discountPercentage   Int                @default(0) @map("discount_percentage")
+  discountAmount       Int?               @map("discount_amount")
+  finalAmount          Int?               @map("final_amount")
+  billingCurrency      BillingCurrency?   @map("billing_currency")
   status               SubscriptionStatus @default(active)
   stripeCustomerId     String?            @map("stripe_customer_id")
   stripeSubscriptionId String?            @map("stripe_subscription_id")
@@ -436,11 +460,15 @@ model Subscription {
   metadata             Json?              @default("{}")
   startDate            DateTime?          @map("start_date")
   endDate              DateTime?          @map("end_date")
+  startedAt            DateTime?          @map("started_at")
+  expiresAt            DateTime?          @map("expires_at")
   currentPeriodStart   DateTime?          @map("current_period_start")
   currentPeriodEnd     DateTime?          @map("current_period_end")
   trialEndsAt          DateTime?          @map("trial_ends_at")
   createdAt            DateTime           @default(now()) @map("created_at")
   updatedAt            DateTime           @default(now()) @map("updated_at")
+  couponCode           String?            @map("coupon_code")
+  pricingMetadata      Json?              @default("{}") @map("pricing_metadata")
 
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   child Child? @relation(fields: [childId], references: [id], onDelete: SetNull)
@@ -448,6 +476,8 @@ model Subscription {
   transactions PaymentTransaction[]
 
   @@unique([userId])
+  @@index([childCount])
+  @@index([planType])
   @@map("subscriptions")
 }
 
@@ -478,6 +508,7 @@ model Payment {
   userId           String?      @map("user_id")
   subscriptionId   String?      @map("subscription_id")
   provider         String       @default("stripe")
+  paymentProvider  PaymentProvider? @map("payment_provider")
   paymentMethod    String?      @map("payment_method")
   providerPaymentId String?     @map("provider_payment_id")
   amount           Int
@@ -485,6 +516,7 @@ model Payment {
   status           PaymentStatus @default(pending)
   description      String?
   metadata         Json?        @default("{}")
+  transactionReference String?  @map("transaction_reference")
   verifiedAt       DateTime?    @map("verified_at")
   verifiedBy       String?      @map("verified_by")
   rejectionReason  String?      @map("rejection_reason")

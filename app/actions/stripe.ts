@@ -1,27 +1,22 @@
 "use server"
 
 import { requireStripe } from "@/lib/stripe"
-import { SUBSCRIPTION_PLANS } from "@/lib/subscription-plans"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { buildPricing } from "@/services/pricing.service"
+import { getParentChildCount } from "@/services/subscription-service"
 
-export async function startCheckoutSession(planId: string, billingPeriod: "monthly" | "yearly") {
+export async function startCheckoutSession(planType: "monthly" | "yearly") {
   const stripe = requireStripe()
-  const plan = SUBSCRIPTION_PLANS.find((p) => p.id === planId)
-  if (!plan) {
-    throw new Error(`Plan "${planId}" not found`)
-  }
-
-  const price = billingPeriod === "yearly" ? plan.priceYearly : plan.priceMonthly
-  if (price === 0) {
-    throw new Error("Cannot checkout for free plan")
-  }
 
   const authSession = await auth()
   const user = authSession?.user
   if (!user || (user.role !== "parent" && user.role !== "admin")) {
     throw new Error("Not authorized")
   }
+
+  const childCount = await getParentChildCount(user.id)
+  const pricing = buildPricing({ childCount, planType, currency: "USD" })
 
   const checkoutSession = await stripe.checkout.sessions.create({
     ui_mode: "embedded",
@@ -32,12 +27,12 @@ export async function startCheckoutSession(planId: string, billingPeriod: "month
         price_data: {
           currency: "usd",
           product_data: {
-            name: `HomeSchoolar ${plan.name}`,
-            description: plan.description,
+            name: `HomeSchoolar ${planType === "yearly" ? "Yearly" : "Monthly"} Plan`,
+            description: `${childCount} ${childCount === 1 ? "child" : "children"} on plan`,
           },
-          unit_amount: price,
+          unit_amount: pricing.finalAmount,
           recurring: {
-            interval: billingPeriod === "yearly" ? "year" : "month",
+            interval: planType === "yearly" ? "year" : "month",
           },
         },
         quantity: 1,
@@ -46,8 +41,8 @@ export async function startCheckoutSession(planId: string, billingPeriod: "month
     mode: "subscription",
     metadata: {
       user_id: user?.id || "",
-      plan_id: planId,
-      billing_period: billingPeriod,
+      plan_type: planType,
+      child_count: String(childCount),
     },
   })
 

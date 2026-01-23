@@ -1,23 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { PaymentGateway, PaymentStatus } from "@prisma/client"
-import {
-  createPayoneerPayment,
-  parsePayoneerWebhook,
-  verifyPayoneerWebhook,
-  type PayoneerWebhookEvent,
-} from "@/lib/payments/payoneer"
-import {
-  createJazzCashPayment,
-  parseJazzCashWebhook,
-  verifyJazzCashWebhook,
-  type JazzCashWebhookEvent,
-} from "@/lib/payments/jazzcash"
-import {
-  createEasyPaisaPayment,
-  parseEasyPaisaWebhook,
-  verifyEasyPaisaWebhook,
-  type EasyPaisaWebhookEvent,
-} from "@/lib/payments/easypaisa"
+import { getPaymentProvider, resolveGateway } from "@/services/payments/payment.service"
+import type { ProviderWebhookEvent } from "@/services/payments/providers/types"
 
 export type CreatePaymentParams = {
   userId: string
@@ -47,28 +31,13 @@ type NormalizedEvent = {
   metadata?: Record<string, unknown>
 }
 
-function resolveGateway(currency: string, requested?: PaymentGateway) {
-  if (currency === "USD" || currency === "EUR") {
-    return PaymentGateway.payoneer
-  }
-  if (currency === "PKR") {
-    if (requested === PaymentGateway.jazzcash || requested === PaymentGateway.easypaisa) {
-      return requested
-    }
-    return PaymentGateway.jazzcash
-  }
-  throw new Error("Unsupported currency")
-}
-
 function normalizeStatus(status: "succeeded" | "failed" | "pending"): PaymentStatus {
   if (status === "succeeded") return PaymentStatus.succeeded
   if (status === "failed") return PaymentStatus.failed
   return PaymentStatus.pending
 }
 
-function normalizeEvent(
-  event: PayoneerWebhookEvent | JazzCashWebhookEvent | EasyPaisaWebhookEvent,
-): NormalizedEvent {
+function normalizeEvent(event: ProviderWebhookEvent): NormalizedEvent {
   return {
     externalId: event.externalId,
     status: normalizeStatus(event.status),
@@ -116,49 +85,16 @@ export async function createPayment(params: CreatePaymentParams): Promise<Create
     },
   })
 
-  let externalId = ""
-  let redirectUrl = ""
-
-  if (gateway === PaymentGateway.payoneer) {
-    const response = await createPayoneerPayment({
-      amount: params.amount,
-      currency: params.currency === "EUR" ? "EUR" : "USD",
-      referenceId,
-      returnUrl: params.returnUrl,
-      webhookUrl: `${params.webhookBaseUrl}/api/payments/webhooks/payoneer`,
-      customerEmail: params.customerEmail,
-    })
-    externalId = response.externalId
-    redirectUrl = response.redirectUrl
-  }
-
-  if (gateway === PaymentGateway.jazzcash) {
-    const response = await createJazzCashPayment({
-      amount: params.amount,
-      currency: "PKR",
-      referenceId,
-      returnUrl: params.returnUrl,
-      webhookUrl: `${params.webhookBaseUrl}/api/payments/webhooks/jazzcash`,
-      customerEmail: params.customerEmail,
-      customerPhone: params.customerPhone,
-    })
-    externalId = response.externalId
-    redirectUrl = response.redirectUrl
-  }
-
-  if (gateway === PaymentGateway.easypaisa) {
-    const response = await createEasyPaisaPayment({
-      amount: params.amount,
-      currency: "PKR",
-      referenceId,
-      returnUrl: params.returnUrl,
-      webhookUrl: `${params.webhookBaseUrl}/api/payments/webhooks/easypaisa`,
-      customerEmail: params.customerEmail,
-      customerPhone: params.customerPhone,
-    })
-    externalId = response.externalId
-    redirectUrl = response.redirectUrl
-  }
+  const provider = getPaymentProvider(gateway)
+  const response = await provider.createPayment({
+    amount: params.amount,
+    currency: params.currency,
+    referenceId,
+    returnUrl: params.returnUrl,
+    webhookUrl: `${params.webhookBaseUrl}/api/payments/webhooks/${gateway}`,
+    customerEmail: params.customerEmail,
+    customerPhone: params.customerPhone,
+  })
 
   await prisma.paymentTransaction.create({
     data: {
@@ -168,7 +104,7 @@ export async function createPayment(params: CreatePaymentParams): Promise<Create
       amount: params.amount,
       currency: params.currency,
       status: "pending",
-      externalId,
+      externalId: response.externalId,
       referenceId,
       metadata: (params.metadata ?? {}) as unknown as object,
     },
@@ -181,7 +117,7 @@ export async function createPayment(params: CreatePaymentParams): Promise<Create
     referenceId,
   })
 
-  return { redirectUrl, externalId, gateway, subscriptionId: subscription.id }
+  return { redirectUrl: response.redirectUrl, externalId: response.externalId, gateway, subscriptionId: subscription.id }
 }
 
 async function applyPaymentUpdate({
@@ -227,22 +163,25 @@ async function applyPaymentUpdate({
 }
 
 export async function handlePayoneerWebhook(rawBody: string, signature: string | null) {
-  verifyPayoneerWebhook(rawBody, signature)
+  const provider = getPaymentProvider(PaymentGateway.payoneer)
+  provider.verifyWebhook(rawBody, signature)
   const payload = JSON.parse(rawBody) as Record<string, unknown>
-  const normalized = normalizeEvent(parsePayoneerWebhook(payload))
+  const normalized = normalizeEvent(provider.parseWebhook(payload))
   await applyPaymentUpdate({ gateway: PaymentGateway.payoneer, normalized })
 }
 
 export async function handleJazzCashWebhook(rawBody: string, signature: string | null) {
-  verifyJazzCashWebhook(rawBody, signature)
+  const provider = getPaymentProvider(PaymentGateway.jazzcash)
+  provider.verifyWebhook(rawBody, signature)
   const payload = JSON.parse(rawBody) as Record<string, unknown>
-  const normalized = normalizeEvent(parseJazzCashWebhook(payload))
+  const normalized = normalizeEvent(provider.parseWebhook(payload))
   await applyPaymentUpdate({ gateway: PaymentGateway.jazzcash, normalized })
 }
 
 export async function handleEasyPaisaWebhook(rawBody: string, signature: string | null) {
-  verifyEasyPaisaWebhook(rawBody, signature)
+  const provider = getPaymentProvider(PaymentGateway.easypaisa)
+  provider.verifyWebhook(rawBody, signature)
   const payload = JSON.parse(rawBody) as Record<string, unknown>
-  const normalized = normalizeEvent(parseEasyPaisaWebhook(payload))
+  const normalized = normalizeEvent(provider.parseWebhook(payload))
   await applyPaymentUpdate({ gateway: PaymentGateway.easypaisa, normalized })
 }

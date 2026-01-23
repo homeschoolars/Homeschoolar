@@ -16,13 +16,13 @@ import { PKR_PAYMENT_METHODS, type PaymentMethod, formatPricePKR } from "@/lib/s
 import { apiFetch } from "@/lib/api-client"
 
 interface PKRCheckoutProps {
-  planId: string
+  planType: "monthly" | "yearly"
   billingPeriod: "monthly" | "yearly"
   pricePKR: number
   trigger?: React.ReactNode
 }
 
-export function PKRCheckout({ planId, billingPeriod, pricePKR, trigger }: PKRCheckoutProps) {
+export function PKRCheckout({ planType, billingPeriod, pricePKR, trigger }: PKRCheckoutProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("jazzcash")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -62,9 +62,8 @@ export function PKRCheckout({ planId, billingPeriod, pricePKR, trigger }: PKRChe
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          planId,
+          planType,
           billingPeriod,
-          amount: pricePKR,
           paymentMethod: selectedMethod,
           transactionId,
           senderNumber,

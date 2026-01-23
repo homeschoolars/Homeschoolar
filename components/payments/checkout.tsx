@@ -13,19 +13,18 @@ import { Loader2 } from "lucide-react"
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 interface CheckoutProps {
-  planId: string
-  billingPeriod: "monthly" | "yearly"
+  planType: "monthly" | "yearly"
   trigger?: React.ReactNode
 }
 
-export function Checkout({ planId, billingPeriod, trigger }: CheckoutProps) {
+export function Checkout({ planType, trigger }: CheckoutProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
   const fetchClientSecret = useCallback(async () => {
     setIsLoading(true)
     try {
-      const clientSecret = await startCheckoutSession(planId, billingPeriod)
+      const clientSecret = await startCheckoutSession(planType)
       if (!clientSecret) {
         throw new Error("Failed to initialize Stripe checkout session.")
       }
@@ -33,7 +32,7 @@ export function Checkout({ planId, billingPeriod, trigger }: CheckoutProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [planId, billingPeriod])
+  }, [planType])
 
   return (
     <>

@@ -12,6 +12,7 @@ import { hashPassword } from "@/services/auth-service"
 import { calculateAgeYears, deriveAgeGroup, validateElectives } from "@/lib/onboarding-utils"
 import { toPrismaAgeGroup } from "@/lib/age-group"
 import { logAnalyticsEvent } from "@/services/analytics-service"
+import { updateSubscriptionChildCount } from "@/services/subscription-service"
 import { Prisma } from "@prisma/client"
 
 export interface ParentSignupInput {
@@ -162,7 +163,11 @@ export async function createChildWithProfile({
   child: ChildSignupInput
   eventUserId?: string | null
 }) {
-  return prisma.$transaction((tx) => createChildWithProfileInternal({ tx, parentId, child, eventUserId }))
+  const childRecord = await prisma.$transaction((tx) =>
+    createChildWithProfileInternal({ tx, parentId, child, eventUserId }),
+  )
+  await updateSubscriptionChildCount(parentId)
+  return childRecord
 }
 
 export async function createParentWithChildren({

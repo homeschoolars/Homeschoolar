@@ -4,6 +4,9 @@ export type Difficulty = "easy" | "medium" | "hard"
 export type AssignmentStatus = "pending" | "in_progress" | "completed" | "graded"
 export type SubscriptionPlan = "trial" | "monthly" | "yearly"
 export type SubscriptionStatus = "pending" | "active" | "cancelled" | "expired" | "past_due"
+export type SubscriptionPlanType = "monthly" | "yearly"
+export type BillingCurrency = "USD" | "PKR"
+export type PaymentProvider = "payoneer" | "jazzcash" | "easypaisa" | "manual"
 export type LearningLevel = "beginner" | "intermediate" | "advanced"
 export type RecommendationType = "subject" | "topic" | "worksheet" | "activity"
 export type QuestionType = "multiple_choice" | "text" | "true_false" | "fill_blank"
@@ -223,6 +226,13 @@ export interface Subscription {
   id: string
   user_id: string
   plan: SubscriptionPlan
+  plan_type: SubscriptionPlanType | null
+  child_count: number
+  base_monthly_price: number | null
+  discount_percentage: number
+  discount_amount: number | null
+  final_amount: number | null
+  billing_currency: BillingCurrency | null
   status: SubscriptionStatus
   stripe_customer_id: string | null
   stripe_subscription_id: string | null
@@ -231,6 +241,24 @@ export interface Subscription {
   trial_ends_at: string | null
   created_at: string
   updated_at: string
+  started_at: string | null
+  expires_at: string | null
+  coupon_code: string | null
+  pricing_metadata: Record<string, unknown> | null
+}
+
+export interface SubscriptionPricingPreview {
+  child_count: number
+  currency: BillingCurrency
+  monthly_price: number
+  yearly_price: number
+  discount_percentage: number
+  savings_amount: number
+  discount_amount: number
+  per_child_monthly: number
+  per_child_yearly: number
+  base_monthly_price: number
+  base_yearly_price: number
 }
 
 export interface Notification {

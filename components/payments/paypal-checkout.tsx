@@ -5,18 +5,17 @@ import type React from "react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { SUBSCRIPTION_PLANS, formatPrice } from "@/lib/subscription-plans"
+import { formatPrice } from "@/lib/subscription-plans"
 
 interface PayPalCheckoutProps {
-  planId: string
   billingPeriod: "monthly" | "yearly"
+  amount: number
+  currency: "USD"
   trigger?: React.ReactNode
 }
 
-export function PayPalCheckout({ planId, billingPeriod, trigger }: PayPalCheckoutProps) {
+export function PayPalCheckout({ billingPeriod, amount, currency, trigger }: PayPalCheckoutProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const plan = SUBSCRIPTION_PLANS.find((p) => p.id === planId)
-  const price = billingPeriod === "yearly" ? plan?.priceYearly : plan?.priceMonthly
 
   // PayPal integration placeholder - requires PayPal SDK setup
   const handlePayPalPayment = async () => {
@@ -43,8 +42,7 @@ export function PayPalCheckout({ planId, billingPeriod, trigger }: PayPalCheckou
           <DialogHeader>
             <DialogTitle>Pay with PayPal</DialogTitle>
             <DialogDescription>
-              Complete your {plan?.name} subscription ({formatPrice(price || 0)}/
-              {billingPeriod === "yearly" ? "year" : "month"})
+              Complete your subscription ({formatPrice(amount)}/{billingPeriod === "yearly" ? "year" : "month"})
             </DialogDescription>
           </DialogHeader>
 
@@ -59,7 +57,7 @@ export function PayPalCheckout({ planId, billingPeriod, trigger }: PayPalCheckou
               Continue with PayPal
             </Button>
             <p className="text-xs text-gray-500 mt-4">
-              You will be redirected to PayPal to complete your payment securely.
+              You will be redirected to PayPal to complete your {currency} payment securely.
             </p>
           </div>
         </DialogContent>

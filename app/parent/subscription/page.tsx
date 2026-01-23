@@ -21,7 +21,7 @@ export default async function SubscriptionPage() {
   const dbSubscription = await prisma.subscription.findFirst({ where: { userId: user.id } })
   const subscription = dbSubscription ? serializeSubscription(dbSubscription) : null
 
-  const currentPlan = subscription?.plan || "none"
+  const currentPlan = subscription?.plan_type ?? (subscription?.plan as "monthly" | "yearly" | undefined)
   const isActive = subscription?.status === "active"
 
   return (
@@ -88,7 +88,7 @@ export default async function SubscriptionPage() {
           <h2 className="text-xl font-semibold text-center mb-6">
             {isActive ? "Change Your Plan" : "Choose Your Plan"}
           </h2>
-          <PricingSection currentPlan={currentPlan} />
+          <PricingSection currentPlan={currentPlan ?? null} />
         </div>
 
         {/* FAQ */}
