@@ -194,6 +194,8 @@ model User {
   analytics     AnalyticsEvent[]
   preferences   NotificationPreference?
   parentProfile Parent?
+  orphanSubmissions OrphanVerification[] @relation("OrphanSubmittedBy")
+  orphanReviews OrphanVerification[] @relation("OrphanReviewedBy")
 
   accounts Account[]
   sessions Session[]
