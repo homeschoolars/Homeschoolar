@@ -17,6 +17,11 @@ export default function HomePage() {
       <FloatingDecorations />
       <Header />
       <main className="relative z-10 flex-1">
+        <div className="mx-auto w-full max-w-5xl px-6 pt-10 text-center">
+          <h1 className="text-4xl font-bold tracking-tight text-purple-900 sm:text-5xl lg:text-6xl">
+            homeschoolars
+          </h1>
+        </div>
         <Hero />
         <AgeSelector />
         <Features />

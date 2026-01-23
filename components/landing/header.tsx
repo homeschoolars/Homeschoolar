@@ -18,7 +18,7 @@ export function Header() {
 
   return (
     <header
-      className="sticky top-0 z-50 w-full border-b-4 border-transparent bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+      className="sticky top-0 z-50 w-full border-b-4 border-transparent bg-gradient-to-r from-white/90 via-white/70 to-white/90 shadow-lg shadow-purple/10 backdrop-blur supports-[backdrop-filter]:bg-background/60"
       style={{
         borderImage:
           "linear-gradient(90deg, var(--pink), var(--purple), var(--blue), var(--cyan), var(--green), var(--yellow), var(--orange)) 1",
@@ -37,12 +37,12 @@ export function Header() {
           <Sparkles className="h-4 w-4 text-yellow animate-pulse hidden sm:block" />
         </Link>
 
-        <nav className="hidden items-center gap-6 md:flex">
+        <nav className="hidden items-center gap-1 rounded-full bg-white/70 px-2 py-1 ring-1 ring-purple/10 shadow-sm md:flex">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm font-semibold text-foreground/70 transition-all hover:text-purple hover:scale-110"
+              className="rounded-full px-3 py-1.5 text-sm font-semibold text-foreground/70 transition-all hover:bg-purple/10 hover:text-purple"
             >
               {link.label}
             </Link>
@@ -50,12 +50,16 @@ export function Header() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <Button variant="ghost" asChild className="font-semibold hover:bg-purple/10 hover:text-purple">
+          <Button
+            variant="ghost"
+            asChild
+            className="font-semibold hover:bg-purple/10 hover:text-purple transition-all"
+          >
             <Link href="/login">Log In</Link>
           </Button>
           <Button
             asChild
-            className="bg-gradient-to-r from-purple via-pink to-orange hover:opacity-90 font-semibold shadow-lg hover:shadow-purple/25 hover:scale-105 transition-all"
+            className="bg-gradient-to-r from-purple via-pink to-orange font-semibold shadow-lg hover:shadow-purple/25 hover:opacity-90 hover:scale-105 transition-all"
           >
             <Link href="/signup">Start Free Trial</Link>
           </Button>
