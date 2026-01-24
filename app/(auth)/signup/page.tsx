@@ -55,6 +55,8 @@ type ChildForm = {
   challenges: string
 }
 
+type ChildArrayKey = "interestsPreset" | "learningStyles" | "learnsBetterWith"
+
 const defaultParent: ParentForm = {
   fullName: "",
   relationship: "guardian",
@@ -115,16 +117,14 @@ export default function SignupPage() {
     setChildren((prev) => prev.map((child, idx) => (idx === index ? { ...child, ...updates } : child)))
   }
 
-  const toggleChildMultiSelect = <T extends string>(
+  const toggleChildMultiSelect = <K extends ChildArrayKey>(
     index: number,
-    key: "interestsPreset" | "learningStyles" | "learnsBetterWith",
-    value: T,
+    key: K,
+    value: ChildForm[K][number],
   ) => {
-    updateChild(index, {
-      [key]: children[index][key].includes(value)
-        ? children[index][key].filter((item) => item !== value)
-        : [...children[index][key], value],
-    } as Partial<ChildForm>)
+    const current = children[index][key] as ChildForm[K]
+    const next = current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
+    updateChild(index, { [key]: next } as Pick<ChildForm, K>)
   }
 
   const handleSubmit = async (event: React.FormEvent) => {
