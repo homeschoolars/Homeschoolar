@@ -215,6 +215,7 @@ model User {
   parentProfile Parent?
   orphanSubmissions OrphanVerification[] @relation("OrphanSubmittedBy")
   orphanReviews OrphanVerification[] @relation("OrphanReviewedBy")
+  adminAuditLogs AdminAuditLog[]
 
   accounts Account[]
   sessions Session[]
@@ -312,6 +313,8 @@ model Child {
   interestsV2      ChildInterest[]
   initialAssessments InitialAssessment[]
   orphanVerifications OrphanVerification[]
+  learningMemory   LearningMemory[]
+  behavioralMemory BehavioralMemory?
 
   @@map("students")
   @@index([parentId])
@@ -403,6 +406,7 @@ model Subject {
   quizzes SurpriseQuiz[]
   curriculumPaths CurriculumPath[]
   initialAssessments InitialAssessment[]
+  learningMemory LearningMemory[]
 
   @@map("subjects")
 }
