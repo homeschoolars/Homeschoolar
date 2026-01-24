@@ -122,9 +122,11 @@ export default function SignupPage() {
     key: K,
     value: ChildForm[K][number],
   ) => {
-    const current = children[index][key] as ChildForm[K]
-    const next = current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
-    updateChild(index, { [key]: next } as Pick<ChildForm, K>)
+    const current = children[index][key] as unknown as string[]
+    const next = current.includes(value as string)
+      ? current.filter((item) => item !== (value as string))
+      : [...current, value as string]
+    updateChild(index, { [key]: next } as any)
   }
 
   const handleSubmit = async (event: React.FormEvent) => {
