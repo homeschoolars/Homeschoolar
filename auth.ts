@@ -34,6 +34,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name ?? undefined,
           image: user.image ?? undefined,
           role: user.role,
+          adminRole: user.adminRole ?? undefined,
         }
       },
     }),
@@ -43,6 +44,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id
         token.role = (user as { role?: string }).role ?? "parent"
+        token.adminRole = (user as { adminRole?: string }).adminRole
       }
       return token
     },
@@ -50,6 +52,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string
         session.user.role = (token.role as string) ?? "parent"
+        session.user.adminRole = token.adminRole as string | undefined
       }
       return session
     },

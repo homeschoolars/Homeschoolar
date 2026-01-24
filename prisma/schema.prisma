@@ -71,6 +71,24 @@ enum LearningLevel {
   advanced
 }
 
+enum AssessmentType {
+  baseline
+  progress
+  checkpoint
+}
+
+enum AssessmentStatus {
+  pending
+  completed
+}
+
+enum AdminRole {
+  super_admin
+  content_admin
+  support_admin
+  finance_admin
+}
+
 enum RecommendationType {
   subject
   topic
@@ -178,6 +196,7 @@ model User {
   emailVerified DateTime? @map("email_verified")
   name         String?   @map("full_name")
   role         UserRole  @default(parent)
+  adminRole    AdminRole? @map("admin_role")
   image        String?   @map("avatar_url")
   passwordHash String?   @map("password_hash")
   createdAt    DateTime  @default(now()) @map("created_at")
@@ -640,6 +659,9 @@ model Assessment {
   id              String   @id @default(uuid())
   childId         String   @map("child_id")
   subjectId       String   @map("subject_id")
+  assessmentType  AssessmentType @default(baseline) @map("assessment_type")
+  difficultyLevel Difficulty?    @map("difficulty_level")
+  status          AssessmentStatus @default(pending)
   questions       Json
   answers         Json?
   score           Int?
@@ -649,8 +671,86 @@ model Assessment {
 
   child   Child   @relation(fields: [childId], references: [id], onDelete: Cascade)
   subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  assessmentQuestions AssessmentQuestion[]
+  assessmentResult AssessmentResult?
 
   @@map("assessments")
+}
+
+model AssessmentQuestion {
+  id             String   @id @default(uuid())
+  assessmentId   String   @map("assessment_id")
+  question       String
+  expectedAnswer String   @map("expected_answer")
+  aiExplanation  String?  @map("ai_explanation")
+  metadata       Json?    @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@map("assessment_questions")
+  @@index([assessmentId])
+}
+
+model AssessmentResult {
+  id              String   @id @default(uuid())
+  assessmentId    String   @unique @map("assessment_id")
+  rawScore        Int      @map("raw_score")
+  normalizedScore Int      @map("normalized_score")
+  strengths       Json?    @default("[]")
+  weaknesses      Json?    @default("[]")
+  aiSummary       String?  @map("ai_summary")
+  evaluatedAt     DateTime @default(now()) @map("evaluated_at")
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@map("assessment_results")
+}
+
+model LearningMemory {
+  id            String   @id @default(uuid())
+  childId       String   @map("child_id")
+  subjectId     String   @map("subject_id")
+  concept       String
+  masteryLevel  Int      @map("mastery_level")
+  lastUpdated   DateTime @default(now()) @map("last_updated")
+  evidence      Json?    @default("{}")
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@map("learning_memory")
+  @@unique([childId, subjectId, concept])
+  @@index([childId, subjectId])
+}
+
+model BehavioralMemory {
+  id                 String   @id @default(uuid())
+  childId            String   @unique @map("child_id")
+  attentionPattern   String?  @map("attention_pattern")
+  learningStyle      String?  @map("learning_style")
+  motivationTriggers Json?    @default("{}") @map("motivation_triggers")
+  frustrationSignals Json?    @default("{}") @map("frustration_signals")
+  lastObserved       DateTime @default(now()) @map("last_observed")
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@map("behavioral_memory")
+}
+
+model AdminAuditLog {
+  id        String   @id @default(uuid())
+  adminId   String   @map("admin_id")
+  action    String
+  targetType String? @map("target_type")
+  targetId  String?  @map("target_id")
+  metadata  Json?    @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  admin User @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("admin_audit_logs")
+  @@index([adminId])
 }
 
 model SurpriseQuiz {

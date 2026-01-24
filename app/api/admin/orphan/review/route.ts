@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { requireRole } from "@/lib/auth-helpers"
+import { requireAdminRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 import { reviewOrphanVerification } from "@/services/orphan-verification-service"
+import { logAdminAction } from "@/services/admin-audit-service"
 
 const reviewSchema = z.object({
   verificationId: z.string().min(1),
@@ -12,7 +13,7 @@ const reviewSchema = z.object({
 
 export async function GET() {
   try {
-    await requireRole("admin")
+    await requireAdminRole(["super_admin", "support_admin"])
     const queue = await prisma.orphanVerification.findMany({
       where: { status: "pending" },
       include: { child: true, submittedBy: true },
@@ -43,13 +44,20 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await requireRole("admin")
+    const session = await requireAdminRole(["super_admin", "support_admin"])
     const body = reviewSchema.parse(await request.json())
     const updated = await reviewOrphanVerification({
       verificationId: body.verificationId,
       adminId: session.user.id,
       status: body.status,
       rejectionReason: body.rejectionReason,
+    })
+    await logAdminAction({
+      adminId: session.user.id,
+      action: "orphan.review",
+      targetType: "orphan_verification",
+      targetId: body.verificationId,
+      metadata: { status: body.status, rejectionReason: body.rejectionReason ?? null },
     })
     return NextResponse.json({ verification: updated })
   } catch (error) {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import path from "path"
 import { promises as fs } from "fs"
-import { requireRole } from "@/lib/auth-helpers"
+import { requireAdminRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
 const storageDir = process.env.ORPHAN_DOC_STORAGE_DIR || path.join(process.cwd(), "storage", "orphan-docs")
@@ -15,7 +15,7 @@ function getMimeType(fileName: string) {
 
 export async function GET(_request: Request, context: { params: { id: string } }) {
   try {
-    await requireRole("admin")
+    await requireAdminRole(["super_admin", "support_admin"])
     const verification = await prisma.orphanVerification.findUnique({ where: { id: context.params.id } })
     if (!verification) {
       return NextResponse.json({ error: "Document not found" }, { status: 404 })

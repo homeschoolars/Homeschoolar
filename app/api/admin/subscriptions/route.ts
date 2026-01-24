@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
-import { requireRole } from "@/lib/auth-helpers"
+import { requireAdminRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
 export async function GET() {
   try {
-    await requireRole("admin")
+    await requireAdminRole(["super_admin", "finance_admin"])
     const subscriptions = await prisma.subscription.findMany({
       orderBy: { createdAt: "desc" },
       include: { user: { select: { email: true, name: true } } },

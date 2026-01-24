@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { requireRole } from "@/lib/auth-helpers"
+import { requireAdminRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
+import { logAdminAction } from "@/services/admin-audit-service"
 
 const refundSchema = z.object({
   reason: z.string().optional(),
@@ -9,7 +10,7 @@ const refundSchema = z.object({
 
 export async function POST(request: Request, context: { params: { id: string } }) {
   try {
-    await requireRole("admin")
+    const session = await requireAdminRole(["super_admin", "finance_admin"])
     const body = refundSchema.parse(await request.json())
     const subscription = await prisma.subscription.findUnique({ where: { id: context.params.id } })
     if (!subscription) {
@@ -34,6 +35,14 @@ export async function POST(request: Request, context: { params: { id: string } }
     await prisma.subscription.update({
       where: { id: subscription.id },
       data: { status: "cancelled" },
+    })
+
+    await logAdminAction({
+      adminId: session.user.id,
+      action: "subscription.refund",
+      targetType: "subscription",
+      targetId: subscription.id,
+      metadata: { reason: body.reason ?? null },
     })
 
     return NextResponse.json({ success: true })

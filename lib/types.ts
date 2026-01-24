@@ -9,6 +9,9 @@ export type BillingCurrency = "USD" | "PKR"
 export type PaymentProvider = "payoneer" | "jazzcash" | "easypaisa" | "manual"
 export type SubscriptionType = "trial" | "paid" | "orphan"
 export type LearningLevel = "beginner" | "intermediate" | "advanced"
+export type AssessmentType = "baseline" | "progress" | "checkpoint"
+export type AssessmentStatus = "pending" | "completed"
+export type AdminRole = "super_admin" | "content_admin" | "support_admin" | "finance_admin"
 export type RecommendationType = "subject" | "topic" | "worksheet" | "activity"
 export type QuestionType = "multiple_choice" | "text" | "true_false" | "fill_blank"
 export type ParentRelationship = "father" | "mother" | "guardian" | "other"
@@ -28,6 +31,7 @@ export interface Profile {
   email: string
   full_name: string | null
   role: UserRole
+  admin_role?: AdminRole | null
   avatar_url: string | null
   created_at: string
   updated_at: string
@@ -296,11 +300,65 @@ export interface Assessment {
   id: string
   child_id: string
   subject_id: string
+  assessment_type: AssessmentType
+  difficulty_level: Difficulty | null
+  status: AssessmentStatus
   questions: Question[]
   answers: Answer[] | null
   score: number | null
   recommended_level: LearningLevel | null
   completed_at: string | null
+  created_at: string
+}
+
+export interface AssessmentQuestion {
+  id: string
+  assessment_id: string
+  question: string
+  expected_answer: string
+  ai_explanation: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+}
+
+export interface AssessmentResult {
+  id: string
+  assessment_id: string
+  raw_score: number
+  normalized_score: number
+  strengths: Record<string, unknown>[]
+  weaknesses: Record<string, unknown>[]
+  ai_summary: string | null
+  evaluated_at: string
+}
+
+export interface LearningMemory {
+  id: string
+  child_id: string
+  subject_id: string
+  concept: string
+  mastery_level: number
+  last_updated: string
+  evidence: Record<string, unknown> | null
+}
+
+export interface BehavioralMemory {
+  id: string
+  child_id: string
+  attention_pattern: string | null
+  learning_style: string | null
+  motivation_triggers: Record<string, unknown> | null
+  frustration_signals: Record<string, unknown> | null
+  last_observed: string
+}
+
+export interface AdminAuditLog {
+  id: string
+  admin_id: string
+  action: string
+  target_type: string | null
+  target_id: string | null
+  metadata: Record<string, unknown> | null
   created_at: string
 }
 

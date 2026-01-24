@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { requireRole } from "@/lib/auth-helpers"
+import { requireAdminRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
+import { logAdminAction } from "@/services/admin-audit-service"
 
 const updateSchema = z.object({
   status: z.enum(["pending", "active", "past_due", "cancelled", "expired"]).optional(),
@@ -13,7 +14,7 @@ const updateSchema = z.object({
 
 export async function PATCH(request: Request, context: { params: { id: string } }) {
   try {
-    await requireRole("admin")
+    const session = await requireAdminRole(["super_admin", "finance_admin"])
     const body = updateSchema.parse(await request.json())
     const updated = await prisma.subscription.update({
       where: { id: context.params.id },
@@ -24,6 +25,14 @@ export async function PATCH(request: Request, context: { params: { id: string } 
         discountAmount: body.discount_amount,
         couponCode: body.coupon_code ?? undefined,
       },
+    })
+
+    await logAdminAction({
+      adminId: session.user.id,
+      action: "subscription.override",
+      targetType: "subscription",
+      targetId: context.params.id,
+      metadata: body,
     })
 
     return NextResponse.json({ subscription: updated })

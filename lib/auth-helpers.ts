@@ -20,6 +20,18 @@ export async function requireRole(roles: UserRole[] | UserRole) {
   return session
 }
 
+export async function requireAdminRole(roles: Array<"super_admin" | "content_admin" | "support_admin" | "finance_admin">) {
+  const session = await requireRole("admin")
+  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { adminRole: true } })
+  if (!user?.adminRole) {
+    throw new Error("Forbidden")
+  }
+  if (!roles.includes(user.adminRole)) {
+    throw new Error("Forbidden")
+  }
+  return session
+}
+
 export async function enforceParentChildAccess(childId: string, session: Session | null) {
   if (!session?.user?.id) {
     return
