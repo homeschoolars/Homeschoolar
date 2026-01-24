@@ -8,11 +8,12 @@ const refundSchema = z.object({
   reason: z.string().optional(),
 })
 
-export async function POST(request: Request, context: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireAdminRole(["super_admin", "finance_admin"])
     const body = refundSchema.parse(await request.json())
-    const subscription = await prisma.subscription.findUnique({ where: { id: context.params.id } })
+    const { id } = await params
+    const subscription = await prisma.subscription.findUnique({ where: { id } })
     if (!subscription) {
       return NextResponse.json({ error: "Subscription not found" }, { status: 404 })
     }
