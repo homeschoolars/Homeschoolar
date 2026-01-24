@@ -26,7 +26,7 @@ CREATE TABLE "orphan_verifications" (
     "id" TEXT NOT NULL,
     "child_id" TEXT NOT NULL,
     "submitted_by_parent_id" TEXT NOT NULL,
-    "document_type" "OrphanDocumentType" NOT NULL,
+    "documentType" "OrphanDocumentType" NOT NULL,
     "document_url" TEXT NOT NULL,
     "status" "OrphanVerificationStatus" NOT NULL DEFAULT 'pending',
     "reviewed_by_admin_id" TEXT,
