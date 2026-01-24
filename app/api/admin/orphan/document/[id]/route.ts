@@ -13,10 +13,11 @@ function getMimeType(fileName: string) {
   return "application/octet-stream"
 }
 
-export async function GET(_request: Request, context: { params: { id: string } }) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAdminRole(["super_admin", "support_admin"])
-    const verification = await prisma.orphanVerification.findUnique({ where: { id: context.params.id } })
+    const { id } = await params
+    const verification = await prisma.orphanVerification.findUnique({ where: { id } })
     if (!verification) {
       return NextResponse.json({ error: "Document not found" }, { status: 404 })
     }
