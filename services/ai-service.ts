@@ -481,8 +481,9 @@ export async function generateQuiz({
   }
 
   // 3. Now TypeScript knows resolvedUserId is 100% a string
-  await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
-  await enforceDailyLimit(resolvedUserId, "generate-quiz")
+  const safeUserId: string = resolvedUserId
+  await enforceSubscriptionAccess({ userId: safeUserId, feature: "ai" })
+  await enforceDailyLimit(safeUserId, "generate-quiz")
 
   let targetSubject = subject_name
   let targetSubjectId = subject_id
