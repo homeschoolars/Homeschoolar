@@ -473,10 +473,14 @@ export async function generateQuiz({
   recent_topics?: string[]
   userId?: string
 }) {
+  // 1. Resolve the ID
   const resolvedUserId = userId ?? (await getParentIdFromChild(child_id))
+  // 2. HARD CHECK: If it is still null, we MUST stop execution.
   if (!resolvedUserId) {
-    throw new Error("Validation Failed: No valid User ID found.")
+    throw new Error("Validation Failed: No valid User ID found for this request.")
   }
+
+  // 3. Now TypeScript knows resolvedUserId is 100% a string
   await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
   await enforceDailyLimit(resolvedUserId, "generate-quiz")
 
