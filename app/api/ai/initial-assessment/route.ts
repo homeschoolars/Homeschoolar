@@ -26,6 +26,8 @@ export async function POST(req: Request) {
     return Response.json({ assessment: serializeAssessment(assessment) })
   } catch (error) {
     console.error("Error generating assessment:", error)
-    return Response.json({ error: "Failed to generate assessment" }, { status: 500 })
+    const message = error instanceof Error ? error.message : "Failed to generate assessment"
+    const status = message === "Unauthorized" || message === "Forbidden" ? 403 : 400
+    return Response.json({ error: message }, { status })
   }
 }

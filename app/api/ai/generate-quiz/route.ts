@@ -28,6 +28,8 @@ export async function POST(req: Request) {
     return Response.json({ quiz: serializeSurpriseQuiz(quiz) })
   } catch (error) {
     console.error("Error generating quiz:", error)
-    return Response.json({ error: "Failed to generate quiz" }, { status: 500 })
+    const message = error instanceof Error ? error.message : "Failed to generate quiz"
+    const status = message === "Unauthorized" || message === "Forbidden" ? 403 : 400
+    return Response.json({ error: message }, { status })
   }
 }
