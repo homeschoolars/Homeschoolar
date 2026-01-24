@@ -6,5 +6,6 @@
 
 */
 -- AlterTable
-ALTER TABLE "orphan_verifications" DROP COLUMN "document_type",
-ADD COLUMN     "documentType" "OrphanDocumentType" NOT NULL;
+ALTER TABLE "orphan_verifications" DROP COLUMN IF EXISTS "document_type";
+ALTER TABLE "orphan_verifications"
+  ADD COLUMN IF NOT EXISTS "documentType" "OrphanDocumentType" NOT NULL;
