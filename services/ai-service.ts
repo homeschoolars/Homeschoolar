@@ -475,7 +475,7 @@ export async function generateQuiz({
 }) {
   const resolvedUserId = userId ?? (await getParentIdFromChild(child_id))
   if (!resolvedUserId) {
-    throw new Error("Parent account not found")
+    throw new Error("Validation Failed: No valid User ID found.")
   }
   await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
   await enforceDailyLimit(resolvedUserId, "generate-quiz")
