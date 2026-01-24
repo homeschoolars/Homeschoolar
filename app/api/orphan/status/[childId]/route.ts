@@ -2,10 +2,11 @@ import { NextResponse } from "next/server"
 import { requireRole } from "@/lib/auth-helpers"
 import { getOrphanStatus } from "@/services/orphan-verification-service"
 
-export async function GET(_request: Request, context: { params: { childId: string } }) {
+export async function GET(_request: Request, { params }: { params: Promise<{ childId: string }> }) {
   try {
     const session = await requireRole(["parent", "admin"])
-    const status = await getOrphanStatus(context.params.childId, session.user.id, session.user.role === "admin")
+    const { childId } = await params
+    const status = await getOrphanStatus(childId, session.user.id, session.user.role === "admin")
     return NextResponse.json({ status })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to fetch orphan status"

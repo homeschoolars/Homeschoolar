@@ -23,16 +23,17 @@ const childSchema = z.object({
   challenges: z.string().optional().nullable(),
 })
 
-export async function POST(request: Request, context: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireRole(["parent", "admin"])
-    if (session.user.role !== "admin" && session.user.id !== context.params.id) {
+    const { id } = await params
+    if (session.user.role !== "admin" && session.user.id !== id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     const body = childSchema.parse(await request.json())
     const child = await createChildWithProfile({
-      parentId: context.params.id,
+      parentId: id,
       eventUserId: session.user.id,
       child: {
         fullName: body.full_name,

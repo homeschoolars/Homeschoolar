@@ -2,11 +2,12 @@ import { NextResponse } from "next/server"
 import { requireRole, enforceParentChildAccess } from "@/lib/auth-helpers"
 import { getChildInsights } from "@/services/insights-service"
 
-export async function GET(_request: Request, context: { params: { id: string } }) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireRole(["parent", "admin"])
-    await enforceParentChildAccess(context.params.id, session)
-    const insights = await getChildInsights(context.params.id)
+    const { id } = await params
+    await enforceParentChildAccess(id, session)
+    const insights = await getChildInsights(id)
     return NextResponse.json({ insights })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to fetch insights"

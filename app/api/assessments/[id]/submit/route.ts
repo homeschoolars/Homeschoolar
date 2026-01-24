@@ -12,12 +12,13 @@ const bodySchema = z.object({
   ),
 })
 
-export async function POST(request: Request, context: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireRole(["parent", "admin"])
     const body = bodySchema.parse(await request.json())
+    const { id } = await params
     const result = await submitAssessment({
-      assessmentId: context.params.id,
+      assessmentId: id,
       answers: body.answers,
       userId: session.user.id,
     })

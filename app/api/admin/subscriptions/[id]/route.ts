@@ -12,12 +12,13 @@ const updateSchema = z.object({
   coupon_code: z.string().optional().nullable(),
 })
 
-export async function PATCH(request: Request, context: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireAdminRole(["super_admin", "finance_admin"])
     const body = updateSchema.parse(await request.json())
+    const { id } = await params
     const updated = await prisma.subscription.update({
-      where: { id: context.params.id },
+      where: { id },
       data: {
         status: body.status,
         finalAmount: body.final_amount,
@@ -31,7 +32,7 @@ export async function PATCH(request: Request, context: { params: { id: string } 
       adminId: session.user.id,
       action: "subscription.override",
       targetType: "subscription",
-      targetId: context.params.id,
+      targetId: id,
       metadata: body,
     })
 

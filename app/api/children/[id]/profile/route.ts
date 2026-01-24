@@ -24,13 +24,14 @@ const updateSchema = z.object({
   challenges: z.string().optional().nullable(),
 })
 
-export async function PUT(request: Request, context: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireRole(["parent", "admin"])
     const body = updateSchema.parse(await request.json())
+    const { id } = await params
 
     const updated = await updateChildProfile({
-      childId: context.params.id,
+      childId: id,
       parentId: session.user.id,
       isAdmin: session.user.role === "admin",
       data: {
