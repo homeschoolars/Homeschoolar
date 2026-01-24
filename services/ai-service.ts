@@ -474,6 +474,9 @@ export async function generateQuiz({
   userId?: string
 }) {
   const resolvedUserId = userId ?? (await getParentIdFromChild(child_id))
+  if (!resolvedUserId) {
+    throw new Error("Parent account not found")
+  }
   await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
   await enforceDailyLimit(resolvedUserId, "generate-quiz")
 
@@ -543,6 +546,9 @@ export async function gradeQuiz({
     throw new Error("Quiz not found")
   }
   const resolvedUserId = userId ?? (await getParentIdFromChild(quiz.childId))
+  if (!resolvedUserId) {
+    throw new Error("Parent account not found")
+  }
   await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
   await enforceDailyLimit(resolvedUserId, "grade-quiz")
 
@@ -603,6 +609,9 @@ export async function generateInitialAssessment({
   userId?: string
 }) {
   const resolvedUserId = userId ?? (await getParentIdFromChild(child_id))
+  if (!resolvedUserId) {
+    throw new Error("Parent account not found")
+  }
   await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
   await enforceDailyLimit(resolvedUserId, "initial-assessment")
 
@@ -685,6 +694,9 @@ export async function completeAssessment({
   })
 
   const resolvedUserId = userId ?? (await getParentIdFromChild(assessment.childId))
+  if (!resolvedUserId) {
+    throw new Error("Parent account not found")
+  }
   await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
   await enforceDailyLimit(resolvedUserId, "complete-assessment")
 
@@ -760,6 +772,9 @@ export async function recommendCurriculum({ child_id, userId }: { child_id: stri
     throw new Error("Child not found")
   }
   const resolvedUserId = userId ?? (await getParentIdFromChild(child_id))
+  if (!resolvedUserId) {
+    throw new Error("Parent account not found")
+  }
   await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
   await enforceDailyLimit(resolvedUserId, "recommend-curriculum")
 
