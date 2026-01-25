@@ -33,7 +33,6 @@ export async function POST(req: Request) {
       assessment_id,
       answers,
       age_group,
-      userId: session?.user?.id ?? undefined,
     })
     return Response.json(result)
   } catch (error) {
