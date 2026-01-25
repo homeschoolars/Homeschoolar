@@ -6,7 +6,6 @@ import { useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { signIn } from "next-auth/react"
 import { Sparkles, Star, UserPlus, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -188,12 +187,8 @@ export default function SignupPage() {
         throw new Error(data.error || "Registration failed")
       }
 
-      await signIn("credentials", {
-        email: parent.email,
-        password: parent.password,
-        redirect: false,
-      })
-      router.push("/signup/success")
+      const email = data.email ?? parent.email
+      router.push(email ? `/signup/success?email=${encodeURIComponent(email)}` : "/signup/success")
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {

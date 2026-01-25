@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { createParentWithChildren } from "@/services/onboarding-service"
+import { createAndSendVerificationEmail } from "@/services/email-verification"
 
 const parentSchema = z.object({
   full_name: z.string().min(1),
@@ -66,7 +67,13 @@ export async function POST(request: Request) {
       })),
     })
 
-    return NextResponse.json({ userId: user.id })
+    try {
+      await createAndSendVerificationEmail(body.parent.email)
+    } catch (e) {
+      console.error("[signup] Verification email failed:", e)
+    }
+
+    return NextResponse.json({ userId: user.id, email: body.parent.email })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to sign up"
     return NextResponse.json({ error: message }, { status: 400 })

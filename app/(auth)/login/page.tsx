@@ -2,6 +2,7 @@
 
 import type React from "react"
 
+import { Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,24 +10,43 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { Sparkles, Star, Users, GraduationCap } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useState, useEffect } from "react"
+import { Sparkles, Star, Users, GraduationCap, Loader2 } from "lucide-react"
 import { signIn, getSession } from "next-auth/react"
 import { apiFetch } from "@/lib/api-client"
 
-export default function LoginPage() {
+function LoginContent() {
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [studentCode, setStudentCode] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [needsVerification, setNeedsVerification] = useState(false)
+  const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle")
+  const [resendError, setResendError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    const verified = searchParams.get("verified")
+    const err = searchParams.get("error")
+    if (verified === "1") setSuccess("Email verified! You can log in now.")
+    if (err === "invalid_token" || err === "missing_token") {
+      setError("Verification link expired or invalid. Enter your email and use “Resend verification” below.")
+      setNeedsVerification(true)
+    }
+  }, [searchParams])
 
   const handleParentLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
+    setSuccess(null)
+    setNeedsVerification(false)
+    setResendStatus("idle")
+    setResendError(null)
 
     try {
       const result = await signIn("credentials", {
@@ -35,16 +55,47 @@ export default function LoginPage() {
         redirect: false,
       })
       if (!result || result.error) {
-        throw new Error(result?.error || "Invalid credentials")
+        const check = await apiFetch(`/api/auth/check-verification?email=${encodeURIComponent(email)}`)
+        const data = (await check.json()) as { verified?: boolean }
+        if (data.verified === false) {
+          setNeedsVerification(true)
+          setError("Please verify your email before logging in. Check your inbox or resend the link.")
+        } else {
+          setError("Invalid email or password.")
+        }
+        return
       }
 
       const session = await getSession()
       const role = session?.user?.role || "parent"
       router.push(role === "admin" ? "/admin" : "/parent")
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleResendVerification = async () => {
+    if (!email) return
+    setResendStatus("sending")
+    setResendError(null)
+    try {
+      const res = await apiFetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      })
+      const data = (await res.json()) as { error?: string }
+      if (!res.ok) {
+        setResendError(data.error ?? "Failed to resend")
+        setResendStatus("error")
+        return
+      }
+      setResendStatus("sent")
+    } catch {
+      setResendError("Could not resend. Try again.")
+      setResendStatus("error")
     }
   }
 
@@ -156,10 +207,29 @@ export default function LoginPage() {
                     />
                   </div>
 
+                  {success && (
+                    <div className="p-3 rounded-lg bg-green-100 border border-green-300 text-green-800 text-sm">{success}</div>
+                  )}
                   {error && (
                     <div className="p-3 rounded-lg bg-red-100 border border-red-300 text-red-700 text-sm">{error}</div>
                   )}
-
+                  {needsVerification && (
+                    <div className="space-y-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full border-2 border-teal-300"
+                        onClick={handleResendVerification}
+                        disabled={resendStatus === "sending"}
+                      >
+                        {resendStatus === "sending" ? <Loader2 className="w-4 h-4 animate-spin" /> : resendStatus === "sent" ? "Sent! Check your inbox" : "Resend verification email"}
+                      </Button>
+                      {resendStatus === "error" && resendError && (
+                        <p className="text-xs text-center text-red-600">{resendError}</p>
+                      )}
+                    </div>
+                  )}
                   <Button
                     type="submit"
                     disabled={isLoading}
@@ -220,5 +290,23 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-pink-100 via-purple-100 to-cyan-100">
+          <Card className="w-full max-w-md border-2 border-purple-200 shadow-xl bg-white/80 backdrop-blur">
+            <CardContent className="p-8 flex justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+            </CardContent>
+          </Card>
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   )
 }

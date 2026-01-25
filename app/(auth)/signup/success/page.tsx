@@ -1,12 +1,45 @@
+"use client"
+
+import { Suspense } from "react"
+import { useSearchParams } from "next/navigation"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Mail, Sparkles, Star, CheckCircle } from "lucide-react"
+import { Mail, Sparkles, Star, CheckCircle, Loader2 } from "lucide-react"
+import { apiFetch } from "@/lib/api-client"
 
-export default function SignupSuccessPage() {
+function SignupSuccessContent() {
+  const searchParams = useSearchParams()
+  const email = searchParams.get("email")
+  const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle")
+  const [resendError, setResendError] = useState<string | null>(null)
+
+  const handleResend = async () => {
+    if (!email) return
+    setResendStatus("sending")
+    setResendError(null)
+    try {
+      const res = await apiFetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      })
+      const data = (await res.json()) as { error?: string }
+      if (!res.ok) {
+        setResendError(data.error ?? "Failed to resend")
+        setResendStatus("error")
+        return
+      }
+      setResendStatus("sent")
+    } catch {
+      setResendError("Could not resend. Try again.")
+      setResendStatus("error")
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-green-100 via-teal-100 to-cyan-100">
-      {/* Floating decorations */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <Star className="absolute top-20 left-10 w-8 h-8 text-yellow-400 animate-pulse" />
         <Sparkles className="absolute top-40 right-20 w-6 h-6 text-green-400 animate-bounce" />
@@ -22,7 +55,7 @@ export default function SignupSuccessPage() {
             Check Your Email!
           </CardTitle>
           <CardDescription className="text-base">
-            We&apos;ve sent a confirmation link to your email address
+            We&apos;ve sent a verification link to your email address. Click it to activate your account, then log in.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -31,6 +64,30 @@ export default function SignupSuccessPage() {
               Click the link in your email to verify your account and start your learning adventure!
             </p>
           </div>
+
+          {email && (
+            <div className="space-y-2">
+              <p className="text-xs text-center text-gray-500">Didn&apos;t receive it?</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full border-2 border-teal-300"
+                onClick={handleResend}
+                disabled={resendStatus === "sending"}
+              >
+                {resendStatus === "sending" ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : resendStatus === "sent" ? (
+                  "Sent! Check your inbox"
+                ) : (
+                  "Resend verification email"
+                )}
+              </Button>
+              {resendStatus === "error" && resendError && (
+                <p className="text-xs text-center text-red-600">{resendError}</p>
+              )}
+            </div>
+          )}
 
           <div className="space-y-3">
             <Button
@@ -49,5 +106,23 @@ export default function SignupSuccessPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function SignupSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-green-100 via-teal-100 to-cyan-100">
+          <Card className="w-full max-w-md border-2 border-green-200 shadow-xl bg-white/80 backdrop-blur">
+            <CardContent className="p-8 flex justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-teal-500" />
+            </CardContent>
+          </Card>
+        </div>
+      }
+    >
+      <SignupSuccessContent />
+    </Suspense>
   )
 }

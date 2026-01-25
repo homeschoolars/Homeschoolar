@@ -24,6 +24,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const user = await findUserByEmail(credentials.email)
         if (!user?.passwordHash) return null
+        if (!user.emailVerified) return null
 
         const valid = await verifyPassword(credentials.password, user.passwordHash)
         if (!valid) return null
