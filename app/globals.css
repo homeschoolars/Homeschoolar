@@ -409,8 +409,8 @@
 .animated-bg__glow {
   position: absolute;
   border-radius: 999px;
-  filter: blur(24px);
-  opacity: 0.6;
+  filter: none;
+  opacity: 0.5;
   animation: blob-float 8s ease-in-out infinite;
 }
 

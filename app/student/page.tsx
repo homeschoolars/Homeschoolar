@@ -219,7 +219,7 @@ export default function StudentDashboard() {
           childId={child.id}
           childName={child.name}
           ageGroup={child.age_group}
-          subjects={subjects.slice(0, 5)}
+          subjects={subjects}
           onComplete={handleAssessmentComplete}
         />
       </div>

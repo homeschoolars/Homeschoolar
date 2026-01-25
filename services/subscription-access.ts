@@ -46,7 +46,7 @@ export async function enforceSubscriptionAccess({
     return subscription
   }
 
-  if (subscription.status !== "active") {
+  if (subscription.status !== "active" && subscription.status !== "pending") {
     throw new Error("Subscription inactive")
   }
 

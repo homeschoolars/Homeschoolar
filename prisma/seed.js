@@ -101,6 +101,21 @@ async function main() {
       },
     }));
 
+  const extraSubjects = [
+    { name: "English", description: "Reading, writing, and language", color: "#EC4899", displayOrder: 3 },
+    { name: "Social Studies", description: "People, places, and history", color: "#0EA5E9", displayOrder: 4 },
+    { name: "Art & Creativity", description: "Creative thinking and expression", color: "#F97316", displayOrder: 5 },
+    { name: "Life Skills", description: "Habits, values, and daily skills", color: "#8B5CF6", displayOrder: 6 },
+    { name: "Physical Education", description: "Movement, fitness, and wellness", color: "#F59E0B", displayOrder: 7 },
+    { name: "Financial Literacy", description: "Money basics and smart choices", color: "#22C55E", displayOrder: 8 },
+  ];
+  for (const s of extraSubjects) {
+    const exists = await prisma.subject.findFirst({ where: { name: s.name } });
+    if (!exists) {
+      await prisma.subject.create({ data: s });
+    }
+  }
+
   const child = await prisma.child.upsert({
     where: { loginCode: "TEST1234" },
     update: { name: "Ava Student", parentId: parentUser.id },
