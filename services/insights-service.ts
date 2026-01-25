@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { generateObject } from "ai"
-import { google } from "@ai-sdk/google"
+import { google } from "@/lib/google-ai"
 import { prisma } from "@/lib/prisma"
 import { enforceSubscriptionAccess } from "@/services/subscription-access"
 

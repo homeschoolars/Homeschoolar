@@ -12,7 +12,7 @@ import type {
   QuizQuestion,
   LearningLevel,
 } from "@/lib/types"
-import { google } from "@ai-sdk/google"
+import { google, isGeminiConfigured } from "@/lib/google-ai"
 import {
   buildWorksheetPrompt,
   buildGradeSubmissionPrompt,
@@ -508,7 +508,7 @@ export async function generateWorksheet(body: GenerateWorksheetRequest, userId: 
   await enforceDailyLimit(userId, "generate-worksheet")
 
   const result = await generateObject({
-    model: "google/gemini-2.0-flash",
+    model: google("gemini-2.0-flash"),
     schema: worksheetSchema,
     prompt,
     maxOutputTokens: 4000,
@@ -566,7 +566,7 @@ export async function gradeSubmission(body: GradeSubmissionRequest, userId: stri
   await enforceDailyLimit(userId, "grade-submission")
 
   const result = await generateObject({
-    model: "google/gemini-2.0-flash",
+    model: google("gemini-2.0-flash"),
     schema: gradingSchema,
     prompt,
     maxOutputTokens: 3000,
@@ -683,7 +683,7 @@ export async function gradeQuiz({
   })
 
   const result = await generateObject({
-    model: "google/gemini-2.0-flash",
+    model: google("gemini-2.0-flash"),
     schema: quizGradingSchema,
     prompt,
     maxOutputTokens: 1500,
@@ -735,8 +735,8 @@ export async function generateInitialAssessment({
     skill_tested: string
   }> = []
 
-  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-    console.warn("[Assessment] GOOGLE_GENERATIVE_AI_API_KEY missing. Using fallback questions — set it for real-time AI-generated assessment.")
+  if (!isGeminiConfigured()) {
+    console.warn("[Assessment] GOOGLE_GENERATIVE_AI_API_KEY missing or placeholder. Using fallback questions — set it in .env.local for real-time AI-generated assessment.")
     questions = buildFallbackAssessmentQuestions(subject_name)
   } else {
     try {
@@ -813,7 +813,7 @@ export async function completeAssessment({
   })
 
   const result = await generateObject({
-    model: "google/gemini-2.0-flash",
+    model: google("gemini-2.0-flash"),
     schema: assessmentResultSchema,
     prompt,
     maxOutputTokens: 2000,
@@ -971,7 +971,7 @@ export async function recommendCurriculum({ child_id }: { child_id: string; user
   })
 
   const result = await generateObject({
-    model: "google/gemini-2.0-flash",
+    model: google("gemini-2.0-flash"),
     schema: recommendationSchema,
     prompt,
     maxOutputTokens: 2000,

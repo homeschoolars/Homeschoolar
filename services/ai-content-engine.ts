@@ -1,7 +1,7 @@
 import "server-only"
 import { z } from "zod"
 import { generateObject } from "ai"
-import { google } from "@ai-sdk/google"
+import { google } from "@/lib/google-ai"
 import { prisma } from "@/lib/prisma"
 import { toPrismaAgeGroup } from "@/lib/age-group"
 import type { AgeGroup } from "@/lib/types"
