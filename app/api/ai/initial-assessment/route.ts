@@ -21,7 +21,6 @@ export async function POST(req: Request) {
       subject_id,
       subject_name,
       age_group,
-      userId: session?.user?.id ?? undefined,
     })
     return Response.json({ assessment: serializeAssessment(assessment) })
   } catch (error) {

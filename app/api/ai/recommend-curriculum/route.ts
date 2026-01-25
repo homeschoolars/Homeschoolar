@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     const session = await auth()
     await enforceParentChildAccess(child_id, session)
 
-    const recommendations = await recommendCurriculum({ child_id, userId: session?.user?.id ?? undefined })
+    const recommendations = await recommendCurriculum({ child_id })
     return Response.json({ recommendations })
   } catch (error) {
     if (error instanceof Error && error.message === "Child not found") {

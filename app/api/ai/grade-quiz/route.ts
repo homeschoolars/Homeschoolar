@@ -10,8 +10,8 @@ export async function POST(req: Request) {
       age_group: string
     }
 
-    const session = await auth()
-    const result = await gradeQuiz({ quiz_id, answers, age_group, userId: session?.user?.id ?? undefined })
+    await auth()
+    const result = await gradeQuiz({ quiz_id, answers, age_group })
     return Response.json(result)
   } catch (error) {
     if (error instanceof Error && error.message === "Quiz not found") {
