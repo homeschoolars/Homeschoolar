@@ -1,4 +1,12 @@
 import type { AgeGroup, Difficulty } from "@/lib/types"
+import { type ContentLanguage, ageGroupToBracket } from "@/lib/ai-architecture"
+
+/** Worksheet templates by age (Phase 2 blueprint). One-concept-per-lesson; reinforce concept from lesson. */
+const WORKSHEET_TEMPLATE_BY_AGE: Record<string, string> = {
+  "4-6": "Prefer: coloring, matching, tracing, simple circling. Minimal text. Reinforce exact concept from lesson; use different examples than any quiz.",
+  "7-9": "Prefer: fill-in-blanks, short answers, diagrams to label. Progress from guided to independent practice.",
+  "10-13": "Prefer: problem-solving, application exercises, short essays. Deeper application of the concept.",
+}
 
 export function buildWorksheetPrompt({
   subjectName,
@@ -28,8 +36,10 @@ export function buildWorksheetPrompt({
     medium: "moderate challenge, some application required, builds on basics",
     hard: "challenging questions, requires deeper thinking, problem-solving skills",
   }
+  const bracket = ageGroupToBracket(ageGroup)
+  const templateHint = WORKSHEET_TEMPLATE_BY_AGE[bracket] ?? ""
 
-  return `Create an educational worksheet for homeschooled children.
+  return `Create an educational worksheet for homeschooled children. ONE CONCEPT PER LESSON.
 
 Subject: ${subjectName}
 Age Group: ${ageGroup} years old (${ageGroupDescriptions[ageGroup]})
@@ -37,6 +47,7 @@ Difficulty: ${difficulty} (${difficultyDescriptions[difficulty]})
 ${topic ? `Specific Topic: ${topic}` : ""}
 ${childLevel ? `Student's Current Level: ${childLevel}` : ""}
 Number of Questions: ${numQuestions}
+${templateHint ? `Template (age ${bracket}): ${templateHint}` : ""}
 
 Requirements:
 1. Questions should be age-appropriate and engaging
@@ -252,4 +263,93 @@ Generate 5-8 personalized recommendations:
 5. Make recommendations encouraging and achievable
 
 Prioritize recommendations (1 = highest priority).`
+}
+
+/** Phase 1: AI Content Engine – story-based video script (3–5 min, one-concept-per-lesson) */
+export function buildLessonContentPrompt({
+  subject,
+  topic,
+  conceptId,
+  targetAge,
+  language,
+}: {
+  subject: string
+  topic: string
+  conceptId: string
+  targetAge: AgeGroup
+  language: ContentLanguage
+}) {
+  const bracket = ageGroupToBracket(targetAge)
+  const vocabRule =
+    bracket === "4-6"
+      ? "very simple words, short sentences, visual cues"
+      : bracket === "7-9"
+        ? "clear vocabulary, 1–2 step explanations"
+        : "grade-appropriate terms, multi-step reasoning"
+  const cultural =
+    language === "roman_urdu"
+      ? "Use local examples (cricket, Rupees, metric, Pakistani names like Ali/Sara). Roman Urdu where helpful. Culturally familiar scenarios."
+      : "Use clear, neutral examples. English throughout."
+
+  return `Create a story-based VIDEO SCRIPT for a homeschool lesson. SAFETY: Age-appropriate (4–13), educationally sound, culturally sensitive.
+ONE CONCEPT ONLY: ${conceptId}. Topic: ${topic}. Subject: ${subject}.
+
+TARGET AGE: ${targetAge} (bracket ${bracket}). Vocabulary: ${vocabRule}
+
+STRUCTURE (3–5 minutes total):
+1. Hook (30–45 sec): engaging opener, link to child's world
+2. Explain (1–1.5 min): single concept, exactly 3 explanatory examples. No extra concepts.
+3. Interactive (1–1.5 min): 2–3 prompts for the child to respond (e.g. "What do you think...?", "Can you spot...?")
+4. Recap (30 sec): brief summary, positive close
+
+RULES:
+- Single concept focus. Never combine multiple complex ideas.
+- Age-adjusted vocabulary throughout.
+- ${cultural}
+- Each section: duration_estimate_sec, script text, examples array, interactive_prompts array.
+- Total duration 180–300 seconds.
+
+Output a structured script with title, concept_id, age_bracket, vocabulary_level, sections (label, duration_estimate_sec, script, examples, interactive_prompts), and total_duration_estimate_sec.`
+}
+
+/** Phase 1: AI Lesson Quiz – 20 MCQs per lesson, 4 options, distractors reveal misunderstandings */
+export function buildLessonQuizPrompt({
+  subject,
+  topic,
+  conceptId,
+  ageGroup,
+  lessonSummary,
+  recentTopics,
+}: {
+  subject: string
+  topic: string
+  conceptId: string
+  ageGroup: AgeGroup
+  lessonSummary?: string
+  recentTopics?: string[]
+}) {
+  const bracket = ageGroupToBracket(ageGroup)
+  const difficultyRule =
+    bracket === "4-6"
+      ? "Visual-heavy, simple language. Minimal text. Focus on recognition and simple choices."
+      : bracket === "7-9"
+        ? "Text-based, 2-step reasoning. Clear scenarios."
+        : "Applied concepts, multi-step problems. Test deeper understanding."
+
+  return `Create a LESSON QUIZ: exactly 20 multiple-choice questions for the lesson.
+
+Subject: ${subject}. Topic: ${topic}. Concept: ${conceptId}.
+Age group: ${ageGroup} (${bracket}). ${difficultyRule}
+${lessonSummary ? `Lesson summary: ${lessonSummary}` : ""}
+${recentTopics?.length ? `Recent topics (avoid overlap): ${recentTopics.join(", ")}` : ""}
+
+RULES:
+- Exactly 20 MCQs. 4 options each: 1 correct, 3 plausible distractors.
+- Distractors must reveal specific misunderstandings (e.g. common confusion, typical slip).
+- NO ROTE MEMORY. Every question must test conceptual understanding.
+- Mix difficulty: easy (~6), medium (~8), hard (~6). Points: easy 1, medium 2, hard 3.
+- Each question: id, question, options [4 strings], correct_answer, skill_tested, difficulty, points.
+- Optional: distractor_rationale object (key = wrong option, value = why it’s a plausible mistake).
+
+Output only the questions array.`
 }

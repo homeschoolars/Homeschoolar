@@ -407,6 +407,8 @@ model Subject {
   curriculumPaths CurriculumPath[]
   initialAssessments InitialAssessment[]
   learningMemory LearningMemory[]
+  lessonContents LessonContent[]
+  lessonQuizzes  LessonQuiz[]
 
   @@map("subjects")
 }
@@ -774,6 +776,38 @@ model SurpriseQuiz {
   subject Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
 
   @@map("surprise_quizzes")
+}
+
+model LessonContent {
+  id         String   @id @default(uuid())
+  subjectId  String   @map("subject_id")
+  topic      String
+  conceptId  String   @map("concept_id")
+  ageGroup   AgeGroup @map("age_group")
+  language   String   @default("en")
+  script     Json
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([subjectId, topic, conceptId, ageGroup, language])
+  @@map("lesson_contents")
+}
+
+model LessonQuiz {
+  id        String   @id @default(uuid())
+  subjectId String   @map("subject_id")
+  topic     String
+  conceptId String   @map("concept_id")
+  ageGroup  AgeGroup @map("age_group")
+  questions Json
+  maxScore  Int      @map("max_score")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([subjectId, topic, conceptId, ageGroup])
+  @@map("lesson_quizzes")
 }
 
 model AIRecommendation {

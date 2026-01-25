@@ -1,19 +1,32 @@
 import { prisma } from "@/lib/prisma"
+import type { ErrorCategory } from "@/lib/ai-architecture"
 
 export async function updateLearningMemoryFromAssessment({
   childId,
   subjectId,
   strengths,
   weaknesses,
+  errorPatterns,
+  masteryScores,
 }: {
   childId: string
   subjectId: string
   strengths: Array<{ concept: string; evidence?: string }>
   weaknesses: Array<{ concept: string; evidence?: string }>
+  /** Optional: map concept -> error categories for wrong answers */
+  errorPatterns?: Record<string, ErrorCategory[]>
+  /** Optional: map concept -> 0-100 mastery override */
+  masteryScores?: Record<string, number>
 }) {
   const now = new Date()
 
   for (const item of strengths) {
+    const mastery = masteryScores?.[item.concept] ?? 80
+    const patterns = errorPatterns?.[item.concept]
+    const evidence = {
+      latest: item.evidence ?? "Strength observed",
+      ...(patterns && patterns.length > 0 ? { error_patterns: patterns } : {}),
+    } as unknown as object
     await prisma.learningMemory.upsert({
       where: {
         childId_subjectId_concept: {
@@ -22,23 +35,25 @@ export async function updateLearningMemoryFromAssessment({
           concept: item.concept,
         },
       },
-      update: {
-        masteryLevel: 80,
-        lastUpdated: now,
-        evidence: { latest: item.evidence ?? "Strength observed" } as unknown as object,
-      },
+      update: { masteryLevel: mastery, lastUpdated: now, evidence },
       create: {
         childId,
         subjectId,
         concept: item.concept,
-        masteryLevel: 80,
+        masteryLevel: mastery,
         lastUpdated: now,
-        evidence: { latest: item.evidence ?? "Strength observed" } as unknown as object,
+        evidence,
       },
     })
   }
 
   for (const item of weaknesses) {
+    const mastery = masteryScores?.[item.concept] ?? 30
+    const patterns = errorPatterns?.[item.concept]
+    const evidence = {
+      latest: item.evidence ?? "Needs practice",
+      ...(patterns && patterns.length > 0 ? { error_patterns: patterns } : {}),
+    } as unknown as object
     await prisma.learningMemory.upsert({
       where: {
         childId_subjectId_concept: {
@@ -47,18 +62,14 @@ export async function updateLearningMemoryFromAssessment({
           concept: item.concept,
         },
       },
-      update: {
-        masteryLevel: 30,
-        lastUpdated: now,
-        evidence: { latest: item.evidence ?? "Needs practice" } as unknown as object,
-      },
+      update: { masteryLevel: mastery, lastUpdated: now, evidence },
       create: {
         childId,
         subjectId,
         concept: item.concept,
-        masteryLevel: 30,
+        masteryLevel: mastery,
         lastUpdated: now,
-        evidence: { latest: item.evidence ?? "Needs practice" } as unknown as object,
+        evidence,
       },
     })
   }
