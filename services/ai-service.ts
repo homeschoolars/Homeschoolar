@@ -21,8 +21,11 @@ import {
   buildInitialAssessmentPrompt,
   buildCompleteAssessmentPrompt,
   buildRecommendCurriculumPrompt,
+  buildCurriculumFromAssessmentPrompt,
 } from "@/services/ai-prompts"
 import { enforceSubscriptionAccess } from "@/services/subscription-access"
+import { updateLearningMemoryFromAssessment } from "@/services/memory-service"
+import { upsertBehavioralMemory } from "@/services/memory-service"
 
 const DAILY_AI_LIMIT = Number(process.env.AI_DAILY_LIMIT ?? "50")
 
@@ -164,6 +167,7 @@ const assessmentResultSchema = z.object({
   strengths: z.array(z.string()),
   areas_to_work_on: z.array(z.string()),
   suggested_starting_topics: z.array(z.string()),
+  inferred_learning_style: z.enum(["visual", "auditory", "reading_writing", "kinesthetic", "mixed"]).optional(),
 })
 
 function buildFallbackAssessmentQuestions(subjectName: string) {
@@ -276,7 +280,10 @@ function buildFallbackAssessmentQuestions(subjectName: string) {
     ]
   }
 
-  if (normalized.includes("english") || normalized.includes("language") || normalized.includes("literacy")) {
+  if (
+    (normalized.includes("english") || normalized.includes("language") || normalized.includes("literacy")) &&
+    !normalized.includes("financial")
+  ) {
     return [
       create("fallback-1", "multiple_choice", "Which word is a noun?", "Cat", 1, ["Cat", "Run", "Quickly", "Blue"], "nouns"),
       create("fallback-2", "multiple_choice", "Which word is a verb?", "Run", 1, ["Happy", "Run", "Blue", "Tall"], "verbs"),
@@ -296,6 +303,91 @@ function buildFallbackAssessmentQuestions(subjectName: string) {
       create("fallback-8", "multiple_choice", "Which is a punctuation mark?", "Period", 3, ["Letter", "Word", "Period", "Sound"], "punctuation"),
       create("fallback-9", "true_false", "True or False: 'They is' is correct grammar.", "False", 3, undefined, "grammar"),
       create("fallback-10", "multiple_choice", "Choose the correct word: I ___ happy.", "am", 3, ["am", "is", "are", "be"], "grammar"),
+      create("fallback-11", "multiple_choice", "What is the opposite of 'hot'?", "Cold", 3, ["Cold", "Warm", "Wet", "Big"], "antonyms"),
+      create("fallback-12", "true_false", "True or False: A sentence must have a verb.", "True", 3, undefined, "sentence structure"),
+      create("fallback-13", "multiple_choice", "Which is a proper noun?", "London", 3, ["city", "London", "place", "country"], "proper nouns"),
+      create("fallback-14", "true_false", "True or False: 'Quickly' is an adverb.", "True", 3, undefined, "adverbs"),
+      create("fallback-15", "multiple_choice", "What do we use at the end of a question?", "Question mark", 3, ["Period", "Comma", "Question mark", "Exclamation"], "punctuation"),
+    ]
+  }
+
+  if (normalized.includes("art") || normalized.includes("creativity")) {
+    return [
+      create("fallback-1", "multiple_choice", "Which is a primary color?", "Red", 1, ["Red", "Green", "Orange", "Purple"], "color"),
+      create("fallback-2", "true_false", "True or False: Artists use shapes to make pictures.", "True", 1, undefined, "art basics"),
+      create("fallback-3", "multiple_choice", "What do we use to draw?", "Pencil", 2, ["Spoon", "Pencil", "Chair", "Water"], "materials"),
+      create("fallback-4", "multiple_choice", "Mixing blue and yellow makes:", "Green", 2, ["Red", "Green", "Brown", "Pink"], "color mixing"),
+      create("fallback-5", "true_false", "True or False: Dancing is a form of art.", "True", 2, undefined, "art forms"),
+      create("fallback-6", "multiple_choice", "Which shape has no corners?", "Circle", 2, ["Square", "Triangle", "Circle", "Rectangle"], "shapes"),
+      create("fallback-7", "true_false", "True or False: We can use recycled materials for art.", "True", 3, undefined, "creativity"),
+      create("fallback-8", "multiple_choice", "What helps us create patterns?", "Repetition", 3, ["Repetition", "Eating", "Sleeping", "Running"], "patterns"),
+      create("fallback-9", "true_false", "True or False: Music is a type of art.", "True", 3, undefined, "art forms"),
+      create("fallback-10", "multiple_choice", "Which is used for painting?", "Brush", 3, ["Brush", "Fork", "Ruler", "Eraser"], "materials"),
+      create("fallback-11", "multiple_choice", "Drawing from imagination is called:", "Creative", 3, ["Creative", "Boring", "Easy", "Hard"], "creativity"),
+      create("fallback-12", "true_false", "True or False: Everyone can be an artist.", "True", 3, undefined, "art confidence"),
+      create("fallback-13", "multiple_choice", "Which is a cool color?", "Blue", 3, ["Red", "Orange", "Blue", "Yellow"], "color"),
+      create("fallback-14", "true_false", "True or False: Art can show feelings.", "True", 3, undefined, "expression"),
+      create("fallback-15", "multiple_choice", "What do we call a picture of yourself?", "Self-portrait", 3, ["Landscape", "Self-portrait", "Still life", "Abstract"], "art types"),
+    ]
+  }
+
+  if (normalized.includes("life") || normalized.includes("skill")) {
+    return [
+      create("fallback-1", "multiple_choice", "We should brush our teeth:", "Twice a day", 1, ["Once a week", "Twice a day", "Never", "Once a month"], "hygiene"),
+      create("fallback-2", "true_false", "True or False: Saying please and thank you is polite.", "True", 1, undefined, "manners"),
+      create("fallback-3", "multiple_choice", "What should we do before eating?", "Wash hands", 2, ["Wash hands", "Run", "Watch TV", "Sleep"], "hygiene"),
+      create("fallback-4", "multiple_choice", "Who do we ask when we need help?", "A trusted adult", 2, ["A stranger", "A trusted adult", "Nobody", "A pet"], "safety"),
+      create("fallback-5", "true_false", "True or False: We should share with others.", "True", 2, undefined, "sharing"),
+      create("fallback-6", "multiple_choice", "What helps us stay healthy?", "Exercise", 2, ["Exercise", "Too much candy", "No sleep", "Sitting all day"], "health"),
+      create("fallback-7", "true_false", "True or False: It is good to listen when others speak.", "True", 3, undefined, "listening"),
+      create("fallback-8", "multiple_choice", "When we make a mistake, we should:", "Say sorry and try again", 3, ["Hide it", "Say sorry and try again", "Blame others", "Give up"], "responsibility"),
+      create("fallback-9", "true_false", "True or False: Cleaning up our toys is responsible.", "True", 3, undefined, "responsibility"),
+      create("fallback-10", "multiple_choice", "What do we use to tell time?", "Clock", 3, ["Clock", "Chair", "Apple", "Ball"], "daily skills"),
+      create("fallback-11", "true_false", "True or False: Being kind makes others feel good.", "True", 3, undefined, "kindness"),
+      create("fallback-12", "multiple_choice", "Before crossing the road we:", "Look both ways", 3, ["Run", "Look both ways", "Close eyes", "Listen to music"], "safety"),
+      create("fallback-13", "true_false", "True or False: We should drink water every day.", "True", 3, undefined, "health"),
+      create("fallback-14", "multiple_choice", "What helps us stay calm when upset?", "Taking deep breaths", 3, ["Shouting", "Taking deep breaths", "Hiding", "Blame"], "emotional skills"),
+      create("fallback-15", "true_false", "True or False: Helping at home is a good habit.", "True", 3, undefined, "habits"),
+    ]
+  }
+
+  if (normalized.includes("physical") || normalized.includes("education") || normalized.includes("fitness") || normalized.includes("wellness")) {
+    return [
+      create("fallback-1", "multiple_choice", "Running helps our:", "Heart", 1, ["Heart", "Ears", "Eyes", "Hair"], "fitness"),
+      create("fallback-2", "true_false", "True or False: Exercise keeps us healthy.", "True", 1, undefined, "fitness"),
+      create("fallback-3", "multiple_choice", "We should drink water when we:", "Exercise", 2, ["Sleep", "Exercise", "Read", "Draw"], "hydration"),
+      create("fallback-4", "multiple_choice", "Which is a form of exercise?", "Jumping", 2, ["Jumping", "Sitting", "Sleeping", "Watching TV"], "exercise"),
+      create("fallback-5", "true_false", "True or False: Stretching before exercise is good.", "True", 2, undefined, "warm-up"),
+      create("fallback-6", "multiple_choice", "What do our muscles need to grow?", "Exercise and food", 2, ["Only sleep", "Exercise and food", "Only TV", "Sugar"], "muscles"),
+      create("fallback-7", "true_false", "True or False: Playing outside is good for us.", "True", 3, undefined, "outdoor play"),
+      create("fallback-8", "multiple_choice", "Which sport uses a ball?", "Soccer", 3, ["Soccer", "Swimming", "Running", "Cycling"], "sports"),
+      create("fallback-9", "true_false", "True or False: Rest is important after exercise.", "True", 3, undefined, "rest"),
+      create("fallback-10", "multiple_choice", "What helps us balance?", "Practice", 3, ["Practice", "Sitting", "Eating", "Sleeping"], "balance"),
+      create("fallback-11", "true_false", "True or False: We should warm up before playing.", "True", 3, undefined, "warm-up"),
+      create("fallback-12", "multiple_choice", "Sleep helps our body:", "Recover", 3, ["Recover", "Shrink", "Stay awake", "Forget"], "rest"),
+      create("fallback-13", "true_false", "True or False: Team sports teach us to work together.", "True", 3, undefined, "teamwork"),
+      create("fallback-14", "multiple_choice", "Which is a healthy snack?", "Fruit", 3, ["Fruit", "Candy only", "Chips only", "Soda"], "nutrition"),
+      create("fallback-15", "true_false", "True or False: Moving our body every day is important.", "True", 3, undefined, "activity"),
+    ]
+  }
+
+  if (normalized.includes("financial") || normalized.includes("money") || normalized.includes("literacy")) {
+    return [
+      create("fallback-1", "multiple_choice", "Money is used to:", "Buy things", 1, ["Eat", "Buy things", "Sleep", "Run"], "money basics"),
+      create("fallback-2", "true_false", "True or False: We should save some money.", "True", 1, undefined, "saving"),
+      create("fallback-3", "multiple_choice", "A piggy bank helps us:", "Save money", 2, ["Save money", "Cook", "Draw", "Sleep"], "saving"),
+      create("fallback-4", "multiple_choice", "When we want something expensive we:", "Save over time", 2, ["Give up", "Save over time", "Steal", "Cry"], "saving"),
+      create("fallback-5", "true_false", "True or False: Needs are more important than wants.", "True", 2, undefined, "needs vs wants"),
+      create("fallback-6", "multiple_choice", "Which is a need?", "Food", 2, ["Food", "Toys", "Video games", "Candy"], "needs vs wants"),
+      create("fallback-7", "true_false", "True or False: Sharing money to help others is kind.", "True", 3, undefined, "giving"),
+      create("fallback-8", "multiple_choice", "Earning money means:", "Getting paid for work", 3, ["Stealing", "Getting paid for work", "Finding it", "Asking only"], "earning"),
+      create("fallback-9", "true_false", "True or False: We should not spend all our money at once.", "True", 3, undefined, "budgeting"),
+      create("fallback-10", "multiple_choice", "What helps us plan our spending?", "A budget", 3, ["A budget", "A toy", "A game", "A song"], "budgeting"),
+      create("fallback-11", "true_false", "True or False: Delaying a want to save is smart.", "True", 3, undefined, "delayed gratification"),
+      create("fallback-12", "multiple_choice", "Which helps us save?", "Putting coins in a jar", 3, ["Putting coins in a jar", "Buying everything", "Losing money", "Not caring"], "saving"),
+      create("fallback-13", "true_false", "True or False: We should compare prices before buying.", "True", 3, undefined, "smart spending"),
+      create("fallback-14", "multiple_choice", "Donating to help others is:", "Generous", 3, ["Generous", "Wrong", "Strange", "Bad"], "giving"),
+      create("fallback-15", "true_false", "True or False: Learning about money is useful.", "True", 3, undefined, "financial literacy"),
     ]
   }
 
@@ -386,6 +478,19 @@ const recommendationSchema = z.object({
       priority: z.number(),
     }),
   ),
+})
+
+const curriculumPlanSchema = z.object({
+  subjects: z.array(
+    z.object({
+      subject_id: z.string(),
+      subject_name: z.string(),
+      current_topic: z.string(),
+      next_topics: z.array(z.string()),
+      rationale: z.string().optional(),
+    })
+  ),
+  summary: z.string().optional(),
 })
 
 export async function generateWorksheet(body: GenerateWorksheetRequest, userId: string) {
@@ -631,6 +736,7 @@ export async function generateInitialAssessment({
   }> = []
 
   if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    console.warn("[Assessment] GOOGLE_GENERATIVE_AI_API_KEY missing. Using fallback questions — set it for real-time AI-generated assessment.")
     questions = buildFallbackAssessmentQuestions(subject_name)
   } else {
     try {
@@ -668,10 +774,12 @@ export async function completeAssessment({
   assessment_id,
   answers,
   age_group,
+  is_last_subject = false,
 }: {
   assessment_id: string
   answers: Answer[]
   age_group: string
+  is_last_subject?: boolean
 }) {
   const assessment = await prisma.assessment.findUnique({
     where: { id: assessment_id },
@@ -711,6 +819,12 @@ export async function completeAssessment({
     maxOutputTokens: 2000,
   })
 
+  const maxScore = questions.reduce((sum, q) => sum + (q.points ?? 0), 0)
+  const normalizedScore = maxScore > 0 ? Math.round((result.object.score / maxScore) * 100) : 0
+  const topics = result.object.suggested_starting_topics ?? []
+  const firstTopic = topics[0] ?? null
+  const restTopics = topics.slice(1)
+
   await prisma.assessment.update({
     where: { id: assessment_id },
     data: {
@@ -721,19 +835,56 @@ export async function completeAssessment({
     },
   })
 
+  await prisma.assessmentResult.upsert({
+    where: { assessmentId: assessment_id },
+    update: {
+      rawScore: result.object.score,
+      normalizedScore,
+      strengths: (result.object.strengths ?? []) as unknown as object,
+      weaknesses: (result.object.areas_to_work_on ?? []) as unknown as object,
+      aiSummary: result.object.analysis ?? null,
+      evaluatedAt: new Date(),
+    },
+    create: {
+      assessmentId: assessment_id,
+      rawScore: result.object.score,
+      normalizedScore,
+      strengths: (result.object.strengths ?? []) as unknown as object,
+      weaknesses: (result.object.areas_to_work_on ?? []) as unknown as object,
+      aiSummary: result.object.analysis ?? null,
+    },
+  })
+
+  await updateLearningMemoryFromAssessment({
+    childId: assessment.childId,
+    subjectId: assessment.subjectId,
+    strengths: (result.object.strengths ?? []).map((s) => ({ concept: s, evidence: "Initial assessment" })),
+    weaknesses: (result.object.areas_to_work_on ?? []).map((w) => ({ concept: w, evidence: "Initial assessment" })),
+  })
+
+  if (result.object.inferred_learning_style) {
+    await upsertBehavioralMemory({
+      childId: assessment.childId,
+      learningStyle: result.object.inferred_learning_style,
+    })
+  }
+
   await prisma.child.update({
     where: { id: assessment.childId },
     data: {
       currentLevel: result.object.recommended_level as LearningLevel,
-      assessmentCompleted: true,
+      ...(result.object.inferred_learning_style
+        ? { learningStyle: result.object.inferred_learning_style }
+        : {}),
+      ...(is_last_subject ? { assessmentCompleted: true } : {}),
     },
   })
 
   await prisma.curriculumPath.upsert({
     where: { childId_subjectId: { childId: assessment.childId, subjectId: assessment.subjectId } },
     update: {
-      currentTopic: result.object.suggested_starting_topics[0],
-      nextTopics: result.object.suggested_starting_topics.slice(1),
+      currentTopic: firstTopic,
+      nextTopics: restTopics,
       masteryLevel:
         result.object.recommended_level === "beginner"
           ? 0
@@ -744,8 +895,8 @@ export async function completeAssessment({
     create: {
       childId: assessment.childId,
       subjectId: assessment.subjectId,
-      currentTopic: result.object.suggested_starting_topics[0],
-      nextTopics: result.object.suggested_starting_topics.slice(1),
+      currentTopic: firstTopic,
+      nextTopics: restTopics,
       masteryLevel:
         result.object.recommended_level === "beginner"
           ? 0
@@ -760,6 +911,14 @@ export async function completeAssessment({
     feature: "complete-assessment",
     eventData: { assessmentId: assessment_id, ageGroup: age_group },
   })
+
+  if (is_last_subject) {
+    try {
+      await generateCurriculumFromAssessment(assessment.childId, resolvedUserId)
+    } catch (e) {
+      console.error("Auto-generate curriculum from assessment failed:", e)
+    }
+  }
 
   return result.object
 }
@@ -838,4 +997,81 @@ export async function recommendCurriculum({ child_id }: { child_id: string; user
   })
 
   return result.object.recommendations
+}
+
+/** Generate or regenerate curriculum plan from stored assessments. Used after assessment and when parent clicks Regenerate. */
+export async function generateCurriculumFromAssessment(
+  childId: string,
+  userId: string
+): Promise<{ paths: Array<{ subjectId: string; subjectName: string; currentTopic: string; nextTopics: string[] }>; summary?: string }> {
+  const child = await prisma.child.findUnique({ where: { id: childId } })
+  if (!child) throw new Error("Child not found")
+  const resolvedUserId = await resolveParentUserId(childId)
+  await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
+  await enforceDailyLimit(resolvedUserId, "recommend-curriculum")
+
+  const assessments = await prisma.assessment.findMany({
+    where: { childId, status: "completed" },
+    include: { subject: true, assessmentResult: true },
+    orderBy: { createdAt: "desc" },
+  })
+
+  const input = assessments.map((a) => {
+    const res = a.assessmentResult as { strengths?: string[]; weaknesses?: string[] } | null
+    return {
+      subjectId: a.subjectId,
+      subjectName: a.subject?.name ?? "General",
+      recommendedLevel: (a as { recommendedLevel?: string }).recommendedLevel ?? "beginner",
+      strengths: (res?.strengths as string[]) ?? [],
+      weaknesses: (res?.weaknesses as string[]) ?? [],
+      suggestedTopics: [] as string[],
+    }
+  })
+
+  if (input.length === 0) {
+    return { paths: [] }
+  }
+
+  const prompt = buildCurriculumFromAssessmentPrompt({
+    childName: child.name,
+    ageGroup: toApiAgeGroup(child.ageGroup),
+    learningStyle: child.learningStyle,
+    assessments: input,
+  })
+
+  const result = await generateObject({
+    model: google("gemini-1.5-flash"),
+    schema: curriculumPlanSchema,
+    prompt,
+    maxOutputTokens: 2500,
+  })
+
+  await prisma.curriculumPath.deleteMany({ where: { childId } })
+
+  const paths: Array<{ subjectId: string; subjectName: string; currentTopic: string; nextTopics: string[] }> = []
+  for (const s of result.object.subjects) {
+    await prisma.curriculumPath.create({
+      data: {
+        childId,
+        subjectId: s.subject_id,
+        currentTopic: s.current_topic,
+        nextTopics: s.next_topics ?? [],
+        masteryLevel: 50,
+      },
+    })
+    paths.push({
+      subjectId: s.subject_id,
+      subjectName: s.subject_name,
+      currentTopic: s.current_topic,
+      nextTopics: s.next_topics ?? [],
+    })
+  }
+
+  await logUsage({
+    userId: resolvedUserId,
+    feature: "regenerate-curriculum",
+    eventData: { childId },
+  })
+
+  return { paths, summary: result.object.summary }
 }

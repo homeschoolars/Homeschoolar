@@ -6,10 +6,11 @@ import { prisma } from "@/lib/prisma"
 
 export async function POST(req: Request) {
   try {
-    const { assessment_id, answers, age_group } = (await req.json()) as {
+    const { assessment_id, answers, age_group, is_last_subject } = (await req.json()) as {
       assessment_id: string
       answers: Answer[]
       age_group: string
+      is_last_subject?: boolean
     }
 
     const session = await auth()
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
       assessment_id,
       answers,
       age_group,
+      is_last_subject: is_last_subject ?? false,
     })
     return Response.json(result)
   } catch (error) {

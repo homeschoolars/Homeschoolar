@@ -210,9 +210,10 @@ Student: ${q.student_answer}
 
 Determine:
 1. Their score and recommended level (beginner/intermediate/advanced)
-2. Their strengths based on correct answers
-3. Areas they need to work on
+2. Their strengths based on correct answers (by subject/concept)
+3. Areas they need to work on (by subject/concept)
 4. Suggested starting topics for their curriculum
+5. Inferred learning style: From response patterns (e.g. better on visual vs text, speed, question types), infer one of: visual | auditory | reading_writing | kinesthetic | mixed. Output as inferred_learning_style.
 
 Be encouraging and constructive in the analysis.`
 }
@@ -263,6 +264,45 @@ Generate 5-8 personalized recommendations:
 5. Make recommendations encouraging and achievable
 
 Prioritize recommendations (1 = highest priority).`
+}
+
+/** Generate curriculum plan from assessment results. Used for initial plan and regenerate. */
+export function buildCurriculumFromAssessmentPrompt({
+  childName,
+  ageGroup,
+  learningStyle,
+  assessments,
+}: {
+  childName: string
+  ageGroup: string
+  learningStyle: string | null
+  assessments: Array<{
+    subjectId: string
+    subjectName: string
+    recommendedLevel: string
+    strengths: string[]
+    weaknesses: string[]
+    suggestedTopics: string[]
+  }>
+}) {
+  return `Generate a personalized CURRICULUM PLAN for ${childName} (${ageGroup} years). Learning style: ${learningStyle || "not yet assessed"}.
+
+Assessment results per subject:
+${assessments
+  .map(
+    (a) =>
+      `- ${a.subjectName}: level ${a.recommendedLevel}. Strengths: ${(a.strengths ?? []).join(", ") || "none"}. Areas to work on: ${(a.weaknesses ?? []).join(", ") || "none"}. Suggested topics: ${(a.suggestedTopics ?? []).join(", ") || "none"}.`
+  )
+  .join("\n")}
+
+For each subject, output:
+1. subject_id (use exact id from input)
+2. subject_name
+3. current_topic: one concrete starting topic (from suggested or derived from level)
+4. next_topics: 4–6 ordered topics for the next weeks/months, building on strengths and addressing weaknesses
+5. rationale: one short sentence why this plan fits the child
+
+Also output a brief summary (2–3 sentences) for the parent. No jargon.`
 }
 
 /** Phase 1: AI Content Engine – story-based video script (3–5 min, one-concept-per-lesson) */

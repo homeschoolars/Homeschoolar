@@ -52,6 +52,7 @@ import type {
 } from "@/lib/types"
 import { WorksheetGenerator } from "@/components/ai/worksheet-generator"
 import { RecommendationsPanel } from "@/components/ai/recommendations-panel"
+import { CurriculumPlanCard } from "@/components/ai/curriculum-plan-card"
 import { CurriculumPDFActions, AssessmentPDFActions } from "@/components/pdf/pdf-actions"
 import { NotificationCenter } from "@/components/notifications/notification-center"
 import { ParentAnalytics } from "@/components/analytics/parent-analytics"
@@ -787,6 +788,12 @@ export default function ParentDashboardClient({
                   </Button>
                 </CardContent>
               </Card>
+            )}
+
+            {selectedChild && selectedChild.assessment_completed && (
+              <div className="mt-6">
+                <CurriculumPlanCard childId={selectedChild.id} childName={selectedChild.name} />
+              </div>
             )}
           </TabsContent>
 

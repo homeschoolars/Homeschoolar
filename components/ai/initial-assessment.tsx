@@ -141,6 +141,7 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
     setSubmitError(null)
 
     try {
+      const isLast = currentSubjectIndex >= subjects.length - 1
       const response = await apiFetch("/api/ai/complete-assessment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -148,6 +149,7 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
           assessment_id: assessmentId,
           answers: finalAnswers,
           age_group: ageGroup,
+          is_last_subject: isLast,
         }),
       })
 
