@@ -617,7 +617,7 @@ export async function generateQuiz({
   })
 
   const result = await generateObject({
-    model: google("gemini-1.5-flash"),
+    model: google("gemini-2.0-flash"),
     schema: quizSchema,
     prompt,
     maxOutputTokens: 2000,
@@ -735,21 +735,35 @@ export async function generateInitialAssessment({
     skill_tested: string
   }> = []
 
+  let source: "ai" | "fallback" = "ai"
+  let fallback_reason: "gemini_unconfigured" | "gemini_error" | null = null
   if (!isGeminiConfigured()) {
-    console.warn("[Assessment] GOOGLE_GENERATIVE_AI_API_KEY missing or placeholder. Using fallback questions — set it in .env.local for real-time AI-generated assessment.")
+    console.warn(
+      "[Assessment] GOOGLE_GENERATIVE_AI_API_KEY missing or placeholder. Using fallback questions. " +
+        "Set it in .env.local (local) or Cloud Run / Vercel env vars (production). Check GET /api/health → gemini_configured."
+    )
     questions = buildFallbackAssessmentQuestions(subject_name)
+    source = "fallback"
+    fallback_reason = "gemini_unconfigured"
   } else {
     try {
       const result = await generateObject({
-        model: google("gemini-1.5-flash"),
+        model: google("gemini-2.0-flash"),
         schema: assessmentSchema,
         prompt,
         maxOutputTokens: 3000,
       })
       questions = result.object.questions
     } catch (error) {
-      console.error("AI assessment generation failed. Using fallback questions.", error)
+      const err = error as { status?: number; code?: string; message?: string }
+      const hint = err?.status ?? err?.code ?? (err?.message ? String(err.message).slice(0, 80) : "unknown")
+      console.error(
+        `[Assessment] Gemini API error (${hint}). Using fallback questions. Check quota, billing, and key restrictions.`,
+        error
+      )
       questions = buildFallbackAssessmentQuestions(subject_name)
+      source = "fallback"
+      fallback_reason = "gemini_error"
     }
   }
 
@@ -764,10 +778,10 @@ export async function generateInitialAssessment({
   await logUsage({
     userId: resolvedUserId,
     feature: "initial-assessment",
-    eventData: { childId: child_id, subjectId: subject_id },
+    eventData: { childId: child_id, subjectId: subject_id, source, fallback_reason: fallback_reason ?? undefined },
   })
 
-  return assessment
+  return { assessment, source, fallback_reason: fallback_reason ?? undefined }
 }
 
 export async function completeAssessment({
@@ -1040,7 +1054,7 @@ export async function generateCurriculumFromAssessment(
   })
 
   const result = await generateObject({
-    model: google("gemini-1.5-flash"),
+    model: google("gemini-2.0-flash"),
     schema: curriculumPlanSchema,
     prompt,
     maxOutputTokens: 2500,

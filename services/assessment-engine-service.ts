@@ -120,7 +120,7 @@ RULES:
 - concept_id when referring to a specific concept; summary required; suggested_action optional.`
 
   const result = await generateObject({
-    model: google("gemini-1.5-flash"),
+    model: google("gemini-2.0-flash"),
     schema: insightSchema,
     prompt,
     maxOutputTokens: 1500,

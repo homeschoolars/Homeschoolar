@@ -82,7 +82,7 @@ export async function createAssessment({
   }
 
   const result = await generateObject({
-    model: google("gemini-1.5-flash"),
+    model: google("gemini-2.0-flash"),
     schema: assessmentGenerateSchema,
     prompt: buildAssessmentPrompt({
       childName: child.name,
@@ -137,7 +137,7 @@ export async function submitAssessment({
   }
 
   const gradingResult = await generateObject({
-    model: google("gemini-1.5-flash"),
+    model: google("gemini-2.0-flash"),
     schema: assessmentResultSchema,
     prompt: buildAssessmentGradingPrompt({
       subjectName: assessment.subject.name,

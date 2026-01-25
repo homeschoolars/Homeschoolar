@@ -16,13 +16,17 @@ export async function POST(req: Request) {
     const session = await auth()
     await enforceParentChildAccess(child_id, session)
 
-    const assessment = await generateInitialAssessment({
+    const { assessment, source, fallback_reason } = await generateInitialAssessment({
       child_id,
       subject_id,
       subject_name,
       age_group,
     })
-    return Response.json({ assessment: serializeAssessment(assessment) })
+    return Response.json({
+      assessment: serializeAssessment(assessment),
+      source,
+      ...(fallback_reason && { fallback_reason }),
+    })
   } catch (error) {
     console.error("Error generating assessment:", error)
     const message = error instanceof Error ? error.message : "Failed to generate assessment"

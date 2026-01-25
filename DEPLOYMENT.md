@@ -79,6 +79,20 @@ cp env.example .env.local
    - Click "Deploy"
    - Wait for build to complete
 
+### Google Cloud Run
+
+1. **Set environment variables** (required for AI features):
+   - Open [Cloud Console](https://console.cloud.google.com/) → Cloud Run → your service
+   - Edit the service → **Variables & Secrets** tab
+   - Add `GOOGLE_GENERATIVE_AI_API_KEY` with your [Gemini API key](https://aistudio.google.com/apikey)
+   - Add `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, and any other vars from `env.example`
+   - Save and redeploy (or create a new revision)
+
+2. **Verify Gemini is used (not fallback):**
+   - `GET https://your-service.run.app/api/health` → expect `"gemini_configured": true`, `"gemini_status": "ok"`
+   - If `gemini_configured` is `false`, the key is not set or not loaded in Cloud Run
+   - Run the assessment quiz; if you see generic questions like "What is 2 + 2?", fallback is active
+
 ### Alternative: Self-Hosted
 
 ```bash
@@ -138,6 +152,12 @@ npm start
 - Check that all environment variables are set
 - Verify API keys are valid
 - Check backend logs for errors
+
+### Assessment uses fallback (e.g. "What is 2 + 2?" instead of AI questions)
+- **If `GET /api/health` shows `gemini_configured: false`:** The API key is missing. Set `GOOGLE_GENERATIVE_AI_API_KEY` in your host env vars (Cloud Run: Variables & Secrets; Vercel: Project Settings). Redeploy.
+- **Fix:** Set the key in your host’s env vars (Cloud Run: Variables & Secrets; Vercel: Project Settings → Environment Variables). Redeploy.
+- **Check:** `GET /api/health` on the **deployed** URL. Ensure `gemini_configured: true` and `gemini_status: "ok"`.
+- The initial-assessment API response includes `source: "ai" | "fallback"`; `"fallback"` means Gemini was not used.
 
 ### Build Errors
 - Ensure TypeScript errors are fixed (set `NODE_ENV=production` disables `ignoreBuildErrors`)

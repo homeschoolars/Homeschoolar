@@ -79,7 +79,7 @@ export async function generateLessonQuiz(input: GenerateLessonQuizInput) {
   })
 
   const result = await generateObject({
-    model: google("gemini-1.5-flash"),
+    model: google("gemini-2.0-flash"),
     schema: lessonQuizSchema,
     prompt,
     maxOutputTokens: 6000,
