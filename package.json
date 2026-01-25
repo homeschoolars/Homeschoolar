@@ -71,6 +71,7 @@
     "sonner": "^1.7.4",
     "stripe": "20.1.2",
     "next-auth": "beta",
+    "prettier": "^3.3.3",
     "@prisma/client": "^6.0.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
