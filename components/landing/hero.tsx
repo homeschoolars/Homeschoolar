@@ -50,7 +50,7 @@ export function Hero() {
       {/* Animated background blobs */}
       <div className="absolute -left-40 -top-40 h-80 w-80 rounded-full bg-purple/20 blur-3xl animate-float" />
       <div className="absolute -right-40 top-20 h-96 w-96 rounded-full bg-pink/20 blur-3xl animate-float-delay-1" />
-      <div className="absolute -bottom-40 left-1/3 h-80 w-80 rounded-full bg-cyan/20 blur-3xl animate-float-delay-2" />
+      <div className="absolute -bottom-40 left-1/3 h-80 w-80 rounded-full bg-cyan/20 animate-float-delay-2" />
 
       <div className="container mx-auto px-4 relative">
         <div className="mx-auto max-w-4xl text-center">

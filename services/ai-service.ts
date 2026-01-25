@@ -61,6 +61,14 @@ async function getParentIdFromChild(childId: string) {
   return child?.parentId ?? null
 }
 
+async function resolveParentUserId(childId: string) {
+  const parentId = await getParentIdFromChild(childId)
+  if (!parentId) {
+    throw new Error("Parent account not found")
+  }
+  return parentId
+}
+
 const questionSchema = z.object({
   id: z.string(),
   type: z.enum(["multiple_choice", "text", "true_false", "fill_blank"]),
@@ -464,26 +472,16 @@ export async function generateQuiz({
   subject_name,
   age_group,
   recent_topics,
-  userId,
 }: {
   child_id: string
   subject_id?: string
   subject_name?: string
   age_group: AgeGroup
   recent_topics?: string[]
-  userId?: string
 }) {
-  // 1. Resolve the ID
-  const resolvedUserId = userId ?? (await getParentIdFromChild(child_id))
-  // 2. HARD CHECK: If it is still null, we MUST stop execution.
-  if (!resolvedUserId) {
-    throw new Error("Validation Failed: No valid User ID found for this request.")
-  }
-
-  // 3. Now TypeScript knows resolvedUserId is 100% a string
-  const safeUserId: string = resolvedUserId
-  await enforceSubscriptionAccess({ userId: safeUserId, feature: "ai" })
-  await enforceDailyLimit(safeUserId, "generate-quiz")
+  const resolvedUserId = await resolveParentUserId(child_id)
+  await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
+  await enforceDailyLimit(resolvedUserId, "generate-quiz")
 
   let targetSubject = subject_name
   let targetSubjectId = subject_id
@@ -539,21 +537,16 @@ export async function gradeQuiz({
   quiz_id,
   answers,
   age_group,
-  userId,
 }: {
   quiz_id: string
   answers: Answer[]
   age_group: string
-  userId?: string
 }) {
   const quiz = await prisma.surpriseQuiz.findUnique({ where: { id: quiz_id } })
   if (!quiz) {
     throw new Error("Quiz not found")
   }
-  const resolvedUserId = userId ?? (await getParentIdFromChild(quiz.childId))
-  if (!resolvedUserId) {
-    throw new Error("Parent account not found")
-  }
+  const resolvedUserId = await resolveParentUserId(quiz.childId)
   await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
   await enforceDailyLimit(resolvedUserId, "grade-quiz")
 
@@ -605,18 +598,13 @@ export async function generateInitialAssessment({
   subject_id,
   subject_name,
   age_group,
-  userId,
 }: {
   child_id: string
   subject_id: string
   subject_name: string
   age_group: AgeGroup
-  userId?: string
 }) {
-  const resolvedUserId = userId ?? (await getParentIdFromChild(child_id))
-  if (!resolvedUserId) {
-    throw new Error("Parent account not found")
-  }
+  const resolvedUserId = await resolveParentUserId(child_id)
   await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
   await enforceDailyLimit(resolvedUserId, "initial-assessment")
 
@@ -670,12 +658,10 @@ export async function completeAssessment({
   assessment_id,
   answers,
   age_group,
-  userId,
 }: {
   assessment_id: string
   answers: Answer[]
   age_group: string
-  userId?: string
 }) {
   const assessment = await prisma.assessment.findUnique({
     where: { id: assessment_id },
@@ -698,10 +684,7 @@ export async function completeAssessment({
     }
   })
 
-  const resolvedUserId = userId ?? (await getParentIdFromChild(assessment.childId))
-  if (!resolvedUserId) {
-    throw new Error("Parent account not found")
-  }
+  const resolvedUserId = await resolveParentUserId(assessment.childId)
   await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
   await enforceDailyLimit(resolvedUserId, "complete-assessment")
 
@@ -771,15 +754,12 @@ export async function completeAssessment({
   return result.object
 }
 
-export async function recommendCurriculum({ child_id, userId }: { child_id: string; userId?: string }) {
+export async function recommendCurriculum({ child_id }: { child_id: string; userId?: string }) {
   const child = await prisma.child.findUnique({ where: { id: child_id } })
   if (!child) {
     throw new Error("Child not found")
   }
-  const resolvedUserId = userId ?? (await getParentIdFromChild(child_id))
-  if (!resolvedUserId) {
-    throw new Error("Parent account not found")
-  }
+  const resolvedUserId = await resolveParentUserId(child_id)
   await enforceSubscriptionAccess({ userId: resolvedUserId, feature: "ai" })
   await enforceDailyLimit(resolvedUserId, "recommend-curriculum")
 

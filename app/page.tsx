@@ -18,7 +18,7 @@ export default function HomePage() {
       <Header />
       <main className="relative z-10 flex-1">
         <div className="mx-auto w-full max-w-5xl px-6 pt-10 text-center">
-          <h1 className="font-heading text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple via-pink to-orange sm:text-4xl lg:text-5xl">
+          <h1 className="font-heading text-6xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple via-pink to-orange sm:text-7xl lg:text-8xl">
             Homeschoolar
           </h1>
         </div>

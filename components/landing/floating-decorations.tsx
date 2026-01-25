@@ -25,9 +25,9 @@ export function FloatingDecorations() {
       <Square className="absolute left-[12%] top-[5%] h-6 w-6 text-blue animate-float-reverse fill-blue/30 opacity-40" />
 
       {/* Additional decorative circles */}
-      <div className="absolute right-[20%] top-[10%] h-16 w-16 rounded-full bg-gradient-to-br from-pink/20 to-purple/20 animate-float-delay-1 blur-sm" />
-      <div className="absolute left-[25%] bottom-[25%] h-12 w-12 rounded-full bg-gradient-to-br from-cyan/20 to-blue/20 animate-float blur-sm" />
-      <div className="absolute right-[30%] bottom-[40%] h-20 w-20 rounded-full bg-gradient-to-br from-yellow/15 to-orange/15 animate-float-delay-2 blur-md" />
+      <div className="absolute right-[20%] top-[10%] h-16 w-16 rounded-full bg-gradient-to-br from-pink/20 to-purple/20 animate-float-delay-1" />
+      <div className="absolute left-[25%] bottom-[25%] h-12 w-12 rounded-full bg-gradient-to-br from-cyan/20 to-blue/20 animate-float" />
+      <div className="absolute right-[30%] bottom-[40%] h-20 w-20 rounded-full bg-gradient-to-br from-yellow/15 to-orange/15 animate-float-delay-2" />
     </div>
   )
 }
