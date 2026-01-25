@@ -153,7 +153,7 @@ export function buildInitialAssessmentPrompt({ ageGroup, subjectName }: { ageGro
   return `Create an initial assessment to determine a ${ageGroup} year old student's level in ${subjectName}.
 
 Requirements:
-1. Create 10 questions of varying difficulty (easy, medium, hard)
+1. Create 15 questions of varying difficulty (easy, medium, hard)
 2. Start with easier questions and progress to harder ones
 3. Cover fundamental concepts for this subject and age group
 4. Mix of multiple choice and true/false

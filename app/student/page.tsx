@@ -26,6 +26,7 @@ import {
   LogOut,
   ChevronRight,
   Zap,
+  Loader2,
 } from "lucide-react"
 import type { Child, Subject, WorksheetAssignment, Progress as ProgressType, SurpriseQuiz } from "@/lib/types"
 import { SurpriseQuizModal } from "@/components/ai/surprise-quiz-modal"
@@ -53,7 +54,8 @@ export default function StudentDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [showAssessment, setShowAssessment] = useState(false)
   const [surpriseQuiz, setSurpriseQuiz] = useState<SurpriseQuiz | null>(null)
-  const [showQuizPrompt, setShowQuizPrompt] = useState(false)
+  const [quizState, setQuizState] = useState<"idle" | "generating" | "ready" | "error">("idle")
+  const [quizError, setQuizError] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const router = useRouter()
 
@@ -93,7 +95,7 @@ export default function StudentDashboard() {
         if (!data.child.assessment_completed) {
           setShowAssessment(true)
         } else {
-          // Check for surprise quiz (20% chance)
+          // Auto-generate surprise quiz when selected (20% chance)
           checkForSurpriseQuiz(data.child)
         }
       }
@@ -124,36 +126,51 @@ export default function StudentDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
-  const checkForSurpriseQuiz = async (childData: Child) => {
-    // 20% chance of surprise quiz if last quiz was more than 1 hour ago
-    const lastQuizAt = childData.last_quiz_at ? new Date(childData.last_quiz_at) : null
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
-
-    if (Math.random() < 0.2 && (!lastQuizAt || lastQuizAt < oneHourAgo)) {
-      setShowQuizPrompt(true)
-    }
-  }
-
-  const startSurpriseQuiz = async () => {
-    if (!child) return
-    setShowQuizPrompt(false)
+  const generateQuiz = async (override?: { childId: string; age_group: string }) => {
+    const c = override ?? (child ? { childId: child.id, age_group: child.age_group } : null)
+    if (!c) return
+    setQuizState("generating")
+    setQuizError(null)
 
     try {
       const response = await apiFetch("/api/ai/generate-quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          child_id: child.id,
-          age_group: child.age_group,
+          child_id: c.childId,
+          age_group: c.age_group,
         }),
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        setSurpriseQuiz(data.quiz)
+      const raw = await response.text()
+      if (!response.ok) {
+        let msg = "Couldn't load quiz."
+        try {
+          const parsed = JSON.parse(raw) as { error?: string }
+          if (parsed?.error) msg = parsed.error
+        } catch {
+          if (raw) msg = raw
+        }
+        setQuizError(msg)
+        setQuizState("error")
+        return
       }
+
+      const data = JSON.parse(raw) as { quiz: SurpriseQuiz }
+      setSurpriseQuiz(data.quiz)
+      setQuizState("ready")
     } catch (error) {
       console.error("Error generating quiz:", error)
+      setQuizError(error instanceof Error ? error.message : "Couldn't load quiz. Please try again.")
+      setQuizState("error")
+    }
+  }
+
+  const checkForSurpriseQuiz = async (childData: Child) => {
+    const lastQuizAt = childData.last_quiz_at ? new Date(childData.last_quiz_at) : null
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+    if (Math.random() < 0.2 && (!lastQuizAt || lastQuizAt < oneHourAgo)) {
+      generateQuiz({ childId: childData.id, age_group: childData.age_group })
     }
   }
 
@@ -231,34 +248,45 @@ export default function StudentDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-cyan-100">
-      {surpriseQuiz && (
+      {surpriseQuiz && quizState === "ready" && (
         <SurpriseQuizModal
           quiz={surpriseQuiz}
           ageGroup={child.age_group}
           onComplete={(score) => {
             console.log("Quiz completed with score:", score)
           }}
-          onClose={() => setSurpriseQuiz(null)}
+          onClose={() => {
+            setSurpriseQuiz(null)
+            setQuizState("idle")
+          }}
         />
       )}
 
-      {showQuizPrompt && (
+      {quizState === "generating" && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="max-w-md w-full border-4 border-yellow-400 animate-bounce">
+          <Card className="max-w-md w-full border-4 border-yellow-400">
+            <CardContent className="p-8 text-center">
+              <Loader2 className="w-14 h-14 mx-auto mb-4 text-purple-500 animate-spin" />
+              <h2 className="text-xl font-bold text-purple-700 mb-2">Preparing your surprise quiz...</h2>
+              <p className="text-gray-600">AI is creating fun questions for you!</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {quizState === "error" && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-md w-full border-4 border-red-200">
             <CardContent className="p-6 text-center">
-              <div className="text-6xl mb-4">🎉</div>
-              <h2 className="text-2xl font-bold text-purple-700 mb-2">Surprise Quiz Time!</h2>
-              <p className="text-gray-600 mb-6">Ready for a quick fun challenge? Test your knowledge!</p>
+              <div className="text-5xl mb-4">😕</div>
+              <h2 className="text-xl font-bold text-red-700 mb-2">Couldn&apos;t load quiz</h2>
+              <p className="text-gray-600 mb-6 text-sm">{quizError ?? "Please try again."}</p>
               <div className="flex gap-3 justify-center">
-                <Button variant="outline" onClick={() => setShowQuizPrompt(false)} className="bg-transparent">
-                  Maybe Later
+                <Button variant="outline" onClick={() => { setQuizState("idle"); setQuizError(null); }}>
+                  Dismiss
                 </Button>
-                <Button
-                  onClick={startSurpriseQuiz}
-                  className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white"
-                >
-                  <Zap className="w-4 h-4 mr-2" />
-                  {"Let's Go!"}
+                <Button onClick={() => generateQuiz()} className="bg-purple-500 hover:bg-purple-600">
+                  Retry
                 </Button>
               </div>
             </CardContent>
@@ -321,6 +349,34 @@ export default function StudentDashboard() {
             <Target className="w-8 h-8 text-pink-500" />
             <h2 className="text-2xl font-bold text-purple-800">{"Today's Adventures"}</h2>
           </div>
+
+          <Card className="mb-4 border-2 border-yellow-300 bg-gradient-to-r from-yellow-50 to-amber-50 hover:border-yellow-400 transition-colors">
+            <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-yellow-400 flex items-center justify-center">
+                  <Zap className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-purple-800">Surprise Quiz</h3>
+                  <p className="text-sm text-gray-600">AI generates a fun quiz for you. Test your knowledge!</p>
+                </div>
+              </div>
+              <Button
+                onClick={() => generateQuiz()}
+                disabled={quizState === "generating"}
+                className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white shrink-0"
+              >
+                {quizState === "generating" ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4 mr-2" />
+                    Take Quiz
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
 
           {assignments.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

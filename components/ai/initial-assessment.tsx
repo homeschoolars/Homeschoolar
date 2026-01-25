@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -42,6 +42,9 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
   const [results, setResults] = useState<AssessmentResult | null>(null)
   const [completedSubjects, setCompletedSubjects] = useState<string[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const timeoutRef = useRef<number | null>(null)
+  const nextSubjectRef = useRef<{ index: number; subject: Subject } | null>(null)
 
   const currentSubject = subjects[currentSubjectIndex]
   const currentQuestion = questions[currentQuestionIndex]
@@ -113,8 +116,29 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
     }
   }
 
+  const advanceToNextSubject = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
+    const next = nextSubjectRef.current
+    nextSubjectRef.current = null
+    if (!next) return
+    setCurrentSubjectIndex(next.index)
+    setResults(null)
+    loadSubjectAssessment(next.subject)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+  }, [])
+
   const completeSubjectAssessment = async (finalAnswers: Answer[]) => {
     setIsLoading(true)
+    setLoadError(null)
+    setSubmitError(null)
 
     try {
       const response = await apiFetch("/api/ai/complete-assessment", {
@@ -127,24 +151,34 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
         }),
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        setResults(data)
-        setCompletedSubjects([...completedSubjects, currentSubject.id])
-
-        // Move to next subject or finish
-        if (currentSubjectIndex < subjects.length - 1) {
-          setTimeout(() => {
-            setCurrentSubjectIndex((prev) => prev + 1)
-            setResults(null)
-            loadSubjectAssessment(subjects[currentSubjectIndex + 1])
-          }, 3000)
-        } else {
-          setStep("results")
+      const raw = await response.text()
+      if (!response.ok) {
+        let msg = "Couldn't save results."
+        try {
+          const parsed = JSON.parse(raw) as { error?: string }
+          if (parsed?.error) msg = parsed.error
+        } catch {
+          if (raw) msg = raw
         }
+        setSubmitError(msg)
+        return
+      }
+
+      const data = JSON.parse(raw) as AssessmentResult
+      setResults(data)
+      setCompletedSubjects((prev) => [...prev, currentSubject.id])
+
+      const nextIndex = currentSubjectIndex + 1
+      const nextSubject = subjects[nextIndex]
+      if (nextIndex < subjects.length && nextSubject) {
+        nextSubjectRef.current = { index: nextIndex, subject: nextSubject }
+        timeoutRef.current = window.setTimeout(advanceToNextSubject, 3000)
+      } else {
+        setStep("results")
       }
     } catch (error) {
       console.error("Error completing assessment:", error)
+      setSubmitError(error instanceof Error ? error.message : "Couldn't save results. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -318,7 +352,23 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
             <p className="text-gray-600 mb-4">
               Level: <span className="font-semibold capitalize">{results.recommended_level}</span>
             </p>
-            <p className="text-sm text-gray-500">Moving to next subject...</p>
+            <p className="text-sm text-gray-500 mb-4">Moving to next subject...</p>
+            {currentSubjectIndex < subjects.length - 1 && (
+              <Button
+                onClick={advanceToNextSubject}
+                variant="outline"
+                className="border-2 border-purple-300 text-purple-700 hover:bg-purple-50"
+              >
+                Continue to next subject <ChevronRight className="ml-2 w-4 h-4" />
+              </Button>
+            )}
+          </div>
+        ) : submitError ? (
+          <div className="text-center py-8 space-y-4">
+            <p className="text-sm text-red-600">{submitError}</p>
+            <Button onClick={() => { setSubmitError(null); completeSubjectAssessment(answers); }} className="w-full">
+              Retry save
+            </Button>
           </div>
         ) : currentQuestion ? (
           <div className="space-y-6">

@@ -200,6 +200,11 @@ function buildFallbackAssessmentQuestions(subjectName: string) {
       create("fallback-8", "multiple_choice", "What is 7 + 1?", "8", 3, ["7", "8", "9", "10"], "addition"),
       create("fallback-9", "multiple_choice", "What is 10 ÷ 2?", "5", 3, ["4", "5", "6", "7"], "division"),
       create("fallback-10", "multiple_choice", "Which number is even?", "6", 3, ["5", "6", "7", "9"], "even/odd"),
+      create("fallback-11", "multiple_choice", "What is 4 × 3?", "12", 3, ["10", "11", "12", "13"], "multiplication"),
+      create("fallback-12", "true_false", "True or False: 15 − 7 = 8.", "True", 3, undefined, "subtraction"),
+      create("fallback-13", "multiple_choice", "How many sides does a hexagon have?", "6", 3, ["5", "6", "7", "8"], "shapes"),
+      create("fallback-14", "multiple_choice", "What is 20 ÷ 4?", "5", 3, ["4", "5", "6", "7"], "division"),
+      create("fallback-15", "true_false", "True or False: 9 × 2 = 18.", "True", 3, undefined, "multiplication"),
     ]
   }
 
@@ -263,6 +268,11 @@ function buildFallbackAssessmentQuestions(subjectName: string) {
         undefined,
         "health & hygiene",
       ),
+      create("fallback-11", "multiple_choice", "Which organ pumps blood?", "Heart", 3, ["Brain", "Heart", "Lungs", "Stomach"], "human body"),
+      create("fallback-12", "true_false", "True or False: Sound travels faster than light.", "False", 3, undefined, "physics basics"),
+      create("fallback-13", "multiple_choice", "What do plants release that we breathe?", "Oxygen", 3, ["Carbon dioxide", "Oxygen", "Nitrogen", "Water vapor"], "plant science"),
+      create("fallback-14", "multiple_choice", "Which is a form of energy?", "Light", 3, ["Light", "Rock", "Water", "Sand"], "energy"),
+      create("fallback-15", "true_false", "True or False: Fossils tell us about the past.", "True", 3, undefined, "earth science"),
     ]
   }
 
