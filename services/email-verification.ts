@@ -4,7 +4,7 @@ import { Resend } from "resend"
 import { prisma } from "@/lib/prisma"
 
 const TOKEN_EXPIRY_HOURS = 24
-const FROM_EMAIL = process.env.VERIFICATION_EMAIL_FROM ?? "HomeSchoolar <onboarding@homeschoolar.com>"
+const FROM_EMAIL = process.env.VERIFICATION_EMAIL_FROM ?? "HomeSchoolar <onboarding@homeschoolars.com>"
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
 
 /** Create a verification token and send email. Replaces any existing token for this email. */

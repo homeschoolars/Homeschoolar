@@ -46,7 +46,7 @@ export async function POST(req: Request) {
 
       if (profile?.email && shouldSendEmail) {
         await resend.emails.send({
-          from: "HomeSchoolar <notifications@homeschoolar.com>",
+          from: "HomeSchoolar <notifications@homeschoolars.com>",
           to: profile.email,
           subject: emailSubject || title,
           html: `
