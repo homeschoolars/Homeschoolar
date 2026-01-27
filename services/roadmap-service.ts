@@ -61,19 +61,46 @@ function buildRoadmapPrompt({
   // Safely serialize JSON fields to avoid circular references or invalid data
   const safeSerialize = (obj: unknown): unknown => {
     try {
-      return JSON.parse(JSON.stringify(obj))
-    } catch {
-      return obj
+      if (obj === null || obj === undefined) {
+        return obj
+      }
+      // Deep clone and validate JSON
+      const serialized = JSON.parse(JSON.stringify(obj, (key, value) => {
+        // Filter out functions, undefined, and symbols
+        if (typeof value === 'function' || typeof value === 'undefined' || typeof value === 'symbol') {
+          return null
+        }
+        // Handle Date objects
+        if (value instanceof Date) {
+          return value.toISOString()
+        }
+        return value
+      }))
+      return serialized
+    } catch (error) {
+      console.warn(`[Roadmap] Failed to serialize field, using fallback:`, error)
+      // Return a safe fallback
+      return {}
     }
   }
 
+  // Validate and serialize learning profile data
+  const academicLevelBySubject = safeSerialize(learningProfile.academicLevelBySubject) || {}
+  const interestSignals = safeSerialize(learningProfile.interestSignals) || {}
+  const strengths = Array.isArray(learningProfile.strengths) 
+    ? safeSerialize(learningProfile.strengths) 
+    : (safeSerialize(learningProfile.strengths) || [])
+  const gaps = Array.isArray(learningProfile.gaps)
+    ? safeSerialize(learningProfile.gaps)
+    : (safeSerialize(learningProfile.gaps) || [])
+
   const studentProfile = {
-    academic_level_by_subject: safeSerialize(learningProfile.academicLevelBySubject),
+    academic_level_by_subject: academicLevelBySubject,
     learning_speed: learningSpeed,
     attention_span: attentionSpan,
-    interest_signals: safeSerialize(learningProfile.interestSignals),
-    strengths: safeSerialize(learningProfile.strengths),
-    gaps: safeSerialize(learningProfile.gaps),
+    interest_signals: interestSignals,
+    strengths: strengths,
+    gaps: gaps,
     age_band: ageBand,
     religion: religion === "muslim" ? "muslim" : "non_muslim",
     preferred_content_style: preferredContentStyle,
@@ -84,14 +111,31 @@ function buildRoadmapPrompt({
     throw new Error("No subjects found for roadmap generation")
   }
 
+  // Build the prompt with proper JSON serialization
+  const subjectList = subjects.map(s => s.name).filter(Boolean)
+  if (subjectList.length === 0) {
+    throw new Error("No valid subject names found for roadmap generation")
+  }
+
+  // Serialize the input data separately to ensure valid JSON
+  let studentProfileJson: string
+  let subjectListJson: string
+  try {
+    studentProfileJson = JSON.stringify(studentProfile, null, 2)
+    subjectListJson = JSON.stringify(subjectList)
+  } catch (error) {
+    console.error("[Roadmap] Failed to serialize prompt data:", error)
+    throw new Error("Failed to prepare roadmap generation data. Please check learning profile data.")
+  }
+
   return `SYSTEM:
 You are an expert curriculum designer and child psychologist. 
 Your task is to generate a personalized learning roadmap for a child, age 4–13, based on their assessment profile.
 
 INPUT:
 {
-  "student_profile": ${JSON.stringify(studentProfile, null, 2)},
-  "subject_list": ${JSON.stringify(subjects.map(s => s.name))}
+  "student_profile": ${studentProfileJson},
+  "subject_list": ${subjectListJson}
 }
 
 TASK:

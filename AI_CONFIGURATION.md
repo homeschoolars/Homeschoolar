@@ -76,17 +76,25 @@ After setting the API key:
 
 ## Common Issues
 
-### Issue: API Key Not Working
+### Issue: API Key Not Working / 400 Bad Request Errors
 
 **Symptoms:**
 - `gemini_configured: true` but content generation fails
 - Error messages about API quota or billing
+- **400 Bad Request errors** in Google AI Studio usage dashboard
+- "Failed to regenerate roadmap" errors in the webapp
 
 **Solutions:**
 1. Verify the API key is correct (no extra spaces, correct format)
 2. Check Google Cloud Console for API quotas and billing
 3. Ensure billing is enabled for your Google Cloud project
 4. Check API key restrictions (IP, referrer, etc.)
+5. **For 400 Bad Request errors specifically:**
+   - Check server logs for detailed error messages
+   - Verify that learning profile data exists and is valid
+   - Ensure the student has completed an assessment before generating roadmap
+   - Check if the prompt is too large (should be under token limits)
+   - Verify JSON data in learning profile is valid (no circular references)
 
 ### Issue: "API key is not configured" Error
 
