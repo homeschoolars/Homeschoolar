@@ -186,15 +186,32 @@ export async function generateLearningRoadmap(
   })
 
   if (!student || !student.profile) {
-    throw new Error("Student or profile not found")
+    throw new Error("Student or profile not found. Please ensure the student profile is complete.")
+  }
+
+  // Check if student has completed assessment
+  const hasCompletedAssessment = student.assessmentCompleted
+  if (!hasCompletedAssessment) {
+    throw new Error(
+      "Assessment not completed. " +
+      "Please complete the initial assessment for this student before generating a roadmap."
+    )
   }
 
   // Get or generate learning profile
   let learningProfile = await getStudentLearningProfile(studentId)
   if (!learningProfile) {
-    // Generate learning profile first
-    const profileService = await import("@/services/learning-profile-service")
-    learningProfile = await profileService.generateStudentLearningProfile(studentId, userId)
+    // Generate learning profile first (this requires assessments to exist)
+    try {
+      const profileService = await import("@/services/learning-profile-service")
+      learningProfile = await profileService.generateStudentLearningProfile(studentId, userId)
+    } catch (profileError) {
+      const profileErr = profileError as Error
+      throw new Error(
+        `Failed to generate learning profile: ${profileErr.message}. ` +
+        "Please ensure the student has completed assessments."
+      )
+    }
   }
 
   // Determine age band
