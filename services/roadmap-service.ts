@@ -309,7 +309,6 @@ export async function generateLearningRoadmap(
       model: openai("gpt-4o-mini"),
       schema: roadmapSchema,
       prompt,
-      maxTokens: 4000,
     })
     
     console.log(`[Roadmap] Successfully generated roadmap for student ${studentId}`)

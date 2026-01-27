@@ -91,7 +91,7 @@ export async function createAssessment({
       assessmentType,
       difficulty: difficultyLevel ?? null,
     }),
-    maxTokens: 2000,
+ 2000,
   })
 
   const assessment = await prisma.assessment.create({
@@ -148,7 +148,7 @@ export async function submitAssessment({
       })),
       answers,
     }),
-    maxTokens: 1500,
+ 1500,
   })
 
   const result = gradingResult.object

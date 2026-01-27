@@ -170,7 +170,6 @@ export async function generateStudentLearningProfile(
     model: openai("gpt-4o-mini"),
     schema: studentLearningProfileSchema,
     prompt,
-    maxTokens: 3000,
   })
 
   // Save or update learning profile

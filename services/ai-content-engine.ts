@@ -73,7 +73,6 @@ export async function generateLessonContent(
     model: openai("gpt-4o-mini"),
     schema: videoScriptSchema,
     prompt,
-    maxTokens: 4000,
   })
 
   const script = result.object

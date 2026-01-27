@@ -522,7 +522,7 @@ export async function generateWorksheet(body: GenerateWorksheetRequest, userId: 
       model: openai("gpt-4o-mini"),
       schema: worksheetSchema,
       prompt,
-      maxTokens: 4000,
+ 4000,
     })
 
     const worksheet = await prisma.worksheet.create({
@@ -599,7 +599,7 @@ export async function gradeSubmission(body: GradeSubmissionRequest, userId: stri
     model: openai("gpt-4o-mini"),
     schema: gradingSchema,
     prompt,
-    maxTokens: 3000,
+ 3000,
   })
 
   await logUsage({
@@ -650,7 +650,7 @@ export async function generateQuiz({
     model: openai("gpt-4o-mini"),
     schema: quizSchema,
     prompt,
-    maxTokens: 2000,
+ 2000,
   })
 
   const maxScore = result.object.questions.reduce((sum, q) => sum + q.points, 0)
@@ -716,7 +716,7 @@ export async function gradeQuiz({
     model: openai("gpt-4o-mini"),
     schema: quizGradingSchema,
     prompt,
-    maxTokens: 1500,
+ 1500,
   })
 
   await prisma.surpriseQuiz.update({
@@ -781,7 +781,7 @@ export async function generateInitialAssessment({
         model: openai("gpt-4o-mini"),
         schema: assessmentSchema,
         prompt,
-        maxTokens: 3000,
+ 3000,
       })
       questions = result.object.questions
     } catch (error) {
@@ -860,7 +860,7 @@ export async function completeAssessment({
     model: openai("gpt-4o-mini"),
     schema: assessmentResultSchema,
     prompt,
-    maxTokens: 2000,
+ 2000,
   })
 
   const maxScore = questions.reduce((sum, q) => sum + (q.points ?? 0), 0)
@@ -1018,7 +1018,7 @@ export async function recommendCurriculum({ child_id }: { child_id: string; user
     model: openai("gpt-4o-mini"),
     schema: recommendationSchema,
     prompt,
-    maxTokens: 2000,
+ 2000,
   })
 
   await prisma.aIRecommendation.deleteMany({ where: { childId: child_id, isDismissed: false } })
@@ -1097,7 +1097,7 @@ export async function generateCurriculumFromAssessment(
       model: openai("gpt-4o-mini"),
       schema: curriculumPlanSchema,
       prompt,
-      maxTokens: 2500,
+ 2500,
     })
 
     await prisma.curriculumPath.deleteMany({ where: { childId } })

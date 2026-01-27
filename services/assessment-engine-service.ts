@@ -123,7 +123,6 @@ RULES:
     model: openai("gpt-4o-mini"),
     schema: insightSchema,
     prompt,
-    maxTokens: 1500,
   })
 
   return result.object.signals.map((s) => ({

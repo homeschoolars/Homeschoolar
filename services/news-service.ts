@@ -80,7 +80,6 @@ export async function generateChildNews(ageBand: "4-7" | "8-13") {
       model: openai("gpt-4o-mini"),
       schema: newsBatchSchema,
       prompt,
-      maxTokens: 2000,
     })
   } catch (error) {
     const err = error as { status?: number; code?: string; message?: string }

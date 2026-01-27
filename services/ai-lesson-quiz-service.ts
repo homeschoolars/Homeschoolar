@@ -82,7 +82,6 @@ export async function generateLessonQuiz(input: GenerateLessonQuizInput) {
     model: openai("gpt-4o-mini"),
     schema: lessonQuizSchema,
     prompt,
-    maxTokens: 6000,
   })
 
   const raw = result.object.questions

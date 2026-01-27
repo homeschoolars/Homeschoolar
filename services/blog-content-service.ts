@@ -100,7 +100,6 @@ export async function generateBlogContent({
     model: openai("gpt-4o-mini"),
     schema: blogContentSchema,
     prompt,
-    maxTokens: 4000,
   })
 
   return {
