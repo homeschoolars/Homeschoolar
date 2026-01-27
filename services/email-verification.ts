@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma"
 
 const TOKEN_EXPIRY_HOURS = 24
 const FROM_EMAIL = process.env.VERIFICATION_EMAIL_FROM ?? "HomeSchoolar <onboarding@homeschoolars.com>"
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+const APP_URL = (process.env.AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://homeschoolars.com").replace(/\/$/, "")
 
 /** Create a verification token and send email. Replaces any existing token for this email. */
 export async function createAndSendVerificationEmail(email: string): Promise<void> {

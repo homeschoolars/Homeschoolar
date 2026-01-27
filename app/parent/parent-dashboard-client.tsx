@@ -38,6 +38,7 @@ import {
   FileText,
   BarChart3,
   Upload,
+  LayoutDashboard,
 } from "lucide-react"
 import type {
   Profile,
@@ -55,7 +56,9 @@ import { RecommendationsPanel } from "@/components/ai/recommendations-panel"
 import { CurriculumPlanCard } from "@/components/ai/curriculum-plan-card"
 import { CurriculumPDFActions, AssessmentPDFActions } from "@/components/pdf/pdf-actions"
 import { NotificationCenter } from "@/components/notifications/notification-center"
-import { ParentAnalytics } from "@/components/analytics/parent-analytics"
+import { ParentOverview } from "@/components/dashboards/parent/parent-overview"
+import { RoadmapViewer } from "@/components/dashboards/parent/roadmap-viewer"
+import { WeeklyAIInsights } from "@/components/dashboards/parent/weekly-ai-insights"
 import { signOut } from "next-auth/react"
 import { apiFetch } from "@/lib/api-client"
 import {
@@ -791,7 +794,9 @@ export default function ParentDashboardClient({
             )}
 
             {selectedChild && selectedChild.assessment_completed && (
-              <div className="mt-6">
+              <div className="mt-6 space-y-6">
+                <RoadmapViewer studentId={selectedChild.id} studentName={selectedChild.name} />
+                <WeeklyAIInsights studentId={selectedChild.id} studentName={selectedChild.name} />
                 <CurriculumPlanCard childId={selectedChild.id} childName={selectedChild.name} />
               </div>
             )}
@@ -857,10 +862,6 @@ export default function ParentDashboardClient({
                 </CardContent>
               </Card>
             )}
-          </TabsContent>
-
-          <TabsContent value="analytics" className="space-y-6">
-            <ParentAnalytics children={children} subjects={subjects} />
           </TabsContent>
 
           <TabsContent value="documents" className="space-y-6">

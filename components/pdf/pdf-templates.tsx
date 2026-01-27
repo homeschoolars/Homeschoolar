@@ -523,3 +523,151 @@ export function RecommendationsPDF({
     </Document>
   )
 }
+
+export type InsightsReportData = {
+  childName: string
+  insights: {
+    strengths?: string[]
+    weaknesses?: string[]
+    weekly_summary?: {
+      mastered?: string[]
+      improving?: string[]
+      needs_attention?: string[]
+      try_this_activity?: string
+      review_concept?: string
+      celebrate?: string
+      next_week_preview?: string
+    }
+  }
+  summary?: {
+    streak?: number
+    worksheetsCompleted?: number
+    averageScore?: number
+  }
+}
+
+export function InsightsReportPDF({ childName, insights, summary }: InsightsReportData) {
+  const ws = insights?.weekly_summary
+  const improving = ws?.improving ?? insights?.strengths ?? []
+  const needsHelp = ws?.needs_attention ?? insights?.weaknesses ?? []
+  const celebrate = ws?.celebrate
+  const tryActivity = ws?.try_this_activity
+  const review = ws?.review_concept
+  const mastered = ws?.mastered ?? []
+  const nextWeek = ws?.next_week_preview
+
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Weekly Insights Report</Text>
+          <Text style={styles.headerSubtitle}>{childName}</Text>
+          <Text style={styles.logo}>HomeSchoolar · {new Date().toLocaleDateString()}</Text>
+        </View>
+
+        {summary && (summary.streak != null || summary.worksheetsCompleted != null || summary.averageScore != null) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>At a glance</Text>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+              {summary.streak != null && (
+                <View style={[styles.statsCard, { flex: 1 }]}>
+                  <Text style={styles.statValue}>{summary.streak}</Text>
+                  <Text style={styles.statLabel}>Day streak</Text>
+                </View>
+              )}
+              {summary.worksheetsCompleted != null && (
+                <View style={[styles.statsCard, { flex: 1 }]}>
+                  <Text style={styles.statValue}>{summary.worksheetsCompleted}</Text>
+                  <Text style={styles.statLabel}>Worksheets done</Text>
+                </View>
+              )}
+              {summary.averageScore != null && (
+                <View style={[styles.statsCard, { flex: 1 }]}>
+                  <Text style={styles.statValue}>{summary.averageScore}%</Text>
+                  <Text style={styles.statLabel}>Average score</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {(celebrate || tryActivity || review) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Key takeaways</Text>
+            {celebrate && (
+              <View style={{ marginBottom: 8, padding: 10, backgroundColor: "#ECFDF5", borderRadius: 6 }}>
+                <Text style={{ fontSize: 10, fontWeight: 700, color: "#065F46", marginBottom: 4 }}>Celebrate</Text>
+                <Text style={{ fontSize: 10, color: "#047857", lineHeight: 1.4 }}>{celebrate}</Text>
+              </View>
+            )}
+            {tryActivity && (
+              <View style={{ marginBottom: 8, padding: 10, backgroundColor: "#FEF3C7", borderRadius: 6 }}>
+                <Text style={{ fontSize: 10, fontWeight: 700, color: "#92400E", marginBottom: 4 }}>Try at home</Text>
+                <Text style={{ fontSize: 10, color: "#78350F", lineHeight: 1.4 }}>{tryActivity}</Text>
+              </View>
+            )}
+            {review && (
+              <View style={{ padding: 10, backgroundColor: "#EFF6FF", borderRadius: 6 }}>
+                <Text style={{ fontSize: 10, fontWeight: 700, color: "#1E40AF", marginBottom: 4 }}>Review</Text>
+                <Text style={{ fontSize: 10, color: "#1E3A8A", lineHeight: 1.4 }}>{review}</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {improving.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Improving in</Text>
+            {improving.map((s, i) => (
+              <View key={i} style={{ flexDirection: "row", marginBottom: 4, alignItems: "flex-start" }}>
+                <Text style={{ fontSize: 10, color: "#059669", marginRight: 6 }}>•</Text>
+                <Text style={{ fontSize: 10, color: "#374151", flex: 1 }}>{s}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {needsHelp.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Needs attention</Text>
+            {needsHelp.map((s, i) => (
+              <View key={i} style={{ flexDirection: "row", marginBottom: 4, alignItems: "flex-start" }}>
+                <Text style={{ fontSize: 10, color: "#D97706", marginRight: 6 }}>•</Text>
+                <Text style={{ fontSize: 10, color: "#374151", flex: 1 }}>{s}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {mastered.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Mastered</Text>
+            {mastered.map((s, i) => (
+              <View key={i} style={{ flexDirection: "row", marginBottom: 4, alignItems: "flex-start" }}>
+                <Text style={{ fontSize: 10, color: "#7C3AED", marginRight: 6 }}>•</Text>
+                <Text style={{ fontSize: 10, color: "#374151", flex: 1 }}>{s}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {nextWeek && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Next week</Text>
+            <Text style={{ fontSize: 10, color: "#374151", lineHeight: 1.4 }}>{nextWeek}</Text>
+          </View>
+        )}
+
+        {!improving.length && !needsHelp.length && !celebrate && !tryActivity && !review && !mastered.length && !nextWeek && (
+          <View style={styles.section}>
+            <Text style={{ fontSize: 10, color: "#6B7280", fontStyle: "italic" }}>
+              Complete an assessment and some activities to see AI insights for {childName}.
+            </Text>
+          </View>
+        )}
+
+        <Text style={styles.footer}>Generated by HomeSchoolar - www.homeschoolar.app</Text>
+      </Page>
+    </Document>
+  )
+}

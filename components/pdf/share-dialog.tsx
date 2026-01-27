@@ -19,7 +19,7 @@ import { Share2, Mail, Loader2, Check, AlertCircle } from "lucide-react"
 import { apiFetch } from "@/lib/api-client"
 
 interface ShareDialogProps {
-  pdfType: "worksheet" | "answer-key" | "curriculum" | "assessment" | "recommendations"
+  pdfType: "worksheet" | "answer-key" | "curriculum" | "assessment" | "recommendations" | "insights"
   data: Record<string, unknown>
   title: string
   children?: React.ReactNode

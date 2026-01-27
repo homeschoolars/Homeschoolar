@@ -1,49 +1,37 @@
 "use client"
 
-import type React from "react"
-
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
+import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
-import Image from "next/image"
 import { useRouter } from "next/navigation"
-import {
-  BookOpen,
-  Calculator,
-  FlaskConical,
-  Globe,
-  Heart,
-  Users,
-  Smile,
-  Activity,
-  PiggyBank,
-  Star,
-  Sparkles,
-  Trophy,
-  Target,
-  LogOut,
-  ChevronRight,
-  Zap,
-  Loader2,
-} from "lucide-react"
+import { ChevronRight, Loader2, Sparkles } from "lucide-react"
 import type { Child, Subject, WorksheetAssignment, Progress as ProgressType, SurpriseQuiz } from "@/lib/types"
 import { SurpriseQuizModal } from "@/components/ai/surprise-quiz-modal"
 import { InitialAssessment } from "@/components/ai/initial-assessment"
+import { GamifiedHeader } from "@/components/dashboards/student/gamified-header"
+import { WelcomeBanner } from "@/components/dashboards/student/welcome-banner"
+import { DailyQuests, type Quest } from "@/components/dashboards/student/daily-quests"
+import { SubjectPath } from "@/components/dashboards/student/subject-path"
+import { AchievementsGrid } from "@/components/dashboards/student/achievements-grid"
+import { NewsPanel } from "@/components/dashboards/student/news-panel"
 import { apiFetch } from "@/lib/api-client"
+import confetti from "canvas-confetti"
 
-const subjectIcons: Record<string, React.ReactNode> = {
-  "book-open": <BookOpen className="w-6 h-6" />,
-  calculator: <Calculator className="w-6 h-6" />,
-  flask: <FlaskConical className="w-6 h-6" />,
-  globe: <Globe className="w-6 h-6" />,
-  heart: <Heart className="w-6 h-6" />,
-  users: <Users className="w-6 h-6" />,
-  smile: <Smile className="w-6 h-6" />,
-  activity: <Activity className="w-6 h-6" />,
-  "piggy-bank": <PiggyBank className="w-6 h-6" />,
-  star: <Star className="w-6 h-6" />,
+type Gamification = {
+  xp: number
+  level: number
+  stars: number
+  coins: number
+  streak: number
+  worksheetsCompleted: number
+  quizCount: number
+  quests: Quest[]
+  completedToday: number
+  dailyGoal?: number
+  dailyGoalProgress?: number
+  xpToNextLevel?: number
+  xpInLevel?: number
 }
 
 export default function StudentDashboard() {
@@ -51,6 +39,7 @@ export default function StudentDashboard() {
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [assignments, setAssignments] = useState<WorksheetAssignment[]>([])
   const [progress, setProgress] = useState<ProgressType[]>([])
+  const [gamification, setGamification] = useState<Gamification | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showAssessment, setShowAssessment] = useState(false)
   const [surpriseQuiz, setSurpriseQuiz] = useState<SurpriseQuiz | null>(null)
@@ -58,6 +47,8 @@ export default function StudentDashboard() {
   const [quizError, setQuizError] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const router = useRouter()
+  const prevDailyGoalRef = useRef<{ progress: number; goal: number } | null>(null)
+  const isInitialGamificationMount = useRef(true)
 
   const loadData = async (childId: string) => {
     try {
@@ -91,12 +82,36 @@ export default function StudentDashboard() {
         setChild(data.child)
         sessionStorage.setItem("student_child", JSON.stringify(data.child))
 
-        // Check if assessment is needed
         if (!data.child.assessment_completed) {
           setShowAssessment(true)
         } else {
-          // Auto-generate surprise quiz when selected (20% chance)
           checkForSurpriseQuiz(data.child)
+        }
+      }
+
+      const id = data.child?.id
+      if (id) {
+        const gRes = await apiFetch(`/api/student/gamification?childId=${encodeURIComponent(id)}`)
+        if (gRes.ok) {
+          const g = (await gRes.json()) as Gamification
+          setGamification(g)
+          const goal = g.dailyGoal ?? 3
+          const progress = g.dailyGoalProgress ?? 0
+          if (isInitialGamificationMount.current) {
+            isInitialGamificationMount.current = false
+            prevDailyGoalRef.current = { progress, goal }
+          } else {
+            const prev = prevDailyGoalRef.current
+            if (prev && prev.progress < prev.goal && progress >= goal) {
+              confetti({
+                particleCount: 120,
+                spread: 80,
+                origin: { y: 0.6 },
+                colors: ["#fbbf24", "#a855f7", "#ec4899", "#06b6d4"],
+              })
+            }
+            prevDailyGoalRef.current = { progress, goal }
+          }
         }
       }
     } catch (error) {
@@ -243,17 +258,27 @@ export default function StudentDashboard() {
     )
   }
 
-  const totalStars = 45
-  const completedToday = 2
+  const g = gamification
+  const stars = g?.stars ?? 0
+  const level = g?.level ?? 1
+  const coins = g?.coins ?? 0
+  const streak = g?.streak ?? 0
+  const completedToday = g?.completedToday ?? 0
+  const quests = g?.quests ?? []
+
+  // Determine age band for UI styling and news
+  const ageGroup = child.age_group
+  const isYounger = ageGroup === "4-5" || ageGroup === "6-7"
+  const ageBand: "4-7" | "8-13" = isYounger ? "4-7" : "8-13"
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-cyan-100">
+    <div className={`min-h-screen ${isYounger ? "bg-gradient-to-br from-yellow-100 via-orange-100 to-pink-100" : "bg-gradient-to-br from-pink-100 via-purple-100 to-cyan-100"}`}>
       {surpriseQuiz && quizState === "ready" && (
         <SurpriseQuizModal
           quiz={surpriseQuiz}
           ageGroup={child.age_group}
-          onComplete={(score) => {
-            console.log("Quiz completed with score:", score)
+          onComplete={() => {
+            if (child) loadData(child.id)
           }}
           onClose={() => {
             setSurpriseQuiz(null)
@@ -264,11 +289,11 @@ export default function StudentDashboard() {
 
       {quizState === "generating" && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="max-w-md w-full border-4 border-yellow-400">
+          <Card className="max-w-md w-full border-4 border-amber-400">
             <CardContent className="p-8 text-center">
-              <Loader2 className="w-14 h-14 mx-auto mb-4 text-purple-500 animate-spin" />
-              <h2 className="text-xl font-bold text-purple-700 mb-2">Preparing your surprise quiz...</h2>
-              <p className="text-gray-600">AI is creating fun questions for you!</p>
+              <Loader2 className="w-14 h-14 mx-auto mb-4 text-violet-500 animate-spin" />
+              <h2 className="text-xl font-bold text-violet-700 mb-2">Preparing your surprise quiz...</h2>
+              <p className="text-slate-600">AI is creating fun questions for you!</p>
             </CardContent>
           </Card>
         </div>
@@ -280,12 +305,12 @@ export default function StudentDashboard() {
             <CardContent className="p-6 text-center">
               <div className="text-5xl mb-4">😕</div>
               <h2 className="text-xl font-bold text-red-700 mb-2">Couldn&apos;t load quiz</h2>
-              <p className="text-gray-600 mb-6 text-sm">{quizError ?? "Please try again."}</p>
+              <p className="text-slate-600 mb-6 text-sm">{quizError ?? "Please try again."}</p>
               <div className="flex gap-3 justify-center">
                 <Button variant="outline" onClick={() => { setQuizState("idle"); setQuizError(null); }}>
                   Dismiss
                 </Button>
-                <Button onClick={() => generateQuiz()} className="bg-purple-500 hover:bg-purple-600">
+                <Button onClick={() => generateQuiz()} className="bg-violet-500 hover:bg-violet-600">
                   Retry
                 </Button>
               </div>
@@ -294,200 +319,86 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b-4 border-purple-200">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/logo.png" alt="HomeSchoolar Logo" width={40} height={40} />
-            <span className="text-xl font-bold bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 bg-clip-text text-transparent">
-              HomeSchoolar
-            </span>
-          </Link>
+      <GamifiedHeader
+        child={child}
+        stars={stars}
+        level={level}
+        coins={coins}
+        streak={streak}
+        xpInLevel={g?.xpInLevel}
+        xpToNextLevel={g?.xpToNextLevel}
+      />
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-yellow-100 px-4 py-2 rounded-full border-2 border-yellow-300">
-              <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-              <span className="font-bold text-yellow-700">{totalStars} Stars</span>
-            </div>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-gray-600 hover:text-red-500">
-              <LogOut className="w-5 h-5" />
-            </Button>
-          </div>
-        </div>
-      </header>
+      <main className="container mx-auto px-4 py-6 sm:py-8">
+        <WelcomeBanner
+          child={child}
+          completedToday={completedToday}
+          dailyGoal={g?.dailyGoal}
+          dailyGoalProgress={g?.dailyGoalProgress}
+          streak={streak}
+        />
 
-      <main className="container mx-auto px-4 py-8">
-        {/* Welcome Banner */}
-        <Card className="mb-8 border-4 border-purple-300 bg-gradient-to-r from-pink-200 via-purple-200 to-cyan-200 overflow-hidden relative">
-          <div className="absolute top-2 right-4 text-6xl animate-bounce">🎉</div>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-r from-pink-400 to-purple-500 flex items-center justify-center text-4xl text-white border-4 border-white shadow-lg">
-                {child.avatar_url || "👧"}
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-purple-800">Hi, {child.name}! 👋</h1>
-                <p className="text-purple-600 text-lg">Ready for another amazing day of learning?</p>
-                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                  <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium border border-green-300">
-                    Age: {child.age_group} years
-                  </span>
-                  <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium border border-blue-300">
-                    {completedToday} worksheets done today!
-                  </span>
-                  <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium border border-purple-300 capitalize">
-                    Level: {child.current_level || "beginner"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <DailyQuests
+          quests={quests}
+          onTakeQuiz={() => generateQuiz()}
+          quizGenerating={quizState === "generating"}
+          hasAssignment={assignments.length > 0}
+        />
 
-        {/* Today's Tasks */}
-        <section className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <Target className="w-8 h-8 text-pink-500" />
-            <h2 className="text-2xl font-bold text-purple-800">{"Today's Adventures"}</h2>
-          </div>
-
-          <Card className="mb-4 border-2 border-yellow-300 bg-gradient-to-r from-yellow-50 to-amber-50 hover:border-yellow-400 transition-colors">
-            <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-yellow-400 flex items-center justify-center">
-                  <Zap className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-purple-800">Surprise Quiz</h3>
-                  <p className="text-sm text-gray-600">AI generates a fun quiz for you. Test your knowledge!</p>
-                </div>
-              </div>
-              <Button
-                onClick={() => generateQuiz()}
-                disabled={quizState === "generating"}
-                className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white shrink-0"
-              >
-                {quizState === "generating" ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <Zap className="w-4 h-4 mr-2" />
-                    Take Quiz
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {assignments.length > 0 ? (
+        {assignments.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-xl font-bold text-violet-800 mb-4">Your worksheets</h2>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {assignments.map((assignment) => (
                 <Link href={`/student/worksheet/${assignment.id}`} key={assignment.id} className="block group">
-                  <Card
-                    className="border-[3px] border-purple-200 hover:border-purple-400 transition-all hover:shadow-lg cursor-pointer h-full"
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-bold text-purple-700">{assignment.worksheet?.title}</h3>
-                          <p className="text-sm text-gray-500">{assignment.worksheet?.description}</p>
-                        </div>
-                        <ChevronRight className="w-6 h-6 text-purple-400 group-hover:translate-x-1 transition-transform" />
+                  <Card className="border-[3px] border-violet-200 hover:border-violet-400 transition-all hover:shadow-lg cursor-pointer h-full">
+                    <CardContent className="p-4 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-violet-700 truncate">{assignment.worksheet?.title}</h3>
+                        <p className="text-sm text-slate-500 truncate">{assignment.worksheet?.description}</p>
                       </div>
+                      <ChevronRight className="w-6 h-6 text-violet-400 shrink-0 group-hover:translate-x-1 transition-transform" />
                     </CardContent>
                   </Card>
                 </Link>
               ))}
             </div>
-          ) : (
-            <Card className="border-[3px] border-dashed border-purple-300 bg-purple-50">
-              <CardContent className="p-8 text-center">
-                <div className="text-5xl mb-4">🌟</div>
-                <h3 className="text-xl font-bold text-purple-700 mb-2">No worksheets assigned yet!</h3>
-                <p className="text-purple-600">Ask your parent to assign some fun activities for you.</p>
-              </CardContent>
-            </Card>
-          )}
-        </section>
+          </section>
+        )}
 
-        {/* Subjects Grid */}
-        <section className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <BookOpen className="w-8 h-8 text-teal-500" />
-            <h2 className="text-2xl font-bold text-purple-800">Your Subjects</h2>
-          </div>
+        {assignments.length === 0 && (
+          <Card className="mb-8 border-[3px] border-dashed border-violet-300 bg-violet-50/80">
+            <CardContent className="p-8 text-center">
+              <div className="text-5xl mb-4">🌟</div>
+              <h3 className="text-xl font-bold text-violet-700 mb-2">No worksheets assigned yet!</h3>
+              <p className="text-violet-600">Ask your parent to assign some fun activities, or explore subjects below.</p>
+            </CardContent>
+          </Card>
+        )}
 
-          <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-            {subjects.map((subject) => {
-              const subjectProgress = progress.find((p) => p.subject_id === subject.id)
-              const progressPercent = subjectProgress
-                ? (subjectProgress.completed_worksheets / Math.max(subjectProgress.total_worksheets, 1)) * 100
-                : 0
+        <SubjectPath subjects={subjects} progress={progress} />
+        
+        <div className="mb-8">
+          <NewsPanel ageBand={ageBand} isYounger={isYounger} />
+        </div>
 
-              return (
-                <Link href={`/student/subject/${subject.id}`} key={subject.id} className="block group">
-                  <Card
-                    className="border-[3px] hover:scale-105 transition-all cursor-pointer overflow-hidden h-full"
-                    style={{ borderColor: subject.color || "#8B5CF6" }}
-                  >
-                    <CardHeader className="pb-2">
-                      <div
-                        className="w-14 h-14 rounded-xl flex items-center justify-center text-white mb-2 group-hover:scale-110 transition-transform"
-                        style={{ backgroundColor: subject.color || "#8B5CF6" }}
-                      >
-                        {subjectIcons[subject.icon || "book-open"] || subjectIcons["book-open"]}
-                      </div>
-                      <CardTitle className="text-sm font-bold leading-tight">
-                        {subject.name.split("(")[0].trim()}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <Progress value={progressPercent} className="h-2 mb-1" />
-                      <p className="text-xs text-gray-500">
-                        {subjectProgress?.completed_worksheets || 0} / {subjectProgress?.total_worksheets || 0} done
-                      </p>
-                    </CardContent>
-                  </Card>
-                </Link>
-              )
-            })}
-          </div>
-        </section>
-
-        {/* Achievements */}
-        <section>
-          <div className="flex items-center gap-3 mb-4">
-            <Trophy className="w-8 h-8 text-yellow-500" />
-            <h2 className="text-2xl font-bold text-purple-800">Your Achievements</h2>
-          </div>
-
-          <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-            {[
-              { icon: "🌟", title: "First Star", desc: "Complete your first worksheet", unlocked: true },
-              { icon: "🔥", title: "On Fire!", desc: "3 day learning streak", unlocked: true },
-              { icon: "🏆", title: "Champion", desc: "Score 100% on a worksheet", unlocked: false },
-              { icon: "📚", title: "Bookworm", desc: "Complete 10 worksheets", unlocked: false },
-            ].map((achievement, index) => (
-              <Card
-                key={index}
-                className={`border-[3px] text-center ${achievement.unlocked ? "border-yellow-300 bg-yellow-50" : "border-gray-200 bg-gray-50 opacity-60"
-                  }`}
-              >
-                <CardContent className="p-4">
-                  <div className={`text-4xl mb-2 ${achievement.unlocked ? "animate-bounce" : "grayscale"}`}>
-                    {achievement.icon}
-                  </div>
-                  <h3 className="font-bold text-sm">{achievement.title}</h3>
-                  <p className="text-xs text-gray-500">{achievement.desc}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
+        <AchievementsGrid
+          worksheetsCompleted={g?.worksheetsCompleted ?? 0}
+          streak={g?.streak ?? 0}
+          quizCount={g?.quizCount}
+        />
       </main>
 
-      <div className="fixed bottom-4 right-4 pointer-events-none">
-        <Sparkles className="w-8 h-8 text-pink-400 animate-pulse" />
-      </div>
+      {isYounger && (
+        <div className="fixed bottom-4 right-4 pointer-events-none">
+          <Sparkles className="w-8 h-8 text-yellow-500 animate-pulse" />
+        </div>
+      )}
+      {!isYounger && (
+        <div className="fixed bottom-4 right-4 pointer-events-none">
+          <Sparkles className="w-8 h-8 text-pink-400 animate-pulse" />
+        </div>
+      )}
     </div>
   )
 }

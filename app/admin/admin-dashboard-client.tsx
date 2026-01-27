@@ -22,6 +22,11 @@ import {
   Bell,
   Banknote,
   CreditCard,
+  LayoutDashboard,
+  BarChart3,
+  AlertTriangle,
+  BookOpen,
+  Newspaper,
 } from "lucide-react"
 import type { Profile, Worksheet, Subject } from "@/lib/types"
 import { WorksheetGenerator } from "@/components/ai/worksheet-generator"
@@ -29,6 +34,14 @@ import { PKRPaymentVerification } from "@/components/admin/pkr-payment-verificat
 import { signOut } from "next-auth/react"
 import { apiFetch } from "@/lib/api-client"
 import { formatPrice, formatPricePKR } from "@/lib/subscription-plans"
+import { AdminOverview } from "@/components/dashboards/admin/admin-overview"
+import { UserManagement } from "@/components/dashboards/admin/user-management"
+import { ContentManagement } from "@/components/dashboards/admin/content-management"
+import { AIUsageMonitor } from "@/components/dashboards/admin/ai-usage-monitor"
+import { LearningAnalytics } from "@/components/dashboards/admin/learning-analytics"
+import { LowPerformingFlags } from "@/components/dashboards/admin/low-performing-flags"
+import { BlogManagement } from "@/components/admin/blog-management"
+import { NewsManager } from "@/components/dashboards/admin/news-manager"
 
 interface AdminDashboardClientProps {
   stats: {
@@ -211,86 +224,89 @@ export default function AdminDashboardClient({
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {/* Welcome */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600">Manage users, content, and monitor platform activity</p>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-900">Admin Dashboard</h1>
+          <p className="text-slate-600 text-sm">Manage users, content, and monitor platform activity</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4 mb-8">
-          <Card className="bg-gradient-to-br from-teal-500 to-teal-600 text-white border-0">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-teal-100 text-sm">Total Users</p>
-                  <p className="text-3xl font-bold">{stats.usersCount}</p>
-                </div>
-                <Users className="w-10 h-10 text-teal-200" />
-              </div>
-              <p className="text-teal-100 text-xs mt-2">+12% from last month</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-purple-100 text-sm">Students</p>
-                  <p className="text-3xl font-bold">{stats.childrenCount}</p>
-                </div>
-                <UserPlus className="w-10 h-10 text-purple-200" />
-              </div>
-              <p className="text-purple-100 text-xs mt-2">+8% from last month</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-amber-500 to-amber-600 text-white border-0">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-amber-100 text-sm">Worksheets</p>
-                  <p className="text-3xl font-bold">{stats.worksheetsCount}</p>
-                </div>
-                <FileText className="w-10 h-10 text-amber-200" />
-              </div>
-              <p className="text-amber-100 text-xs mt-2">{pendingWorksheets.length} pending approval</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-pink-500 to-pink-600 text-white border-0">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-pink-100 text-sm">AI Generated</p>
-                  <p className="text-3xl font-bold">{stats.worksheetsCount}</p>
-                </div>
-                <Sparkles className="w-10 h-10 text-pink-200" />
-              </div>
-              <p className="text-pink-100 text-xs mt-2">This month</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="approvals" className="space-y-6">
-          <TabsList className="bg-white border">
-            <TabsTrigger value="approvals">Pending Approvals</TabsTrigger>
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="bg-white border border-slate-200 flex flex-wrap h-auto gap-1 p-1">
+            <TabsTrigger value="overview" className="flex items-center gap-1.5 data-[state=active]:bg-slate-100">
+              <LayoutDashboard className="w-4 h-4" /> Overview
+            </TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center gap-1.5">
+              <Users className="w-4 h-4" /> Users
+            </TabsTrigger>
+            <TabsTrigger value="content" className="flex items-center gap-1.5">
+              <FileText className="w-4 h-4" /> Content
+            </TabsTrigger>
+            <TabsTrigger value="ai-usage" className="flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4" /> AI Usage
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-1.5">
+              <BarChart3 className="w-4 h-4" /> Analytics
+            </TabsTrigger>
+            <TabsTrigger value="flags" className="flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4" /> Flags
+            </TabsTrigger>
+            <TabsTrigger value="approvals">Approvals</TabsTrigger>
             <TabsTrigger value="generate" className="flex items-center gap-1">
-              <Sparkles className="w-4 h-4" /> Generate Worksheets
+              <Sparkles className="w-4 h-4" /> Generate
             </TabsTrigger>
             <TabsTrigger value="pkr-payments" className="flex items-center gap-1">
-              <Banknote className="w-4 h-4" /> PKR Payments
+              <Banknote className="w-4 h-4" /> PKR
             </TabsTrigger>
             <TabsTrigger value="subscriptions" className="flex items-center gap-1">
               <CreditCard className="w-4 h-4" /> Subscriptions
             </TabsTrigger>
             <TabsTrigger value="orphans" className="flex items-center gap-1">
-              <Users className="w-4 h-4" /> Orphan Queue
+              <Users className="w-4 h-4" /> Orphans
             </TabsTrigger>
-            <TabsTrigger value="users">Recent Users</TabsTrigger>
+            <TabsTrigger value="blog" className="flex items-center gap-1">
+              <BookOpen className="w-4 h-4" /> Blog
+            </TabsTrigger>
+            <TabsTrigger value="news" className="flex items-center gap-1">
+              <Newspaper className="w-4 h-4" /> News
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="approvals">
+          <TabsContent value="overview" className="space-y-6">
+            <AdminOverview
+              usersCount={stats.usersCount}
+              childrenCount={stats.childrenCount}
+              worksheetsCount={stats.worksheetsCount}
+            />
+          </TabsContent>
+
+          <TabsContent value="users" className="space-y-6">
+            <UserManagement />
+          </TabsContent>
+
+          <TabsContent value="content" className="space-y-6">
+            <ContentManagement />
+          </TabsContent>
+
+          <TabsContent value="ai-usage" className="space-y-6">
+            <AIUsageMonitor />
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-6">
+            <LearningAnalytics />
+          </TabsContent>
+
+          <TabsContent value="flags" className="space-y-6">
+            <LowPerformingFlags />
+          </TabsContent>
+
+          <TabsContent value="blog" className="space-y-6">
+            <BlogManagement />
+          </TabsContent>
+
+          <TabsContent value="news" className="space-y-6">
+            <NewsManager />
+          </TabsContent>
+
+          <TabsContent value="approvals" className="space-y-6">
             {/* Pending Approvals */}
             <Card>
               <CardHeader>
@@ -540,40 +556,6 @@ export default function AdminDashboardClient({
             </Card>
           </TabsContent>
 
-          <TabsContent value="users">
-            {/* Recent Users */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5" /> Recent Users
-                </CardTitle>
-                <CardDescription>Newly registered accounts</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentUsers.length > 0 ? (
-                    recentUsers.map((profile) => (
-                      <div key={profile.id} className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-400 to-cyan-500 flex items-center justify-center text-white font-medium">
-                          {profile.full_name?.charAt(0) || profile.email.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{profile.full_name || "No name"}</p>
-                          <p className="text-xs text-gray-500 truncate">{profile.email}</p>
-                        </div>
-                        <Badge variant={profile.role === "admin" ? "default" : "secondary"}>{profile.role}</Badge>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-gray-500 py-4">No users yet</p>
-                  )}
-                </div>
-                <Button variant="outline" className="w-full mt-4 bg-transparent" asChild>
-                  <Link href="/admin/users">View All Users</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </main>
     </div>

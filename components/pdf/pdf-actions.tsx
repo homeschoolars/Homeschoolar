@@ -158,3 +158,45 @@ export function RecommendationsPDFActions({ childName, recommendations }: Recomm
     </div>
   )
 }
+
+type InsightsData = {
+  strengths?: string[]
+  weaknesses?: string[]
+  weekly_summary?: {
+    mastered?: string[]
+    improving?: string[]
+    needs_attention?: string[]
+    try_this_activity?: string
+    review_concept?: string
+    celebrate?: string
+    next_week_preview?: string
+  }
+}
+
+interface InsightsPDFActionsProps {
+  childName: string
+  insights: InsightsData | null
+  summary?: { streak?: number; worksheetsCompleted?: number; averageScore?: number }
+}
+
+export function InsightsPDFActions({ childName, insights, summary }: InsightsPDFActionsProps) {
+  const slug = childName.replace(/\s+/g, "-").toLowerCase()
+  const data = { childName, insights: insights ?? {}, summary }
+
+  return (
+    <div className="flex items-center gap-2">
+      <DownloadButton
+        pdfType="insights"
+        data={data}
+        fileName={`${slug}-insights-report.pdf`}
+      >
+        Download Insights Report
+      </DownloadButton>
+      <ShareDialog
+        pdfType="insights"
+        data={data}
+        title={`${childName}'s Weekly Insights Report`}
+      />
+    </div>
+  )
+}

@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
     const worksheetsCompleted = progressRows.reduce((sum, row) => sum + row.completedWorksheets, 0)
 
-    const [weeklyProgressRows, submissionsByDay, quizzesByDay] = await Promise.all([
+    const [weeklyProgressRows, submissionsByDay, quizzesByDay, activityDays] = await Promise.all([
       prisma.$queryRaw<{ week: Date; score: number }[]>(Prisma.sql`
         SELECT date_trunc('week', submitted_at) AS week,
                COALESCE(AVG(CASE WHEN max_score > 0 THEN (score::float / max_score) * 100 END), 0)::float AS score
@@ -57,6 +57,17 @@ export async function POST(request: Request) {
           AND completed_at >= ${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)}
         GROUP BY 1
         ORDER BY 1
+      `),
+      prisma.$queryRaw<{ d: string }[]>(Prisma.sql`
+        SELECT DISTINCT (date_trunc('day', submitted_at))::date::text AS d
+        FROM worksheet_submissions WHERE child_id = ${childId}
+        AND submitted_at >= ${new Date(Date.now() - 32 * 24 * 60 * 60 * 1000)}
+        UNION
+        SELECT DISTINCT (date_trunc('day', completed_at))::date::text AS d
+        FROM surprise_quizzes WHERE child_id = ${childId}
+        AND completed_at IS NOT NULL
+        AND completed_at >= ${new Date(Date.now() - 32 * 24 * 60 * 60 * 1000)}
+        ORDER BY 1 DESC
       `),
     ])
 
@@ -93,12 +104,24 @@ export async function POST(request: Request) {
     const improvementPercent =
       recentScores.length === 2 && recentScores[0] > 0 ? Math.max(0, Math.round(recentScores[1] - recentScores[0])) : 0
 
+    const today = new Date().toISOString().slice(0, 10)
+    const sortedDays = [...new Set(activityDays.map((r) => r.d))].sort().reverse()
+    let streak = 0
+    for (let i = 0; i < sortedDays.length; i++) {
+      const expected = new Date()
+      expected.setDate(expected.getDate() - i)
+      const want = expected.toISOString().slice(0, 10)
+      if (sortedDays[i] === want) streak += 1
+      else break
+    }
+
     return NextResponse.json({
       summary: {
         averageScore,
         worksheetsCompleted,
         improvementPercent,
         weeklyActivityCount,
+        streak,
       },
       progressData: weeklyProgressRows.map((row) => ({
         week: row.week.toISOString().slice(0, 10),

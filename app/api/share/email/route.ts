@@ -1,6 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { renderToBuffer } from "@react-pdf/renderer"
-import { WorksheetPDF, CurriculumPDF, AssessmentReportPDF, RecommendationsPDF } from "@/components/pdf/pdf-templates"
+import {
+  WorksheetPDF,
+  CurriculumPDF,
+  AssessmentReportPDF,
+  RecommendationsPDF,
+  InsightsReportPDF,
+} from "@/components/pdf/pdf-templates"
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,6 +40,15 @@ export async function POST(request: NextRequest) {
       case "recommendations":
         buffer = await renderToBuffer(
           RecommendationsPDF({ childName: data.childName, recommendations: data.recommendations }),
+        )
+        break
+      case "insights":
+        buffer = await renderToBuffer(
+          InsightsReportPDF({
+            childName: data.childName,
+            insights: data.insights ?? {},
+            summary: data.summary,
+          }),
         )
         break
       default:
