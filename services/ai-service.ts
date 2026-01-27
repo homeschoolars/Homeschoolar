@@ -1147,23 +1147,4 @@ export async function generateCurriculumFromAssessment(
       "Please check your OpenAI API key, quota, billing, and key restrictions."
     )
   }
-} catch (error) {
-    const err = error as { status?: number; code?: string; message?: string }
-    const hint = err?.status ?? err?.code ?? (err?.message ? String(err.message).slice(0, 100) : "unknown")
-    
-    // Provide more specific error messages
-    if (err?.status === 400) {
-      throw new Error(
-        `Invalid request to OpenAI API (400 Bad Request). ` +
-        `This usually means the prompt format is invalid or the schema doesn't match. ` +
-        `Error: ${hint}. ` +
-        `Please check server logs for details.`
-      )
-    }
-    
-    throw new Error(
-      `Failed to generate curriculum: ${hint}. ` +
-      "Please check your OpenAI API key, quota, billing, and key restrictions."
-    )
-  }
 }
