@@ -97,7 +97,7 @@ export async function generateBlogContent({
   })
 
   const result = await generateObject({
-    model: openai("gpt-5-mini"),
+    model: openai("gpt-4o-mini"),
     schema: blogContentSchema,
     prompt,
     maxTokens: 4000,

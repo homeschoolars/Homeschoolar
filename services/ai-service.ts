@@ -519,7 +519,7 @@ export async function generateWorksheet(body: GenerateWorksheetRequest, userId: 
 
   try {
     const result = await generateObject({
-      model: openai("gpt-5-mini"),
+      model: openai("gpt-4o-mini"),
       schema: worksheetSchema,
       prompt,
       maxTokens: 4000,
@@ -596,7 +596,7 @@ export async function gradeSubmission(body: GradeSubmissionRequest, userId: stri
   await enforceDailyLimit(userId, "grade-submission")
 
   const result = await generateObject({
-    model: openai("gpt-5-mini"),
+    model: openai("gpt-4o-mini"),
     schema: gradingSchema,
     prompt,
     maxTokens: 3000,
@@ -647,7 +647,7 @@ export async function generateQuiz({
   })
 
   const result = await generateObject({
-    model: openai("gpt-5-mini"),
+    model: openai("gpt-4o-mini"),
     schema: quizSchema,
     prompt,
     maxTokens: 2000,
@@ -713,7 +713,7 @@ export async function gradeQuiz({
   })
 
   const result = await generateObject({
-    model: openai("gpt-5-mini"),
+    model: openai("gpt-4o-mini"),
     schema: quizGradingSchema,
     prompt,
     maxTokens: 1500,
@@ -778,7 +778,7 @@ export async function generateInitialAssessment({
   } else {
     try {
       const result = await generateObject({
-        model: openai("gpt-5-mini"),
+        model: openai("gpt-4o-mini"),
         schema: assessmentSchema,
         prompt,
         maxTokens: 3000,
@@ -857,7 +857,7 @@ export async function completeAssessment({
   })
 
   const result = await generateObject({
-    model: openai("gpt-5-mini"),
+    model: openai("gpt-4o-mini"),
     schema: assessmentResultSchema,
     prompt,
     maxTokens: 2000,
@@ -1015,7 +1015,7 @@ export async function recommendCurriculum({ child_id }: { child_id: string; user
   })
 
   const result = await generateObject({
-    model: openai("gpt-5-mini"),
+    model: openai("gpt-4o-mini"),
     schema: recommendationSchema,
     prompt,
     maxTokens: 2000,
@@ -1094,7 +1094,7 @@ export async function generateCurriculumFromAssessment(
 
   try {
     const result = await generateObject({
-      model: openai("gpt-5-mini"),
+      model: openai("gpt-4o-mini"),
       schema: curriculumPlanSchema,
       prompt,
       maxTokens: 2500,

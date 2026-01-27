@@ -167,7 +167,7 @@ export async function generateStudentLearningProfile(
   })
 
   const result = await generateObject({
-    model: openai("gpt-5-mini"),
+    model: openai("gpt-4o-mini"),
     schema: studentLearningProfileSchema,
     prompt,
     maxTokens: 3000,

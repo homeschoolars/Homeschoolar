@@ -77,7 +77,7 @@ export async function generateChildNews(ageBand: "4-7" | "8-13") {
   let result
   try {
     result = await generateObject({
-      model: openai("gpt-5-mini"),
+      model: openai("gpt-4o-mini"),
       schema: newsBatchSchema,
       prompt,
       maxTokens: 2000,

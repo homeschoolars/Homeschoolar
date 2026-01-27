@@ -120,7 +120,7 @@ RULES:
 - concept_id when referring to a specific concept; summary required; suggested_action optional.`
 
   const result = await generateObject({
-    model: openai("gpt-5-mini"),
+    model: openai("gpt-4o-mini"),
     schema: insightSchema,
     prompt,
     maxTokens: 1500,

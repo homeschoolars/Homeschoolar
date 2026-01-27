@@ -70,7 +70,7 @@ export async function generateLessonContent(
   })
 
   const result = await generateObject({
-    model: openai("gpt-5-mini"),
+    model: openai("gpt-4o-mini"),
     schema: videoScriptSchema,
     prompt,
     maxTokens: 4000,

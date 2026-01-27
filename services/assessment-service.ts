@@ -82,7 +82,7 @@ export async function createAssessment({
   }
 
   const result = await generateObject({
-    model: openai("gpt-5-mini"),
+    model: openai("gpt-4o-mini"),
     schema: assessmentGenerateSchema,
     prompt: buildAssessmentPrompt({
       childName: child.name,
@@ -137,7 +137,7 @@ export async function submitAssessment({
   }
 
   const gradingResult = await generateObject({
-    model: openai("gpt-5-mini"),
+    model: openai("gpt-4o-mini"),
     schema: assessmentResultSchema,
     prompt: buildAssessmentGradingPrompt({
       subjectName: assessment.subject.name,

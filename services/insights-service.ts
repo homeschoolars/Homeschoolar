@@ -62,7 +62,7 @@ Recommendations: ${JSON.stringify(recommendations)}
 Return timeline, strengths, weaknesses, recommendations with reasons, learning_style_summary, and weekly_summary (mastered, improving, needs_attention, try_this_activity, review_concept, celebrate, next_week_preview).`
 
   const result = await generateObject({
-    model: openai("gpt-5-mini"),
+    model: openai("gpt-4o-mini"),
     schema: insightsSchema,
     prompt,
     maxTokens: 1800,

@@ -306,7 +306,7 @@ export async function generateLearningRoadmap(
     console.log(`[Roadmap] Generating roadmap for student ${studentId}, prompt length: ${prompt.length} chars`)
     
     result = await generateObject({
-      model: openai("gpt-5-mini"),
+      model: openai("gpt-4o-mini"),
       schema: roadmapSchema,
       prompt,
       maxTokens: 4000,
