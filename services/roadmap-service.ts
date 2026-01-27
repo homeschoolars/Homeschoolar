@@ -1,6 +1,6 @@
 import "server-only"
 import { generateObject } from "ai"
-import { google } from "@/lib/google-ai"
+import { google, isGeminiConfigured } from "@/lib/google-ai"
 import { prisma } from "@/lib/prisma"
 import { toApiAgeGroup } from "@/lib/age-group"
 import { z } from "zod"
@@ -199,6 +199,15 @@ export async function generateLearningRoadmap(
   // Get interests
   const interests = student.interestsV2.map((i) => i.label)
 
+  // Check if Gemini is configured
+  if (!isGeminiConfigured()) {
+    throw new Error(
+      "Google Gemini API key is not configured. " +
+      "Please set GOOGLE_GENERATIVE_AI_API_KEY in your environment variables. " +
+      "Get your API key from: https://aistudio.google.com/apikey"
+    )
+  }
+
   const prompt = buildRoadmapPrompt({
     age,
     ageBand,
@@ -216,12 +225,23 @@ export async function generateLearningRoadmap(
     electiveSubjects,
   })
 
-  const result = await generateObject({
-    model: google("gemini-2.0-flash"),
-    schema: roadmapSchema,
-    prompt,
-    maxOutputTokens: 4000,
-  })
+  let result
+  try {
+    result = await generateObject({
+      model: google("gemini-2.0-flash"),
+      schema: roadmapSchema,
+      prompt,
+      maxOutputTokens: 4000,
+    })
+  } catch (error) {
+    const err = error as { status?: number; code?: string; message?: string }
+    const hint = err?.status ?? err?.code ?? (err?.message ? String(err.message).slice(0, 100) : "unknown")
+    console.error(`[Roadmap] Gemini API error (${hint}):`, error)
+    throw new Error(
+      `Failed to generate roadmap: ${hint}. ` +
+      "Please check your Gemini API key, quota, billing, and key restrictions."
+    )
+  }
 
   // Save or update roadmap
   const existing = await prisma.learningRoadmap.findFirst({
