@@ -34,7 +34,7 @@ export default async function ChildDetailPage({
   }
 
   // Fetch related data separately
-  const [progress, assignments] = await Promise.all([
+  const [progressData, assignmentsData] = await Promise.all([
     prisma.progress.findMany({
       where: { childId },
       include: {
@@ -54,6 +54,29 @@ export default async function ChildDetailPage({
       take: 10,
     }),
   ])
+
+  // Map progress to match expected type (convert Decimal to number)
+  const progress = progressData.map((p) => ({
+    id: p.id,
+    averageScore: Number(p.averageScore),
+    completedWorksheets: p.completedWorksheets,
+    subject: {
+      name: p.subject.name,
+    },
+  }))
+
+  // Map assignments to match expected type
+  const assignments = assignmentsData.map((a) => ({
+    id: a.id,
+    status: a.status,
+    assignedAt: a.createdAt, // Use createdAt as assignedAt
+    worksheet: {
+      title: a.worksheet.title,
+      subject: {
+        name: a.worksheet.subject.name,
+      },
+    },
+  }))
 
   const mappedChild = serializeChild(child)
 
