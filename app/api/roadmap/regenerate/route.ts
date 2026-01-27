@@ -20,7 +20,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const body = regenerateRoadmapSchema.parse(await request.json())
+    // Parse request body
+    let body
+    try {
+      const rawBody = await request.json()
+      body = regenerateRoadmapSchema.parse(rawBody)
+    } catch (parseError) {
+      if (parseError instanceof z.ZodError) {
+        return NextResponse.json(
+          { error: "Invalid request body", details: parseError.errors },
+          { status: 400 }
+        )
+      }
+      return NextResponse.json(
+        { error: "Request body is required and must be valid JSON" },
+        { status: 400 }
+      )
+    }
+
     const userId = session.user.id
 
     // Verify access
