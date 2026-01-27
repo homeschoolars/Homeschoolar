@@ -1,30 +1,59 @@
 import "server-only"
 import { generateObject } from "ai"
-import { openai } from "@/lib/openai"
+import { openai, isOpenAIConfigured } from "@/lib/openai"
 import { prisma } from "@/lib/prisma"
 import { toApiAgeGroup } from "@/lib/age-group"
 import { z } from "zod"
 import { enforceSubscriptionAccess } from "@/services/subscription-access"
 
+/**
+ * Production-safe JSON Schema for OpenAI Structured Outputs
+ * 
+ * Schema Rules:
+ * - All required fields are explicitly defined at object level
+ * - evidence is always present (never optional) to satisfy OpenAI validation
+ * - additionalProperties is handled correctly by Zod's record types
+ * - No nested required arrays that cause validation errors
+ */
+/**
+ * Academic level item schema - all fields are required
+ * OpenAI Structured Outputs requires all properties to be in the 'required' array
+ * when using additionalProperties patterns
+ */
+const academicLevelItemSchema = z.object({
+  level: z.string().describe("Academic level: beginner, intermediate, or advanced"),
+  confidence: z.number().min(0).max(100).describe("Confidence score 0-100"),
+  evidence: z.array(z.string()).describe("Evidence items supporting this level assessment - always include, can be empty array"),
+})
+
+const strengthItemSchema = z.object({
+  area: z.string().describe("Subject or skill area where student excels"),
+  evidence: z.string().describe("Specific evidence of strength"),
+})
+
+const gapItemSchema = z.object({
+  area: z.string().describe("Subject or skill area needing improvement"),
+  priority: z.enum(["low", "medium", "high"]).describe("Priority level for addressing this gap"),
+  evidence: z.string().describe("Specific evidence of the gap"),
+})
+
+const evidenceItemSchema = z.object({
+  subject: z.string().describe("Subject name this evidence relates to"),
+  source: z.enum(["assessment", "observation", "parent_input", "worksheet", "quiz"]).describe("Source of the evidence"),
+  confidence: z.number().min(0).max(1).describe("Confidence score between 0 and 1"),
+  description: z.string().describe("Description of the evidence"),
+})
+
 const studentLearningProfileSchema = z.object({
-  academic_level_by_subject: z.record(z.string(), z.object({
-    level: z.string(),
-    confidence: z.number().min(0).max(100),
-    evidence: z.array(z.string()).default([]),
-  })),
-  learning_speed: z.enum(["slow", "average", "fast"]),
-  attention_span: z.enum(["short", "medium", "long"]),
-  interest_signals: z.record(z.string(), z.number().min(0).max(100)),
-  strengths: z.array(z.object({
-    area: z.string(),
-    evidence: z.string(),
-  })),
-  gaps: z.array(z.object({
-    area: z.string(),
-    priority: z.enum(["low", "medium", "high"]),
-    evidence: z.string(),
-  })),
-  recommended_content_style: z.string().optional(),
+  student_summary: z.string().describe("Brief summary of the student's overall learning profile"),
+  academic_level_by_subject: z.record(z.string(), academicLevelItemSchema).describe("Academic level for each subject"),
+  learning_speed: z.enum(["slow", "average", "fast"]).describe("How quickly the student grasps new concepts"),
+  attention_span: z.enum(["short", "medium", "long"]).describe("Student's typical attention span"),
+  interest_signals: z.record(z.string(), z.number().min(0).max(100)).describe("Interest level scores (0-100) for each subject/topic"),
+  strengths: z.array(strengthItemSchema).describe("Areas where the student excels"),
+  gaps: z.array(gapItemSchema).describe("Areas needing improvement with priorities"),
+  evidence: z.array(evidenceItemSchema).default([]).describe("Comprehensive evidence array - always present, can be empty"),
+  recommended_content_style: z.string().optional().describe("Recommended content delivery style (e.g., visual-heavy, story-based)"),
 })
 
 function buildLearningProfilePrompt({
@@ -93,7 +122,20 @@ RULES:
 - Identify learning gaps with actionable priorities
 
 OUTPUT:
-Return a structured JSON object matching the schema.`
+Return a structured JSON object matching the schema.
+
+IMPORTANT SCHEMA REQUIREMENTS:
+- student_summary: Provide a brief 2-3 sentence summary of the student's overall learning profile
+- academic_level_by_subject: For each subject, include level, confidence (0-100), and evidence array (can be empty)
+- evidence: Always include an evidence array at the top level, even if empty. Each evidence item must have:
+  * subject: Subject name
+  * source: One of: assessment, observation, parent_input, worksheet, quiz
+  * confidence: Number between 0 and 1
+  * description: Text description of the evidence
+- strengths: Array of areas where student excels, each with area and evidence
+- gaps: Array of areas needing improvement, each with area, priority (low/medium/high), and evidence
+
+Ensure all required fields are present. The evidence field must always exist (can be empty array).`
 }
 
 export async function generateStudentLearningProfile(
@@ -101,6 +143,15 @@ export async function generateStudentLearningProfile(
   userId: string
 ) {
   await enforceSubscriptionAccess({ userId, feature: "ai" })
+
+  // Backend validation: Check if OpenAI is configured BEFORE any processing
+  if (!isOpenAIConfigured()) {
+    throw new Error(
+      "OpenAI API key is not configured. " +
+      "Please set OPENAI_API_KEY in your environment variables. " +
+      "Get your API key from: https://platform.openai.com/api-keys"
+    )
+  }
 
   const student = await prisma.child.findUnique({
     where: { id: studentId },
@@ -123,8 +174,19 @@ export async function generateStudentLearningProfile(
     },
   })
 
+  // Backend validation: Student and profile must exist
   if (!student || !student.profile) {
-    throw new Error("Student or profile not found")
+    throw new Error("Student or profile not found. Please ensure the student profile is complete.")
+  }
+
+  // Backend validation: Check if assessment data exists BEFORE calling OpenAI
+  const completedAssessments = student.assessments.filter(a => a.status === "completed")
+  if (completedAssessments.length === 0) {
+    throw new Error(
+      "Assessment data is missing. " +
+      "Please complete at least one assessment for this student before generating a learning profile. " +
+      "The learning profile requires assessment data to generate accurate academic levels and evidence."
+    )
   }
 
   // Determine age band
@@ -166,17 +228,59 @@ export async function generateStudentLearningProfile(
     subjects,
   })
 
-  const result = await generateObject({
-    model: openai("gpt-4o-mini"),
-    schema: studentLearningProfileSchema,
-    prompt,
-  })
+  let result
+  try {
+    result = await generateObject({
+      model: openai("gpt-4o-mini"),
+      schema: studentLearningProfileSchema,
+      prompt,
+    })
+  } catch (error) {
+    const err = error as { status?: number; code?: string; message?: string }
+    const hint = err?.status ?? err?.code ?? (err?.message ? String(err.message).slice(0, 200) : "unknown")
+    
+    console.error(`[Learning Profile] OpenAI API error for student ${studentId}:`, {
+      status: err?.status,
+      code: err?.code,
+      message: err?.message,
+      hint,
+      error: String(error),
+    })
+    
+    // Provide specific error messages
+    if (err?.status === 400) {
+      throw new Error(
+        `Invalid schema or prompt format (400 Bad Request). ` +
+        `Error: ${hint}. ` +
+        `Please check server logs for details. This may indicate a schema validation issue.`
+      )
+    }
+    
+    throw new Error(
+      `Failed to generate learning profile: ${hint}. ` +
+      "Please check your OpenAI API key, quota, billing, and key restrictions."
+    )
+  }
+
+  // Ensure evidence array exists (default to empty if not provided)
+  // Also ensure evidence exists in each academic_level_by_subject item
+  const evidence = result.object.evidence ?? []
+  
+  // Normalize academic_level_by_subject to ensure evidence arrays exist
+  const normalizedAcademicLevels: Record<string, { level: string; confidence: number; evidence: string[] }> = {}
+  for (const [subject, data] of Object.entries(result.object.academic_level_by_subject)) {
+    normalizedAcademicLevels[subject] = {
+      level: data.level,
+      confidence: data.confidence,
+      evidence: Array.isArray(data.evidence) ? data.evidence : [],
+    }
+  }
 
   // Save or update learning profile
   const profile = await prisma.studentLearningProfile.upsert({
     where: { studentId },
     update: {
-      academicLevelBySubject: result.object.academic_level_by_subject as unknown as object,
+      academicLevelBySubject: normalizedAcademicLevels as unknown as object,
       learningSpeed: result.object.learning_speed,
       attentionSpan: result.object.attention_span,
       interestSignals: result.object.interest_signals as unknown as object,
@@ -188,7 +292,7 @@ export async function generateStudentLearningProfile(
     },
     create: {
       studentId,
-      academicLevelBySubject: result.object.academic_level_by_subject as unknown as object,
+      academicLevelBySubject: normalizedAcademicLevels as unknown as object,
       learningSpeed: result.object.learning_speed,
       attentionSpan: result.object.attention_span,
       interestSignals: result.object.interest_signals as unknown as object,

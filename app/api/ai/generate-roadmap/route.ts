@@ -45,7 +45,31 @@ export async function POST(request: Request) {
       last_updated: roadmap.lastUpdated.toISOString(),
     })
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to generate roadmap"
-    return NextResponse.json({ error: message }, { status: 400 })
+    const err = error as Error
+    const message = err.message || "Failed to generate roadmap"
+    
+    // Map specific errors to appropriate HTTP status codes
+    let status = 400
+    if (message.includes("Assessment data is missing") || message.includes("Assessment not completed") || message.includes("assessment data")) {
+      status = 400 // Bad Request - missing required data
+    } else if (message.includes("Subscription required") || message.includes("Trial expired") || message.includes("Subscription inactive")) {
+      status = 402 // Payment Required
+    } else if (message.includes("Trial AI limit reached")) {
+      status = 429 // Too Many Requests
+    } else if (message.includes("Student or profile not found") || message.includes("not found")) {
+      status = 404
+    } else if (message.includes("Unauthorized") || message.includes("Forbidden")) {
+      status = 403
+    } else if (message.includes("OpenAI API key is not configured")) {
+      status = 503 // Service Unavailable
+    }
+    
+    console.error(`[Generate Roadmap] Error for student ${body.student_id}:`, {
+      message,
+      status,
+      error: String(error),
+    })
+    
+    return NextResponse.json({ error: message }, { status })
   }
 }

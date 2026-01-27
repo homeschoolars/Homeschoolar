@@ -7,19 +7,47 @@ import { z } from "zod"
 import { enforceSubscriptionAccess } from "@/services/subscription-access"
 import { getStudentLearningProfile } from "@/services/learning-profile-service"
 
+/**
+ * Production-safe JSON Schema for OpenAI Structured Outputs - Roadmap
+ * 
+ * Schema Rules:
+ * - All required fields are explicitly defined
+ * - No optional fields in nested objects that cause validation issues
+ * - additionalProperties handled correctly by Zod record types
+ */
 const roadmapSubjectSchema = z.object({
-  entry_level: z.enum(["Foundation", "Bridge", "Advanced"]),
-  weekly_lessons: z.number().min(3).max(7),
-  teaching_style: z.enum(["story", "visual", "logic", "mix"]),
-  difficulty_progression: z.enum(["linear", "adaptive", "intensive"]),
-  ai_adaptation_strategy: z.string(),
-  estimated_mastery_weeks: z.number().min(1).max(52),
+  entry_level: z.enum(["Foundation", "Bridge", "Advanced"]).describe("Starting level for this subject"),
+  weekly_lessons: z.number().min(3).max(7).int().describe("Number of lessons per week (3-7)"),
+  teaching_style: z.enum(["story", "visual", "logic", "mix"]).describe("Preferred teaching approach"),
+  difficulty_progression: z.enum(["linear", "adaptive", "intensive"]).describe("How difficulty increases over time"),
+  ai_adaptation_strategy: z.string().describe("Strategy for AI to adapt content based on performance"),
+  estimated_mastery_weeks: z.number().min(1).max(52).int().describe("Estimated weeks to master this subject (1-52)"),
+})
+
+const roadmapItemSchema = z.object({
+  subject: z.string().describe("Subject name"),
+  current_level: z.string().describe("Current academic level in this subject"),
+  target_level: z.string().describe("Target level to achieve"),
+  recommended_activities: z.array(z.string()).describe("List of recommended learning activities"),
+  estimated_duration_weeks: z.number().min(1).max(52).int().describe("Estimated duration in weeks to reach target level"),
 })
 
 const roadmapSchema = z.object({
-  subjects: z.record(z.string(), roadmapSubjectSchema),
-  Electives: z.record(z.string(), roadmapSubjectSchema).optional(),
-}).passthrough() // Allow additional fields but validate known ones
+  student_summary: z.string().describe("Brief summary of the student's learning roadmap"),
+  academic_level_by_subject: z.record(z.string(), z.object({
+    level: z.string(),
+    confidence: z.number().min(0).max(100),
+  })).describe("Current academic levels by subject"),
+  learning_roadmap: z.array(roadmapItemSchema).describe("Structured roadmap items for each subject"),
+  evidence: z.array(z.object({
+    subject: z.string(),
+    source: z.enum(["assessment", "observation", "parent_input", "worksheet", "quiz"]),
+    confidence: z.number().min(0).max(1),
+    description: z.string(),
+  })).default([]).describe("Evidence supporting the roadmap - always present, can be empty"),
+  subjects: z.record(z.string(), roadmapSubjectSchema).describe("Detailed roadmap for each mandatory subject"),
+  Electives: z.record(z.string(), roadmapSubjectSchema).optional().describe("Elective subjects roadmap (only for age 8-13)"),
+})
 
 function buildRoadmapPrompt({
   age,
@@ -147,20 +175,52 @@ TASK:
 
 OUTPUT FORMAT (strict JSON):
 {
-  "Language & Communication Arts": {
-    "entry_level": "Foundation | Bridge | Advanced",
-    "weekly_lessons": 3-7,
-    "teaching_style": "story | visual | logic | mix",
-    "difficulty_progression": "linear | adaptive | intensive",
-    "ai_adaptation_strategy": "...",
-    "estimated_mastery_weeks": number
+  "student_summary": "Brief summary of the student's learning roadmap",
+  "academic_level_by_subject": {
+    "Subject Name": {
+      "level": "beginner | intermediate | advanced",
+      "confidence": 0-100
+    }
   },
-  "Mathematical Thinking & Logic": {...},
-  "...": {...},
+  "learning_roadmap": [
+    {
+      "subject": "Subject Name",
+      "current_level": "beginner",
+      "target_level": "intermediate",
+      "recommended_activities": ["activity 1", "activity 2"],
+      "estimated_duration_weeks": 8
+    }
+  ],
+  "evidence": [
+    {
+      "subject": "Subject Name",
+      "source": "assessment | observation | parent_input | worksheet | quiz",
+      "confidence": 0.0-1.0,
+      "description": "Description of evidence"
+    }
+  ],
+  "subjects": {
+    "Language & Communication Arts": {
+      "entry_level": "Foundation | Bridge | Advanced",
+      "weekly_lessons": 3-7,
+      "teaching_style": "story | visual | logic | mix",
+      "difficulty_progression": "linear | adaptive | intensive",
+      "ai_adaptation_strategy": "...",
+      "estimated_mastery_weeks": 1-52
+    }
+  },
   ${ageBand === "8-13" ? `"Electives": {
     ${electiveSubjects.map(s => `"${s.name}": {...}`).join(",\n    ")}
   }` : ""}
 }
+
+SCHEMA REQUIREMENTS:
+- student_summary: REQUIRED string
+- academic_level_by_subject: REQUIRED object with subject keys
+- learning_roadmap: REQUIRED array (can be empty but must exist)
+- evidence: REQUIRED array (can be empty but must exist). Each item needs subject, source, confidence (0-1), description
+- subjects: REQUIRED object with detailed roadmap per subject
+- Electives: OPTIONAL (only for age 8-13)
 
 Always generate JSON, no free text.
 
@@ -177,24 +237,46 @@ export async function generateLearningRoadmap(
 ) {
   await enforceSubscriptionAccess({ userId, feature: "ai" })
 
+  // Backend validation: Check if OpenAI is configured BEFORE any processing
+  if (!isOpenAIConfigured()) {
+    throw new Error(
+      "OpenAI API key is not configured. " +
+      "Please set OPENAI_API_KEY in your environment variables. " +
+      "Get your API key from: https://platform.openai.com/api-keys"
+    )
+  }
+
   const student = await prisma.child.findUnique({
     where: { id: studentId },
     include: {
       profile: true,
       interestsV2: true,
+      assessments: {
+        where: { status: "completed" },
+        include: {
+          subject: true,
+          assessmentResult: true,
+        },
+        take: 1, // Just need to check if any exist
+      },
     },
   })
 
+  // Backend validation: Student and profile must exist
   if (!student || !student.profile) {
     throw new Error("Student or profile not found. Please ensure the student profile is complete.")
   }
 
-  // Check if student has completed assessment
+  // Backend validation: Check if assessment data exists BEFORE calling OpenAI
+  // Return HTTP 400 equivalent error - do NOT call OpenAI if data is missing
   const hasCompletedAssessment = student.assessmentCompleted
-  if (!hasCompletedAssessment) {
+  const completedAssessments = student.assessments || []
+  
+  if (!hasCompletedAssessment || completedAssessments.length === 0) {
     throw new Error(
-      "Assessment not completed. " +
-      "Please complete the initial assessment for this student before generating a roadmap."
+      "Assessment data is missing. " +
+      "Please complete at least one assessment for this student before generating a roadmap. " +
+      "The roadmap generation requires assessment data to create an accurate learning path."
     )
   }
 
@@ -341,6 +423,12 @@ export async function generateLearningRoadmap(
     )
   }
 
+  // Ensure evidence array exists (default to empty if not provided)
+  const roadmapData = {
+    ...result.object,
+    evidence: result.object.evidence ?? [],
+  }
+
   // Save or update roadmap
   const existing = await prisma.learningRoadmap.findFirst({
     where: { studentId },
@@ -351,14 +439,14 @@ export async function generateLearningRoadmap(
     ? await prisma.learningRoadmap.update({
         where: { id: existing.id },
         data: {
-          roadmapJson: result.object as unknown as object,
+          roadmapJson: roadmapData as unknown as object,
           lastUpdated: new Date(),
         },
       })
     : await prisma.learningRoadmap.create({
         data: {
           studentId,
-          roadmapJson: result.object as unknown as object,
+          roadmapJson: roadmapData as unknown as object,
           generatedBy: "openai",
         },
       })
