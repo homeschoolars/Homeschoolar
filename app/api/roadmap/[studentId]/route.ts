@@ -32,7 +32,14 @@ export async function GET(
     const roadmap = await getLearningRoadmap(studentId)
 
     if (!roadmap) {
-      return NextResponse.json({ error: "Roadmap not found" }, { status: 404 })
+      // Return 200 with null to indicate roadmap doesn't exist yet (not an error)
+      return NextResponse.json({ 
+        roadmap_id: null,
+        roadmap_json: null,
+        generated_by: null,
+        created_at: null,
+        last_updated: null,
+      })
     }
 
     return NextResponse.json({

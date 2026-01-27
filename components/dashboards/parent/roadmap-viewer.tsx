@@ -39,16 +39,17 @@ export function RoadmapViewer({ studentId, studentName }: RoadmapViewerProps) {
       setError(null)
       const response = await apiFetch(`/api/roadmap/${studentId}`)
       if (!response.ok) {
-        if (response.status === 404) {
-          setError("No roadmap found. Generate one to get started.")
-        } else {
-          throw new Error("Failed to load roadmap")
-        }
-        setRoadmap(null)
-        return
+        throw new Error(`Failed to load roadmap: ${response.status}`)
       }
       const data = await response.json()
-      setRoadmap(data.roadmap_json as RoadmapData)
+      // Check if roadmap exists (roadmap_json will be null if not generated yet)
+      if (data.roadmap_json) {
+        setRoadmap(data.roadmap_json as RoadmapData)
+      } else {
+        // Roadmap doesn't exist yet - this is normal, not an error
+        setRoadmap(null)
+        setError(null)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load roadmap")
       setRoadmap(null)
@@ -100,6 +101,40 @@ export function RoadmapViewer({ studentId, studentName }: RoadmapViewerProps) {
     )
   }
 
+  if (!loading && !roadmap && !error) {
+    // No roadmap exists yet - show generate button
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <BookOpen className="mr-2 h-5 w-5" />
+            Learning Roadmap
+          </CardTitle>
+          <CardDescription>Personalized learning path for {studentName}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground mb-4">No roadmap found. Generate one to get started.</p>
+            <Button onClick={handleRegenerate} disabled={regenerating}>
+              {regenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Generate Roadmap
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Show error state only for actual errors (not 404)
   if (error && !roadmap) {
     return (
       <Card>
@@ -112,7 +147,40 @@ export function RoadmapViewer({ studentId, studentName }: RoadmapViewerProps) {
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <p className="text-muted-foreground mb-4">{error}</p>
+            <p className="text-destructive mb-4">{error}</p>
+            <Button onClick={handleRegenerate} disabled={regenerating}>
+              {regenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Retry
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // No roadmap exists yet - show generate button (this is normal, not an error)
+  if (!loading && !roadmap && !error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <BookOpen className="mr-2 h-5 w-5" />
+            Learning Roadmap
+          </CardTitle>
+          <CardDescription>Personalized learning path for {studentName}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground mb-4">No roadmap found. Generate one to get started.</p>
             <Button onClick={handleRegenerate} disabled={regenerating}>
               {regenerating ? (
                 <>
