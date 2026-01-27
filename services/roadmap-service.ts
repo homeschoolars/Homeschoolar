@@ -58,16 +58,30 @@ function buildRoadmapPrompt({
       : "mix")
     : "mix"
 
+  // Safely serialize JSON fields to avoid circular references or invalid data
+  const safeSerialize = (obj: unknown): unknown => {
+    try {
+      return JSON.parse(JSON.stringify(obj))
+    } catch {
+      return obj
+    }
+  }
+
   const studentProfile = {
-    academic_level_by_subject: learningProfile.academicLevelBySubject,
+    academic_level_by_subject: safeSerialize(learningProfile.academicLevelBySubject),
     learning_speed: learningSpeed,
     attention_span: attentionSpan,
-    interest_signals: learningProfile.interestSignals,
-    strengths: learningProfile.strengths,
-    gaps: learningProfile.gaps,
+    interest_signals: safeSerialize(learningProfile.interestSignals),
+    strengths: safeSerialize(learningProfile.strengths),
+    gaps: safeSerialize(learningProfile.gaps),
     age_band: ageBand,
     religion: religion === "muslim" ? "muslim" : "non_muslim",
     preferred_content_style: preferredContentStyle,
+  }
+
+  // Validate that we have subjects
+  if (!subjects || subjects.length === 0) {
+    throw new Error("No subjects found for roadmap generation")
   }
 
   return `SYSTEM:
@@ -227,16 +241,40 @@ export async function generateLearningRoadmap(
 
   let result
   try {
+    // Log prompt length for debugging (without exposing sensitive data)
+    console.log(`[Roadmap] Generating roadmap for student ${studentId}, prompt length: ${prompt.length} chars`)
+    
     result = await generateObject({
       model: google("gemini-2.0-flash"),
       schema: roadmapSchema,
       prompt,
       maxOutputTokens: 4000,
     })
+    
+    console.log(`[Roadmap] Successfully generated roadmap for student ${studentId}`)
   } catch (error) {
-    const err = error as { status?: number; code?: string; message?: string }
-    const hint = err?.status ?? err?.code ?? (err?.message ? String(err.message).slice(0, 100) : "unknown")
-    console.error(`[Roadmap] Gemini API error (${hint}):`, error)
+    const err = error as { status?: number; code?: string; message?: string; cause?: unknown }
+    const hint = err?.status ?? err?.code ?? (err?.message ? String(err.message).slice(0, 200) : "unknown")
+    
+    // Log full error for debugging
+    console.error(`[Roadmap] Gemini API error for student ${studentId}:`, {
+      status: err?.status,
+      code: err?.code,
+      message: err?.message,
+      hint,
+      error: String(error),
+    })
+    
+    // Provide more specific error messages
+    if (err?.status === 400) {
+      throw new Error(
+        `Invalid request to Gemini API (400 Bad Request). ` +
+        `This usually means the prompt format is invalid or the schema doesn't match. ` +
+        `Error: ${hint}. ` +
+        `Please check server logs for details.`
+      )
+    }
+    
     throw new Error(
       `Failed to generate roadmap: ${hint}. ` +
       "Please check your Gemini API key, quota, billing, and key restrictions."
