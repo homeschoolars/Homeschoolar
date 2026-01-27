@@ -71,12 +71,43 @@ export function RoadmapViewer({ studentId, studentName }: RoadmapViewerProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ student_id: studentId }),
       })
+      
       if (!response.ok) {
-        throw new Error("Failed to regenerate roadmap")
+        // Try to extract error message from response
+        let errorMessage = "Failed to regenerate roadmap"
+        try {
+          const errorData = await response.json()
+          if (errorData.error) {
+            errorMessage = errorData.error
+          } else if (errorData.message) {
+            errorMessage = errorData.message
+          }
+        } catch {
+          // If response is not JSON, use status-based message
+          if (response.status === 400) {
+            errorMessage = "Invalid request. Please ensure the student has completed an assessment and has a valid learning profile."
+          } else if (response.status === 401) {
+            errorMessage = "Unauthorized. Please log in again."
+          } else if (response.status === 402) {
+            errorMessage = "Subscription required. Please upgrade your plan to use AI features."
+          } else if (response.status === 403) {
+            errorMessage = "You don't have permission to generate roadmaps."
+          } else if (response.status === 404) {
+            errorMessage = "Student not found or profile missing."
+          } else if (response.status === 429) {
+            errorMessage = "AI usage limit reached. Please try again later or upgrade your plan."
+          } else {
+            errorMessage = `Failed to regenerate roadmap (${response.status})`
+          }
+        }
+        throw new Error(errorMessage)
       }
+      
       await fetchRoadmap()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to regenerate roadmap")
+      const errorMessage = err instanceof Error ? err.message : "Failed to regenerate roadmap"
+      setError(errorMessage)
+      console.error("[RoadmapViewer] Regeneration error:", err)
     } finally {
       setRegenerating(false)
     }

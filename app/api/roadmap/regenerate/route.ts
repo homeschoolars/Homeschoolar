@@ -63,7 +63,27 @@ export async function POST(request: Request) {
       last_updated: roadmap.lastUpdated.toISOString(),
     })
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to regenerate roadmap"
-    return NextResponse.json({ error: message }, { status: 400 })
+    const err = error as Error
+    const message = err.message || "Failed to regenerate roadmap"
+    
+    // Map specific errors to appropriate HTTP status codes
+    let status = 400
+    if (message.includes("Subscription required") || message.includes("Trial expired") || message.includes("Subscription inactive")) {
+      status = 402 // Payment Required
+    } else if (message.includes("Trial AI limit reached")) {
+      status = 429 // Too Many Requests
+    } else if (message.includes("Student or profile not found")) {
+      status = 404
+    } else if (message.includes("Unauthorized") || message.includes("Forbidden")) {
+      status = 403
+    }
+    
+    console.error(`[Roadmap Regenerate] Error for student ${body?.student_id || 'unknown'}:`, {
+      message,
+      status,
+      error: String(error),
+    })
+    
+    return NextResponse.json({ error: message }, { status })
   }
 }
