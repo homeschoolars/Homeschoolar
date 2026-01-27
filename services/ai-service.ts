@@ -495,6 +495,16 @@ const curriculumPlanSchema = z.object({
 
 export async function generateWorksheet(body: GenerateWorksheetRequest, userId: string) {
   const { subject_id, subject_name, age_group, difficulty, topic, num_questions = 5, child_level } = body
+  
+  // Check if OpenAI is configured
+  if (!isOpenAIConfigured()) {
+    throw new Error(
+      "OpenAI API key is not configured. " +
+      "Please set OPENAI_API_KEY in your environment variables. " +
+      "Get your API key from: https://platform.openai.com/api-keys"
+    )
+  }
+  
   const prompt = buildWorksheetPrompt({
     subjectName: subject_name,
     ageGroup: age_group,
@@ -507,37 +517,57 @@ export async function generateWorksheet(body: GenerateWorksheetRequest, userId: 
   await enforceSubscriptionAccess({ userId, feature: "ai" })
   await enforceDailyLimit(userId, "generate-worksheet")
 
-  const result = await generateObject({
-    model: openai("gpt-5-mini"),
-    schema: worksheetSchema,
-    prompt,
-    maxOutputTokens: 4000,
-  })
+  try {
+    const result = await generateObject({
+      model: openai("gpt-5-mini"),
+      schema: worksheetSchema,
+      prompt,
+      maxTokens: 4000,
+    })
 
-  const worksheet = await prisma.worksheet.create({
-    data: {
-      title: result.object.title,
-      description: result.object.description,
-      subjectId: subject_id,
-      ageGroup: toPrismaAgeGroup(age_group),
-      difficulty,
-      questions: result.object.questions,
-      answerKey: result.object.answer_key,
-      explanations: result.object.explanations,
-      isAiGenerated: true,
-      isApproved: false,
-      aiPrompt: prompt,
-      createdBy: userId,
-    },
-  })
+    const worksheet = await prisma.worksheet.create({
+      data: {
+        title: result.object.title,
+        description: result.object.description,
+        subjectId: subject_id,
+        ageGroup: toPrismaAgeGroup(age_group),
+        difficulty,
+        questions: result.object.questions,
+        answerKey: result.object.answer_key,
+        explanations: result.object.explanations,
+        isAiGenerated: true,
+        isApproved: false,
+        aiPrompt: prompt,
+        createdBy: userId,
+      },
+    })
 
-  await logUsage({
-    userId,
-    feature: "generate-worksheet",
-    eventData: { subjectId: subject_id, difficulty, ageGroup: age_group },
-  })
+    await logUsage({
+      userId,
+      feature: "generate-worksheet",
+      eventData: { subjectId: subject_id, difficulty, ageGroup: age_group },
+    })
 
-  return worksheet
+    return worksheet
+  } catch (error) {
+    const err = error as { status?: number; code?: string; message?: string }
+    const hint = err?.status ?? err?.code ?? (err?.message ? String(err.message).slice(0, 100) : "unknown")
+    
+    // Provide more specific error messages
+    if (err?.status === 400) {
+      throw new Error(
+        `Invalid request to OpenAI API (400 Bad Request). ` +
+        `This usually means the prompt format is invalid or the schema doesn't match. ` +
+        `Error: ${hint}. ` +
+        `Please check server logs for details.`
+      )
+    }
+    
+    throw new Error(
+      `Failed to generate worksheet: ${hint}. ` +
+      "Please check your OpenAI API key, quota, billing, and key restrictions."
+    )
+  }
 }
 
 export async function gradeSubmission(body: GradeSubmissionRequest, userId: string) {
@@ -569,7 +599,7 @@ export async function gradeSubmission(body: GradeSubmissionRequest, userId: stri
     model: openai("gpt-5-mini"),
     schema: gradingSchema,
     prompt,
-    maxOutputTokens: 3000,
+    maxTokens: 3000,
   })
 
   await logUsage({
@@ -620,7 +650,7 @@ export async function generateQuiz({
     model: openai("gpt-5-mini"),
     schema: quizSchema,
     prompt,
-    maxOutputTokens: 2000,
+    maxTokens: 2000,
   })
 
   const maxScore = result.object.questions.reduce((sum, q) => sum + q.points, 0)
@@ -686,7 +716,7 @@ export async function gradeQuiz({
     model: openai("gpt-5-mini"),
     schema: quizGradingSchema,
     prompt,
-    maxOutputTokens: 1500,
+    maxTokens: 1500,
   })
 
   await prisma.surpriseQuiz.update({
@@ -830,7 +860,7 @@ export async function completeAssessment({
     model: openai("gpt-5-mini"),
     schema: assessmentResultSchema,
     prompt,
-    maxOutputTokens: 2000,
+    maxTokens: 2000,
   })
 
   const maxScore = questions.reduce((sum, q) => sum + (q.points ?? 0), 0)
@@ -988,7 +1018,7 @@ export async function recommendCurriculum({ child_id }: { child_id: string; user
     model: openai("gpt-5-mini"),
     schema: recommendationSchema,
     prompt,
-    maxOutputTokens: 2000,
+    maxTokens: 2000,
   })
 
   await prisma.aIRecommendation.deleteMany({ where: { childId: child_id, isDismissed: false } })
@@ -1018,6 +1048,15 @@ export async function generateCurriculumFromAssessment(
   childId: string,
   userId: string
 ): Promise<{ paths: Array<{ subjectId: string; subjectName: string; currentTopic: string; nextTopics: string[] }>; summary?: string }> {
+  // Check if OpenAI is configured
+  if (!isOpenAIConfigured()) {
+    throw new Error(
+      "OpenAI API key is not configured. " +
+      "Please set OPENAI_API_KEY in your environment variables. " +
+      "Get your API key from: https://platform.openai.com/api-keys"
+    )
+  }
+  
   const child = await prisma.child.findUnique({ where: { id: childId } })
   if (!child) throw new Error("Child not found")
   const resolvedUserId = await resolveParentUserId(childId)
@@ -1053,39 +1092,78 @@ export async function generateCurriculumFromAssessment(
     assessments: input,
   })
 
-  const result = await generateObject({
-    model: openai("gpt-5-mini"),
-    schema: curriculumPlanSchema,
-    prompt,
-    maxOutputTokens: 2500,
-  })
+  try {
+    const result = await generateObject({
+      model: openai("gpt-5-mini"),
+      schema: curriculumPlanSchema,
+      prompt,
+      maxTokens: 2500,
+    })
 
-  await prisma.curriculumPath.deleteMany({ where: { childId } })
+    await prisma.curriculumPath.deleteMany({ where: { childId } })
 
-  const paths: Array<{ subjectId: string; subjectName: string; currentTopic: string; nextTopics: string[] }> = []
-  for (const s of result.object.subjects) {
-    await prisma.curriculumPath.create({
-      data: {
-        childId,
+    const paths: Array<{ subjectId: string; subjectName: string; currentTopic: string; nextTopics: string[] }> = []
+    for (const s of result.object.subjects) {
+      await prisma.curriculumPath.create({
+        data: {
+          childId,
+          subjectId: s.subject_id,
+          currentTopic: s.current_topic,
+          nextTopics: s.next_topics ?? [],
+          masteryLevel: 50,
+        },
+      })
+      paths.push({
         subjectId: s.subject_id,
+        subjectName: s.subject_name,
         currentTopic: s.current_topic,
         nextTopics: s.next_topics ?? [],
-        masteryLevel: 50,
-      },
+      })
+    }
+
+    await logUsage({
+      userId: resolvedUserId,
+      feature: "regenerate-curriculum",
+      eventData: { childId },
     })
-    paths.push({
-      subjectId: s.subject_id,
-      subjectName: s.subject_name,
-      currentTopic: s.current_topic,
-      nextTopics: s.next_topics ?? [],
-    })
+
+    return { paths, summary: result.object.summary }
+  } catch (error) {
+    const err = error as { status?: number; code?: string; message?: string }
+    const hint = err?.status ?? err?.code ?? (err?.message ? String(err.message).slice(0, 100) : "unknown")
+    
+    // Provide more specific error messages
+    if (err?.status === 400) {
+      throw new Error(
+        `Invalid request to OpenAI API (400 Bad Request). ` +
+        `This usually means the prompt format is invalid or the schema doesn't match. ` +
+        `Error: ${hint}. ` +
+        `Please check server logs for details.`
+      )
+    }
+    
+    throw new Error(
+      `Failed to generate curriculum: ${hint}. ` +
+      "Please check your OpenAI API key, quota, billing, and key restrictions."
+    )
   }
-
-  await logUsage({
-    userId: resolvedUserId,
-    feature: "regenerate-curriculum",
-    eventData: { childId },
-  })
-
-  return { paths, summary: result.object.summary }
+} catch (error) {
+    const err = error as { status?: number; code?: string; message?: string }
+    const hint = err?.status ?? err?.code ?? (err?.message ? String(err.message).slice(0, 100) : "unknown")
+    
+    // Provide more specific error messages
+    if (err?.status === 400) {
+      throw new Error(
+        `Invalid request to OpenAI API (400 Bad Request). ` +
+        `This usually means the prompt format is invalid or the schema doesn't match. ` +
+        `Error: ${hint}. ` +
+        `Please check server logs for details.`
+      )
+    }
+    
+    throw new Error(
+      `Failed to generate curriculum: ${hint}. ` +
+      "Please check your OpenAI API key, quota, billing, and key restrictions."
+    )
+  }
 }

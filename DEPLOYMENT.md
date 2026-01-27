@@ -5,7 +5,7 @@ This guide will help you deploy the HomeSchoolar application to production.
 ## Prerequisites
 
 1. **PostgreSQL Database** - Hosted on Supabase, Neon, RDS, or similar
-2. **Google Cloud Account** - For Gemini AI API key
+2. **OpenAI Account** - For OpenAI API key
 3. **Stripe Account** - For payment processing
 4. **Hosting Provider** - Vercel, Cloud Run, or similar for Next.js
 
@@ -25,8 +25,8 @@ cp env.example .env.local
 - `AUTH_SECRET` - Auth.js secret
 - `AUTH_URL` - Public URL of your deployment
 
-#### AI (Google Gemini)
-- `GOOGLE_GENERATIVE_AI_API_KEY` - Your Google Generative AI API key
+#### AI (OpenAI)
+- `OPENAI_API_KEY` - Your OpenAI API key (replaces the old Gemini API key)
 
 #### Stripe
 - `STRIPE_SECRET_KEY` - Stripe secret key (starts with `sk_`)
@@ -84,13 +84,13 @@ cp env.example .env.local
 1. **Set environment variables** (required for AI features):
    - Open [Cloud Console](https://console.cloud.google.com/) → Cloud Run → your service
    - Edit the service → **Variables & Secrets** tab
-   - Add `GOOGLE_GENERATIVE_AI_API_KEY` with your [Gemini API key](https://aistudio.google.com/apikey)
+   - Add `OPENAI_API_KEY` with your [OpenAI API key](https://platform.openai.com/api-keys)
    - Add `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, and any other vars from `env.example`
    - Save and redeploy (or create a new revision)
 
-2. **Verify Gemini is used (not fallback):**
-   - `GET https://your-service.run.app/api/health` → expect `"gemini_configured": true`, `"gemini_status": "ok"`
-   - If `gemini_configured` is `false`, the key is not set or not loaded in Cloud Run
+2. **Verify OpenAI is configured:**
+   - `GET https://your-service.run.app/api/health` → expect `"openai_configured": true`, `"openai_status": "ok"`
+   - If `openai_configured` is `false`, the key is not set or not loaded in Cloud Run
    - Run the assessment quiz; if you see generic questions like "What is 2 + 2?", fallback is active
 
 ### Alternative: Self-Hosted
@@ -133,7 +133,7 @@ npm start
 - [ ] All environment variables set in production
 - [ ] Database migrations run on production database
 - [ ] Stripe webhooks configured with production URL
-- [ ] Google Gemini API key configured
+- [ ] OpenAI API key configured
 - [ ] CORS configured for production domain
 - [ ] Auth.js secret configured
 - [ ] Error logging/monitoring set up (e.g., Sentry)
@@ -154,10 +154,10 @@ npm start
 - Check backend logs for errors
 
 ### Assessment uses fallback (e.g. "What is 2 + 2?" instead of AI questions)
-- **If `GET /api/health` shows `gemini_configured: false`:** The API key is missing. Set `GOOGLE_GENERATIVE_AI_API_KEY` in your host env vars (Cloud Run: Variables & Secrets; Vercel: Project Settings). Redeploy.
+- **If `GET /api/health` shows `openai_configured: false`:** The API key is missing. Set `OPENAI_API_KEY` in your host env vars (Cloud Run: Variables & Secrets; Vercel: Project Settings). Redeploy.
 - **Fix:** Set the key in your host’s env vars (Cloud Run: Variables & Secrets; Vercel: Project Settings → Environment Variables). Redeploy.
-- **Check:** `GET /api/health` on the **deployed** URL. Ensure `gemini_configured: true` and `gemini_status: "ok"`.
-- The initial-assessment API response includes `source: "ai" | "fallback"`; `"fallback"` means Gemini was not used.
+- **Check:** `GET /api/health` on the **deployed** URL. Ensure `openai_configured: true` and `openai_status: "ok"`.
+- The initial-assessment API response includes `source: "ai" | "fallback"`; `"fallback"` means OpenAI was not used.
 
 ### Build Errors
 - Ensure TypeScript errors are fixed (set `NODE_ENV=production` disables `ignoreBuildErrors`)

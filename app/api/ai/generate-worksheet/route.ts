@@ -10,10 +10,31 @@ export async function POST(req: Request) {
     const worksheet = await generateWorksheet(body, session.user.id)
     return Response.json({ worksheet: serializeWorksheet(worksheet) })
   } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return Response.json({ error: "Unauthorized" }, { status: 401 })
+    const err = error as Error
+    const message = err.message || "Failed to generate worksheet"
+    
+    // Map specific errors to appropriate HTTP status codes
+    let status = 500
+    if (message === "Unauthorized" || message.includes("Unauthorized")) {
+      status = 401
+    } else if (message.includes("Subscription required") || message.includes("Trial expired") || message.includes("Subscription inactive")) {
+      status = 402 // Payment Required
+    } else if (message.includes("Trial AI limit reached") || message.includes("Daily limit")) {
+      status = 429 // Too Many Requests
+    } else if (message.includes("Forbidden")) {
+      status = 403
+    } else if (message.includes("OpenAI API key") || message.includes("not configured")) {
+      status = 503 // Service Unavailable
+    } else if (message.includes("Invalid request") || message.includes("Bad Request")) {
+      status = 400
     }
-    console.error("Error generating worksheet:", error)
-    return Response.json({ error: "Failed to generate worksheet" }, { status: 500 })
+    
+    console.error("Error generating worksheet:", {
+      message,
+      status,
+      error: String(error),
+    })
+    
+    return Response.json({ error: message }, { status })
   }
 }
