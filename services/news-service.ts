@@ -89,7 +89,6 @@ Current date: ${new Date().toISOString().split('T')[0]}`
       model: openai("gpt-4o-mini"),
       schema: newsBatchSchema,
       prompt: fullPrompt,
-      maxTokens: TOKEN_LIMITS.news.maxOutputTokens,
     })
   } catch (error) {
     const err = error as { status?: number; code?: string; message?: string }

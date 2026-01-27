@@ -8,13 +8,16 @@ const generateRoadmapSchema = z.object({
 })
 
 export async function POST(request: Request) {
+  // Declare body outside try block for access in catch block
+  let body: { student_id: string } | null = null
+  
   try {
     const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const body = generateRoadmapSchema.parse(await request.json())
+    body = generateRoadmapSchema.parse(await request.json())
     const userId = session.user.id
 
     // Verify access
@@ -64,10 +67,11 @@ export async function POST(request: Request) {
       status = 503 // Service Unavailable
     }
     
-    console.error(`[Generate Roadmap] Error for student ${body.student_id}:`, {
+    console.error(`[Generate Roadmap] Error${body ? ` for student ${body.student_id}` : ""}:`, {
       message,
       status,
       error: String(error),
+      studentId: body?.student_id || "unknown",
     })
     
     return NextResponse.json({ error: message }, { status })

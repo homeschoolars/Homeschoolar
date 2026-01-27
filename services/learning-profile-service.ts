@@ -235,7 +235,6 @@ export async function generateStudentLearningProfile(
       model: openai("gpt-4o-mini"),
       schema: studentLearningProfileSchema,
       prompt: fullPrompt,
-      maxTokens: TOKEN_LIMITS.learningProfile.maxOutputTokens,
     })
   } catch (error) {
     const err = error as { status?: number; code?: string; message?: string }

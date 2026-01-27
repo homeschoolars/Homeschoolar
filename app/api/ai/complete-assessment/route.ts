@@ -5,13 +5,19 @@ import { enforceParentChildAccess } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
 export async function POST(req: Request) {
+  // Declare variables outside try block for access in catch block
+  let assessmentId: string | null = null
+  
   try {
-    const { assessment_id, answers, age_group, is_last_subject } = (await req.json()) as {
+    const body = (await req.json()) as {
       assessment_id: string
       answers: Answer[]
       age_group: string
       is_last_subject?: boolean
     }
+    
+    assessmentId = body.assessment_id
+    const { assessment_id, answers, age_group, is_last_subject } = body
 
     const session = await auth()
     if (session?.user?.role === "parent") {
@@ -41,7 +47,7 @@ export async function POST(req: Request) {
     if (error instanceof Error && error.message === "Assessment not found") {
       return Response.json({ error: "Assessment not found" }, { status: 404 })
     }
-    console.error("Error completing assessment:", error)
+    console.error(`Error completing assessment${assessmentId ? ` (ID: ${assessmentId})` : ""}:`, error)
     return Response.json({ error: "Failed to complete assessment" }, { status: 500 })
   }
 }

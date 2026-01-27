@@ -68,7 +68,6 @@ Return timeline, strengths, weaknesses, recommendations with reasons, learning_s
     model: openai("gpt-4o-mini"),
     schema: insightsSchema,
     prompt: fullPrompt,
-    maxTokens: TOKEN_LIMITS.insights.maxOutputTokens,
   })
 
   await prisma.analyticsEvent.create({

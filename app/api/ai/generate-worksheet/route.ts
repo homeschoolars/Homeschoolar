@@ -4,8 +4,11 @@ import { generateWorksheet } from "@/services/ai-service"
 import { serializeWorksheet } from "@/lib/serializers"
 
 export async function POST(req: Request) {
+  // Declare body outside try block for access in catch block
+  let body: GenerateWorksheetRequest | null = null
+  
   try {
-    const body: GenerateWorksheetRequest = await req.json()
+    body = await req.json() as GenerateWorksheetRequest
     const session = await requireSession()
     const worksheet = await generateWorksheet(body, session.user.id)
     return Response.json({ worksheet: serializeWorksheet(worksheet) })
@@ -33,6 +36,8 @@ export async function POST(req: Request) {
       message,
       status,
       error: String(error),
+      subjectId: body?.subject_id || "unknown",
+      ageGroup: body?.age_group || "unknown",
     })
     
     return Response.json({ error: message }, { status })

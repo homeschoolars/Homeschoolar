@@ -9,6 +9,9 @@ const regenerateRoadmapSchema = z.object({
 })
 
 export async function POST(request: Request) {
+  // Declare body outside try block for access in catch block
+  let body: { student_id: string } | null = null
+  
   try {
     const session = await auth()
     if (!session?.user?.id) {
@@ -21,7 +24,6 @@ export async function POST(request: Request) {
     }
 
     // Parse request body
-    let body
     try {
       const rawBody = await request.json()
       body = regenerateRoadmapSchema.parse(rawBody)
@@ -82,13 +84,14 @@ export async function POST(request: Request) {
       status = 503 // Service Unavailable
     }
     
-    // Extract student_id from error context if available, or use unknown
-    const studentId = (error as { studentId?: string })?.studentId || "unknown"
+    // Extract student_id from body or error context if available
+    const studentId = body?.student_id || (error as { studentId?: string })?.studentId || "unknown"
     
-    console.error(`[Roadmap Regenerate] Error for student ${studentId}:`, {
+    console.error(`[Roadmap Regenerate] Error${body ? ` for student ${body.student_id}` : ""}:`, {
       message,
       status,
       error: String(error),
+      studentId,
     })
     
     return NextResponse.json({ error: message }, { status })

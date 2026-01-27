@@ -653,7 +653,6 @@ export async function generateQuiz({
     model: openai("gpt-4o-mini"),
     schema: quizSchema,
     prompt: fullPrompt,
-    maxTokens: TOKEN_LIMITS.quiz.maxOutputTokens,
   })
 
   const maxScore = result.object.questions.reduce((sum, q) => sum + q.points, 0)
@@ -783,7 +782,6 @@ export async function generateInitialAssessment({
         model: openai("gpt-4o-mini"),
         schema: assessmentSchema,
         prompt,
-        maxTokens: TOKEN_LIMITS.quiz.maxOutputTokens, // Similar structure to quiz
       })
       questions = result.object.questions
     } catch (error) {
