@@ -91,9 +91,8 @@ function buildLearningProfilePrompt({
   } | null
   subjects: Array<{ name: string }>
 }) {
-  return `You are an expert curriculum designer and child psychologist.
-
-Generate a comprehensive Student Learning Profile for ${childName} (age ${age}, age band ${ageBand}, ${religion}).
+  // Build dynamic user content (non-cached)
+  const dynamicContent = `Generate a comprehensive Student Learning Profile for ${childName} (age ${age}, age band ${ageBand}, ${religion}).
 
 INPUT DATA:
 - Age: ${age}
@@ -115,29 +114,9 @@ Create a detailed learning profile that captures:
 6. Gaps (areas needing improvement, with priority levels)
 7. Recommended content style (e.g., "visual-heavy", "story-based", "interactive-games")
 
-RULES:
-- Use provided subject names only
-- Be specific and evidence-based
-- Consider age-appropriate expectations
-- Adapt to attention span patterns
-- Emphasize interest-aligned subjects
-- Identify learning gaps with actionable priorities
+Return a structured JSON object matching the schema.`
 
-OUTPUT:
-Return a structured JSON object matching the schema.
-
-IMPORTANT SCHEMA REQUIREMENTS:
-- student_summary: Provide a brief 2-3 sentence summary of the student's overall learning profile
-- academic_level_by_subject: For each subject, include level, confidence (0-100), and evidence array (can be empty)
-- evidence: Always include an evidence array at the top level, even if empty. Each evidence item must have:
-  * subject: Subject name
-  * source: One of: assessment, observation, parent_input, worksheet, quiz
-  * confidence: Number between 0 and 1
-  * description: Text description of the evidence
-- strengths: Array of areas where student excels, each with area and evidence
-- gaps: Array of areas needing improvement, each with area, priority (low/medium/high), and evidence
-
-Ensure all required fields are present. The evidence field must always exist (can be empty array).`
+  return { staticPrompt: STATIC_PROFILE_SYSTEM_PROMPT, dynamicContent }
 }
 
 export async function generateStudentLearningProfile(
