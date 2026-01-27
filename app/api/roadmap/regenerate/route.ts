@@ -78,7 +78,10 @@ export async function POST(request: Request) {
       status = 403
     }
     
-    console.error(`[Roadmap Regenerate] Error for student ${body?.student_id || 'unknown'}:`, {
+    // Extract student_id from error context if available, or use unknown
+    const studentId = (error as { studentId?: string })?.studentId || "unknown"
+    
+    console.error(`[Roadmap Regenerate] Error for student ${studentId}:`, {
       message,
       status,
       error: String(error),
