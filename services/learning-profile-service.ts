@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma"
 import { toApiAgeGroup } from "@/lib/age-group"
 import { z } from "zod"
 import { enforceSubscriptionAccess } from "@/services/subscription-access"
+import { STATIC_PROFILE_SYSTEM_PROMPT } from "@/lib/static-prompts"
+import { hashStudentData, shouldRegenerateProfile, TOKEN_LIMITS } from "@/lib/openai-cache"
 
 /**
  * Production-safe JSON Schema for OpenAI Structured Outputs
@@ -216,7 +218,25 @@ export async function generateStudentLearningProfile(
   // Get interests
   const interests = student.interestsV2.map((i) => i.label)
 
-  const prompt = buildLearningProfilePrompt({
+  // Check regeneration guard
+  const studentDataHash = hashStudentData(studentId, {
+    assessments,
+    age,
+    religion: student.profile.religion,
+  })
+
+  const { shouldRegenerate } = await shouldRegenerateProfile(studentId, studentDataHash)
+  
+  // If profile exists and data hasn't changed significantly, return existing
+  if (!shouldRegenerate) {
+    const existing = await getStudentLearningProfile(studentId)
+    if (existing) {
+      console.log(`[Learning Profile] Using cached profile for student ${studentId} (data unchanged)`)
+      return existing
+    }
+  }
+
+  const { staticPrompt, dynamicContent } = buildLearningProfilePrompt({
     childName: student.name,
     age,
     ageBand,
@@ -228,12 +248,15 @@ export async function generateStudentLearningProfile(
     subjects,
   })
 
+  const fullPrompt = `${staticPrompt}\n\n${dynamicContent}`
+
   let result
   try {
     result = await generateObject({
       model: openai("gpt-4o-mini"),
       schema: studentLearningProfileSchema,
-      prompt,
+      prompt: fullPrompt,
+      maxTokens: TOKEN_LIMITS.learningProfile.maxOutputTokens,
     })
   } catch (error) {
     const err = error as { status?: number; code?: string; message?: string }

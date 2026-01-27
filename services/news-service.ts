@@ -3,6 +3,8 @@ import { generateObject } from "ai"
 import { openai, isOpenAIConfigured } from "@/lib/openai"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { STATIC_NEWS_SYSTEM_PROMPT } from "@/lib/static-prompts"
+import { TOKEN_LIMITS } from "@/lib/openai-cache"
 
 const newsItemSchema = z.object({
   title: z.string(),
@@ -72,14 +74,22 @@ export async function generateChildNews(ageBand: "4-7" | "8-13") {
     )
   }
 
-  const prompt = buildNewsGenerationPrompt(ageBand)
+  // Build segmented prompt: static (cacheable) + dynamic (non-cached)
+  const dynamicContent = `Generate 3-5 child-friendly news items for age band ${ageBand}.
+
+Topics to cover: science, technology, education, environment, culture.
+
+Current date: ${new Date().toISOString().split('T')[0]}`
+
+  const fullPrompt = `${STATIC_NEWS_SYSTEM_PROMPT}\n\n${dynamicContent}`
 
   let result
   try {
     result = await generateObject({
       model: openai("gpt-4o-mini"),
       schema: newsBatchSchema,
-      prompt,
+      prompt: fullPrompt,
+      maxTokens: TOKEN_LIMITS.news.maxOutputTokens,
     })
   } catch (error) {
     const err = error as { status?: number; code?: string; message?: string }

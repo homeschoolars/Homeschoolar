@@ -6,6 +6,8 @@ import { toApiAgeGroup } from "@/lib/age-group"
 import { z } from "zod"
 import { enforceSubscriptionAccess } from "@/services/subscription-access"
 import { getStudentLearningProfile } from "@/services/learning-profile-service"
+import { STATIC_ROADMAP_SYSTEM_PROMPT } from "@/lib/static-prompts"
+import { segmentPrompt, hashStudentData, shouldRegenerateRoadmap, TOKEN_LIMITS } from "@/lib/openai-cache"
 
 /**
  * Production-safe JSON Schema for OpenAI Structured Outputs - Roadmap
@@ -156,14 +158,13 @@ function buildRoadmapPrompt({
     throw new Error("Failed to prepare roadmap generation data. Please check learning profile data.")
   }
 
-  return `SYSTEM:
-You are an expert curriculum designer and child psychologist. 
-Your task is to generate a personalized learning roadmap for a child, age 4–13, based on their assessment profile.
-
-INPUT:
+  // Build dynamic user content (non-cached)
+  const dynamicContent = `INPUT:
 {
   "student_profile": ${studentProfileJson},
-  "subject_list": ${subjectListJson}
+  "subject_list": ${subjectListJson},
+  "age_band": "${ageBand}",
+  "elective_subjects": ${ageBand === "8-13" ? JSON.stringify(electiveSubjects.map(s => s.name)) : "[]"}
 }
 
 TASK:
@@ -173,62 +174,9 @@ TASK:
 4. Reduce cognitive load on weak areas.
 5. Emphasize subjects aligned with interest_signals.
 
-OUTPUT FORMAT (strict JSON):
-{
-  "student_summary": "Brief summary of the student's learning roadmap",
-  "academic_level_by_subject": {
-    "Subject Name": {
-      "level": "beginner | intermediate | advanced",
-      "confidence": 0-100
-    }
-  },
-  "learning_roadmap": [
-    {
-      "subject": "Subject Name",
-      "current_level": "beginner",
-      "target_level": "intermediate",
-      "recommended_activities": ["activity 1", "activity 2"],
-      "estimated_duration_weeks": 8
-    }
-  ],
-  "evidence": [
-    {
-      "subject": "Subject Name",
-      "source": "assessment | observation | parent_input | worksheet | quiz",
-      "confidence": 0.0-1.0,
-      "description": "Description of evidence"
-    }
-  ],
-  "subjects": {
-    "Language & Communication Arts": {
-      "entry_level": "Foundation | Bridge | Advanced",
-      "weekly_lessons": 3-7,
-      "teaching_style": "story | visual | logic | mix",
-      "difficulty_progression": "linear | adaptive | intensive",
-      "ai_adaptation_strategy": "...",
-      "estimated_mastery_weeks": 1-52
-    }
-  },
-  ${ageBand === "8-13" ? `"Electives": {
-    ${electiveSubjects.map(s => `"${s.name}": {...}`).join(",\n    ")}
-  }` : ""}
-}
+Generate the complete roadmap following the schema requirements.`
 
-SCHEMA REQUIREMENTS:
-- student_summary: REQUIRED string
-- academic_level_by_subject: REQUIRED object with subject keys
-- learning_roadmap: REQUIRED array (can be empty but must exist)
-- evidence: REQUIRED array (can be empty but must exist). Each item needs subject, source, confidence (0-1), description
-- subjects: REQUIRED object with detailed roadmap per subject
-- Electives: OPTIONAL (only for age 8-13)
-
-Always generate JSON, no free text.
-
-Include all mandatory subjects.
-
-Include electives only if age ≥ 8.
-
-Make it age-appropriate and interest-adaptive.`
+  return { staticPrompt: STATIC_ROADMAP_SYSTEM_PROMPT, dynamicContent }
 }
 
 export async function generateLearningRoadmap(
@@ -365,7 +313,33 @@ export async function generateLearningRoadmap(
     )
   }
 
-  const prompt = buildRoadmapPrompt({
+  // Check regeneration guard: hash student data and check if regeneration is needed
+  const studentDataHash = hashStudentData(studentId, {
+    assessments: student.assessments,
+    learningProfile: {
+      academicLevelBySubject: learningProfile.academicLevelBySubject,
+      learningSpeed: learningProfile.learningSpeed,
+      attentionSpan: learningProfile.attentionSpan,
+    },
+    age,
+    religion: student.profile.religion,
+  })
+
+  const { shouldRegenerate } = await shouldRegenerateRoadmap(studentId, studentDataHash)
+  
+  // If roadmap exists and data hasn't changed, return existing
+  if (!shouldRegenerate) {
+    const existing = await prisma.learningRoadmap.findFirst({
+      where: { studentId },
+      orderBy: { createdAt: "desc" },
+    })
+    if (existing) {
+      console.log(`[Roadmap] Using cached roadmap for student ${studentId} (data unchanged)`)
+      return existing
+    }
+  }
+
+  const { staticPrompt, dynamicContent } = buildRoadmapPrompt({
     age,
     ageBand,
     religion: student.profile.religion,
@@ -382,15 +356,20 @@ export async function generateLearningRoadmap(
     electiveSubjects,
   })
 
+  // Use segmented prompt with messages format for potential caching
+  // Note: AI SDK's generateObject doesn't directly support OpenAI cache, but we structure for future use
+  const fullPrompt = `${staticPrompt}\n\n${dynamicContent}`
+
   let result
   try {
     // Log prompt length for debugging (without exposing sensitive data)
-    console.log(`[Roadmap] Generating roadmap for student ${studentId}, prompt length: ${prompt.length} chars`)
+    console.log(`[Roadmap] Generating roadmap for student ${studentId}, prompt length: ${fullPrompt.length} chars`)
     
     result = await generateObject({
       model: openai("gpt-4o-mini"),
       schema: roadmapSchema,
-      prompt,
+      prompt: fullPrompt,
+      maxTokens: TOKEN_LIMITS.roadmap.maxOutputTokens,
     })
     
     console.log(`[Roadmap] Successfully generated roadmap for student ${studentId}`)

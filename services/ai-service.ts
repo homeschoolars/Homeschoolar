@@ -26,6 +26,8 @@ import {
 import { enforceSubscriptionAccess } from "@/services/subscription-access"
 import { updateLearningMemoryFromAssessment } from "@/services/memory-service"
 import { upsertBehavioralMemory } from "@/services/memory-service"
+import { STATIC_WORKSHEET_SYSTEM_PROMPT, STATIC_QUIZ_SYSTEM_PROMPT } from "@/lib/static-prompts"
+import { TOKEN_LIMITS } from "@/lib/openai-cache"
 
 const DAILY_AI_LIMIT = Number(process.env.AI_DAILY_LIMIT ?? "50")
 
@@ -638,16 +640,20 @@ export async function generateQuiz({
     }
   }
 
-  const prompt = buildGenerateQuizPrompt({
+  // Build segmented prompt: static (cacheable) + dynamic (non-cached)
+  const dynamicPrompt = buildGenerateQuizPrompt({
     ageGroup: age_group,
     subjectName: targetSubject || "General Knowledge",
     recentTopics: recent_topics,
   })
 
+  const fullPrompt = `${STATIC_QUIZ_SYSTEM_PROMPT}\n\n${dynamicPrompt}`
+
   const result = await generateObject({
     model: openai("gpt-4o-mini"),
     schema: quizSchema,
-    prompt,
+    prompt: fullPrompt,
+    maxTokens: TOKEN_LIMITS.quiz.maxOutputTokens,
   })
 
   const maxScore = result.object.questions.reduce((sum, q) => sum + q.points, 0)
@@ -777,6 +783,7 @@ export async function generateInitialAssessment({
         model: openai("gpt-4o-mini"),
         schema: assessmentSchema,
         prompt,
+        maxTokens: TOKEN_LIMITS.quiz.maxOutputTokens, // Similar structure to quiz
       })
       questions = result.object.questions
     } catch (error) {

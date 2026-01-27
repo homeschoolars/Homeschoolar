@@ -3,6 +3,8 @@ import { generateObject } from "ai"
 import { openai } from "@/lib/openai"
 import { prisma } from "@/lib/prisma"
 import { enforceSubscriptionAccess } from "@/services/subscription-access"
+import { STATIC_INSIGHTS_SYSTEM_PROMPT } from "@/lib/static-prompts"
+import { TOKEN_LIMITS } from "@/lib/openai-cache"
 
 const insightsSchema = z.object({
   timeline: z.array(z.object({ date: z.string(), summary: z.string() })),
@@ -53,18 +55,20 @@ export async function getChildInsights(childId: string) {
   const memories = await prisma.learningMemory.findMany({ where: { childId } })
   const recommendations = await prisma.aIRecommendation.findMany({ where: { childId }, take: 5 })
 
-  const prompt = `${PARENT_INSIGHT_PROMPT}
-
-Assessments: ${JSON.stringify(assessments)}
+  // Build segmented prompt: static (cacheable) + dynamic (non-cached)
+  const dynamicContent = `Assessments: ${JSON.stringify(assessments)}
 Learning memory: ${JSON.stringify(memories)}
 Recommendations: ${JSON.stringify(recommendations)}
 
 Return timeline, strengths, weaknesses, recommendations with reasons, learning_style_summary, and weekly_summary (mastered, improving, needs_attention, try_this_activity, review_concept, celebrate, next_week_preview).`
 
+  const fullPrompt = `${STATIC_INSIGHTS_SYSTEM_PROMPT}\n\n${dynamicContent}`
+
   const result = await generateObject({
     model: openai("gpt-4o-mini"),
     schema: insightsSchema,
-    prompt,
+    prompt: fullPrompt,
+    maxTokens: TOKEN_LIMITS.insights.maxOutputTokens,
   })
 
   await prisma.analyticsEvent.create({
