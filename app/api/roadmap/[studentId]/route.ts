@@ -3,6 +3,7 @@ import { auth } from "@/auth"
 import { getLearningRoadmap } from "@/services/roadmap-service"
 import { prisma } from "@/lib/prisma"
 
+// Next.js 15+ requires params to be Promise and must be awaited
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ studentId: string }> }
