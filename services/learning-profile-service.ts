@@ -10,7 +10,7 @@ const studentLearningProfileSchema = z.object({
   academic_level_by_subject: z.record(z.string(), z.object({
     level: z.string(),
     confidence: z.number().min(0).max(100),
-    evidence: z.array(z.string()).optional(),
+    evidence: z.array(z.string()).default([]),
   })),
   learning_speed: z.enum(["slow", "average", "fast"]),
   attention_span: z.enum(["short", "medium", "long"]),
