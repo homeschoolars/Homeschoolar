@@ -1,18 +1,18 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getGeminiConfigStatus } from "@/lib/google-ai"
+import { getOpenAIConfigStatus } from "@/lib/openai"
 
 export const dynamic = "force-dynamic"
 
 export async function GET() {
   try {
     await prisma.$queryRaw`SELECT 1`
-    const gemini = getGeminiConfigStatus()
+    const openai = getOpenAIConfigStatus()
     return NextResponse.json({
       ok: true,
       db: "connected",
-      gemini_configured: gemini === "ok",
-      gemini_status: gemini,
+      openai_configured: openai === "ok",
+      openai_status: openai,
     })
   } catch (error) {
     console.error("Health check failed", error)

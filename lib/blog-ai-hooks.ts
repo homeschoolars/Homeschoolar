@@ -1,5 +1,5 @@
 /**
- * AI-ready hooks for blog (Gemini integration).
+ * AI-ready hooks for blog (OpenAI integration).
  * DO NOT implement AI logic here — interfaces only.
  */
 
@@ -43,7 +43,7 @@ export interface AISEOSuggestions {
   keywords: string[]
 }
 
-/** Hook: AI-assisted draft (future Gemini). */
+/** Hook: AI-assisted draft (future OpenAI). */
 export type UseAIBlogDraft = (input: AIBlogDraftInput) => Promise<AIBlogDraftOutput | null>
 
 /** Hook: AI readability scoring. */

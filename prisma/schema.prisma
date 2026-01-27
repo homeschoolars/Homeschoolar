@@ -972,7 +972,7 @@ model LearningRoadmap {
   id          String   @id @default(uuid())
   studentId   String   @map("student_id")
   roadmapJson Json     @map("roadmap_json")
-  generatedBy String   @default("gemini") @map("generated_by")
+  generatedBy String   @default("openai") @map("generated_by")
   createdAt   DateTime @default(now()) @map("created_at")
   lastUpdated DateTime @default(now()) @map("last_updated")
 
@@ -1021,7 +1021,7 @@ model ChildNews {
   summary     String   @db.Text
   category    String
   ageBand     AgeBand  @map("age_band")
-  generatedBy String   @default("gemini") @map("generated_by")
+  generatedBy String   @default("openai") @map("generated_by")
   generatedAt DateTime @default(now()) @map("generated_at")
   expiresAt   DateTime @map("expires_at")
 

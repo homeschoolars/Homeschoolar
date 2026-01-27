@@ -1,7 +1,7 @@
 import "server-only"
 import { z } from "zod"
 import { generateObject } from "ai"
-import { google } from "@/lib/google-ai"
+import { openai } from "@/lib/openai"
 import { prisma } from "@/lib/prisma"
 import {
   type ErrorCategory,
@@ -120,10 +120,10 @@ RULES:
 - concept_id when referring to a specific concept; summary required; suggested_action optional.`
 
   const result = await generateObject({
-    model: google("gemini-2.0-flash"),
+    model: openai("gpt-5-mini"),
     schema: insightSchema,
     prompt,
-    maxOutputTokens: 1500,
+    maxTokens: 1500,
   })
 
   return result.object.signals.map((s) => ({

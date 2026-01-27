@@ -1,6 +1,6 @@
 import "server-only"
 import { generateObject } from "ai"
-import { google } from "@/lib/google-ai"
+import { openai } from "@/lib/openai"
 import { z } from "zod"
 import { enforceSubscriptionAccess } from "@/services/subscription-access"
 
@@ -97,10 +97,10 @@ export async function generateBlogContent({
   })
 
   const result = await generateObject({
-    model: google("gemini-2.0-flash"),
+    model: openai("gpt-5-mini"),
     schema: blogContentSchema,
     prompt,
-    maxOutputTokens: 4000,
+    maxTokens: 4000,
   })
 
   return {

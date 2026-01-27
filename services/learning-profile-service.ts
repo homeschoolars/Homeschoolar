@@ -1,6 +1,6 @@
 import "server-only"
 import { generateObject } from "ai"
-import { google } from "@/lib/google-ai"
+import { openai } from "@/lib/openai"
 import { prisma } from "@/lib/prisma"
 import { toApiAgeGroup } from "@/lib/age-group"
 import { z } from "zod"
@@ -167,10 +167,10 @@ export async function generateStudentLearningProfile(
   })
 
   const result = await generateObject({
-    model: google("gemini-2.0-flash"),
+    model: openai("gpt-5-mini"),
     schema: studentLearningProfileSchema,
     prompt,
-    maxOutputTokens: 3000,
+    maxTokens: 3000,
   })
 
   // Save or update learning profile

@@ -1,6 +1,6 @@
 import "server-only"
 import { generateObject } from "ai"
-import { google, isGeminiConfigured } from "@/lib/google-ai"
+import { openai, isOpenAIConfigured } from "@/lib/openai"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 
@@ -63,12 +63,12 @@ Use topic variety to keep daily feed interesting.`
 }
 
 export async function generateChildNews(ageBand: "4-7" | "8-13") {
-  // Check if Gemini is configured
-  if (!isGeminiConfigured()) {
+  // Check if OpenAI is configured
+  if (!isOpenAIConfigured()) {
     throw new Error(
-      "Google Gemini API key is not configured. " +
-      "Please set GOOGLE_GENERATIVE_AI_API_KEY in your environment variables. " +
-      "Get your API key from: https://aistudio.google.com/apikey"
+      "OpenAI API key is not configured. " +
+      "Please set OPENAI_API_KEY in your environment variables. " +
+      "Get your API key from: https://platform.openai.com/api-keys"
     )
   }
 
@@ -77,18 +77,18 @@ export async function generateChildNews(ageBand: "4-7" | "8-13") {
   let result
   try {
     result = await generateObject({
-      model: google("gemini-2.0-flash"),
+      model: openai("gpt-5-mini"),
       schema: newsBatchSchema,
       prompt,
-      maxOutputTokens: 2000,
+      maxTokens: 2000,
     })
   } catch (error) {
     const err = error as { status?: number; code?: string; message?: string }
     const hint = err?.status ?? err?.code ?? (err?.message ? String(err.message).slice(0, 100) : "unknown")
-    console.error(`[News] Gemini API error (${hint}):`, error)
+    console.error(`[News] OpenAI API error (${hint}):`, error)
     throw new Error(
       `Failed to generate news: ${hint}. ` +
-      "Please check your Gemini API key, quota, billing, and key restrictions."
+      "Please check your OpenAI API key, quota, billing, and key restrictions."
     )
   }
 
@@ -115,7 +115,7 @@ export async function generateChildNews(ageBand: "4-7" | "8-13") {
           summary: item.summary,
           category: item.category,
           ageBand: ageBand === "4-7" ? "AGE_4_7" : "AGE_8_13",
-          generatedBy: "gemini",
+          generatedBy: "openai",
           generatedAt,
           expiresAt: itemExpiresAt,
         },

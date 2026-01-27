@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { generateObject } from "ai"
-import { google } from "@/lib/google-ai"
+import { openai } from "@/lib/openai"
 import { prisma } from "@/lib/prisma"
 import { enforceSubscriptionAccess } from "@/services/subscription-access"
 
@@ -62,10 +62,10 @@ Recommendations: ${JSON.stringify(recommendations)}
 Return timeline, strengths, weaknesses, recommendations with reasons, learning_style_summary, and weekly_summary (mastered, improving, needs_attention, try_this_activity, review_concept, celebrate, next_week_preview).`
 
   const result = await generateObject({
-    model: google("gemini-2.0-flash"),
+    model: openai("gpt-5-mini"),
     schema: insightsSchema,
     prompt,
-    maxOutputTokens: 1800,
+    maxTokens: 1800,
   })
 
   await prisma.analyticsEvent.create({

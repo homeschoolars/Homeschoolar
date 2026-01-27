@@ -12,7 +12,7 @@ import type {
   QuizQuestion,
   LearningLevel,
 } from "@/lib/types"
-import { google, isGeminiConfigured } from "@/lib/google-ai"
+import { openai, isOpenAIConfigured } from "@/lib/openai"
 import {
   buildWorksheetPrompt,
   buildGradeSubmissionPrompt,
@@ -508,7 +508,7 @@ export async function generateWorksheet(body: GenerateWorksheetRequest, userId: 
   await enforceDailyLimit(userId, "generate-worksheet")
 
   const result = await generateObject({
-    model: google("gemini-2.0-flash"),
+    model: openai("gpt-5-mini"),
     schema: worksheetSchema,
     prompt,
     maxOutputTokens: 4000,
@@ -566,7 +566,7 @@ export async function gradeSubmission(body: GradeSubmissionRequest, userId: stri
   await enforceDailyLimit(userId, "grade-submission")
 
   const result = await generateObject({
-    model: google("gemini-2.0-flash"),
+    model: openai("gpt-5-mini"),
     schema: gradingSchema,
     prompt,
     maxOutputTokens: 3000,
@@ -617,7 +617,7 @@ export async function generateQuiz({
   })
 
   const result = await generateObject({
-    model: google("gemini-2.0-flash"),
+    model: openai("gpt-5-mini"),
     schema: quizSchema,
     prompt,
     maxOutputTokens: 2000,
@@ -683,7 +683,7 @@ export async function gradeQuiz({
   })
 
   const result = await generateObject({
-    model: google("gemini-2.0-flash"),
+    model: openai("gpt-5-mini"),
     schema: quizGradingSchema,
     prompt,
     maxOutputTokens: 1500,
@@ -736,34 +736,34 @@ export async function generateInitialAssessment({
   }> = []
 
   let source: "ai" | "fallback" = "ai"
-  let fallback_reason: "gemini_unconfigured" | "gemini_error" | null = null
-  if (!isGeminiConfigured()) {
+    let fallback_reason: "openai_unconfigured" | "openai_error" | null = null
+  if (!isOpenAIConfigured()) {
     console.warn(
-      "[Assessment] GOOGLE_GENERATIVE_AI_API_KEY missing or placeholder. Using fallback questions. " +
-        "Set it in .env.local (local) or Cloud Run / Vercel env vars (production). Check GET /api/health → gemini_configured."
+      "[Assessment] OPENAI_API_KEY missing or placeholder. Using fallback questions. " +
+        "Set it in .env.local (local) or Cloud Run / Vercel env vars (production). Check GET /api/health → openai_configured."
     )
     questions = buildFallbackAssessmentQuestions(subject_name)
     source = "fallback"
-    fallback_reason = "gemini_unconfigured"
+    fallback_reason = "openai_unconfigured"
   } else {
     try {
       const result = await generateObject({
-        model: google("gemini-2.0-flash"),
+        model: openai("gpt-5-mini"),
         schema: assessmentSchema,
         prompt,
-        maxOutputTokens: 3000,
+        maxTokens: 3000,
       })
       questions = result.object.questions
     } catch (error) {
       const err = error as { status?: number; code?: string; message?: string }
       const hint = err?.status ?? err?.code ?? (err?.message ? String(err.message).slice(0, 80) : "unknown")
       console.error(
-        `[Assessment] Gemini API error (${hint}). Using fallback questions. Check quota, billing, and key restrictions.`,
+        `[Assessment] OpenAI API error (${hint}). Using fallback questions. Check quota, billing, and key restrictions.`,
         error
       )
       questions = buildFallbackAssessmentQuestions(subject_name)
       source = "fallback"
-      fallback_reason = "gemini_error"
+      fallback_reason = "openai_error"
     }
   }
 
@@ -827,7 +827,7 @@ export async function completeAssessment({
   })
 
   const result = await generateObject({
-    model: google("gemini-2.0-flash"),
+    model: openai("gpt-5-mini"),
     schema: assessmentResultSchema,
     prompt,
     maxOutputTokens: 2000,
@@ -985,7 +985,7 @@ export async function recommendCurriculum({ child_id }: { child_id: string; user
   })
 
   const result = await generateObject({
-    model: google("gemini-2.0-flash"),
+    model: openai("gpt-5-mini"),
     schema: recommendationSchema,
     prompt,
     maxOutputTokens: 2000,
@@ -1054,7 +1054,7 @@ export async function generateCurriculumFromAssessment(
   })
 
   const result = await generateObject({
-    model: google("gemini-2.0-flash"),
+    model: openai("gpt-5-mini"),
     schema: curriculumPlanSchema,
     prompt,
     maxOutputTokens: 2500,

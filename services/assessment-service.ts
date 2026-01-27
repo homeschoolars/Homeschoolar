@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { generateObject } from "ai"
-import { google } from "@/lib/google-ai"
+import { openai } from "@/lib/openai"
 import { prisma } from "@/lib/prisma"
 import { toApiAgeGroup } from "@/lib/age-group"
 import type { AssessmentType, Difficulty } from "@/lib/types"
@@ -82,7 +82,7 @@ export async function createAssessment({
   }
 
   const result = await generateObject({
-    model: google("gemini-2.0-flash"),
+    model: openai("gpt-5-mini"),
     schema: assessmentGenerateSchema,
     prompt: buildAssessmentPrompt({
       childName: child.name,
@@ -91,7 +91,7 @@ export async function createAssessment({
       assessmentType,
       difficulty: difficultyLevel ?? null,
     }),
-    maxOutputTokens: 2000,
+    maxTokens: 2000,
   })
 
   const assessment = await prisma.assessment.create({
@@ -137,7 +137,7 @@ export async function submitAssessment({
   }
 
   const gradingResult = await generateObject({
-    model: google("gemini-2.0-flash"),
+    model: openai("gpt-5-mini"),
     schema: assessmentResultSchema,
     prompt: buildAssessmentGradingPrompt({
       subjectName: assessment.subject.name,
@@ -148,7 +148,7 @@ export async function submitAssessment({
       })),
       answers,
     }),
-    maxOutputTokens: 1500,
+    maxTokens: 1500,
   })
 
   const result = gradingResult.object

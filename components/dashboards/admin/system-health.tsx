@@ -9,8 +9,8 @@ import { apiFetch } from "@/lib/api-client"
 type Health = {
   ok: boolean
   db: string
-  gemini_configured?: boolean
-  gemini_status?: "ok" | "missing" | "placeholder"
+  openai_configured?: boolean
+  openai_status?: "ok" | "missing" | "placeholder"
 }
 
 export function SystemHealth() {
@@ -37,7 +37,7 @@ export function SystemHealth() {
   }
 
   const dbOk = health?.ok && health?.db === "connected"
-  const geminiOk = health?.gemini_configured === true && health?.gemini_status === "ok"
+  const openaiOk = health?.openai_configured === true && health?.openai_status === "ok"
 
   return (
     <Card className="border-slate-200">
@@ -61,13 +61,13 @@ export function SystemHealth() {
         <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-slate-600" />
-            <span className="text-sm font-medium">Gemini AI</span>
+            <span className="text-sm font-medium">OpenAI</span>
           </div>
           <Badge
-            variant={geminiOk ? "default" : "secondary"}
-            className={geminiOk ? "bg-green-600" : "bg-amber-100 text-amber-800"}
+            variant={openaiOk ? "default" : "secondary"}
+            className={openaiOk ? "bg-green-600" : "bg-amber-100 text-amber-800"}
           >
-            {health?.gemini_status ?? "unknown"}
+            {health?.openai_status ?? "unknown"}
           </Badge>
         </div>
       </CardContent>

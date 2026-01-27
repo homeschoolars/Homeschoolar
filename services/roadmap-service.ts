@@ -1,6 +1,6 @@
 import "server-only"
 import { generateObject } from "ai"
-import { google, isGeminiConfigured } from "@/lib/google-ai"
+import { openai, isOpenAIConfigured } from "@/lib/openai"
 import { prisma } from "@/lib/prisma"
 import { toApiAgeGroup } from "@/lib/age-group"
 import { z } from "zod"
@@ -274,12 +274,12 @@ export async function generateLearningRoadmap(
   // Get interests
   const interests = student.interestsV2.map((i) => i.label)
 
-  // Check if Gemini is configured
-  if (!isGeminiConfigured()) {
+  // Check if OpenAI is configured
+  if (!isOpenAIConfigured()) {
     throw new Error(
-      "Google Gemini API key is not configured. " +
-      "Please set GOOGLE_GENERATIVE_AI_API_KEY in your environment variables. " +
-      "Get your API key from: https://aistudio.google.com/apikey"
+      "OpenAI API key is not configured. " +
+      "Please set OPENAI_API_KEY in your environment variables. " +
+      "Get your API key from: https://platform.openai.com/api-keys"
     )
   }
 
@@ -306,10 +306,10 @@ export async function generateLearningRoadmap(
     console.log(`[Roadmap] Generating roadmap for student ${studentId}, prompt length: ${prompt.length} chars`)
     
     result = await generateObject({
-      model: google("gemini-2.0-flash"),
+      model: openai("gpt-5-mini"),
       schema: roadmapSchema,
       prompt,
-      maxOutputTokens: 4000,
+      maxTokens: 4000,
     })
     
     console.log(`[Roadmap] Successfully generated roadmap for student ${studentId}`)
@@ -318,7 +318,7 @@ export async function generateLearningRoadmap(
     const hint = err?.status ?? err?.code ?? (err?.message ? String(err.message).slice(0, 200) : "unknown")
     
     // Log full error for debugging
-    console.error(`[Roadmap] Gemini API error for student ${studentId}:`, {
+    console.error(`[Roadmap] OpenAI API error for student ${studentId}:`, {
       status: err?.status,
       code: err?.code,
       message: err?.message,
@@ -329,7 +329,7 @@ export async function generateLearningRoadmap(
     // Provide more specific error messages
     if (err?.status === 400) {
       throw new Error(
-        `Invalid request to Gemini API (400 Bad Request). ` +
+        `Invalid request to OpenAI API (400 Bad Request). ` +
         `This usually means the prompt format is invalid or the schema doesn't match. ` +
         `Error: ${hint}. ` +
         `Please check server logs for details.`
@@ -338,7 +338,7 @@ export async function generateLearningRoadmap(
     
     throw new Error(
       `Failed to generate roadmap: ${hint}. ` +
-      "Please check your Gemini API key, quota, billing, and key restrictions."
+      "Please check your OpenAI API key, quota, billing, and key restrictions."
     )
   }
 
@@ -360,7 +360,7 @@ export async function generateLearningRoadmap(
         data: {
           studentId,
           roadmapJson: result.object as unknown as object,
-          generatedBy: "gemini",
+          generatedBy: "openai",
         },
       })
 

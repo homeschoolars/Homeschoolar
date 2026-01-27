@@ -1,7 +1,7 @@
 import "server-only"
 import { z } from "zod"
 import { generateObject } from "ai"
-import { google } from "@/lib/google-ai"
+import { openai } from "@/lib/openai"
 import { prisma } from "@/lib/prisma"
 import { toPrismaAgeGroup } from "@/lib/age-group"
 import type { AgeGroup } from "@/lib/types"
@@ -70,10 +70,10 @@ export async function generateLessonContent(
   })
 
   const result = await generateObject({
-    model: google("gemini-2.0-flash"),
+    model: openai("gpt-5-mini"),
     schema: videoScriptSchema,
     prompt,
-    maxOutputTokens: 4000,
+    maxTokens: 4000,
   })
 
   const script = result.object

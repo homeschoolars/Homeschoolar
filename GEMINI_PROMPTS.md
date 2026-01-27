@@ -141,7 +141,7 @@ AI content writer specialized in parenting, child psychology, learning science, 
 
 ## Implementation Notes
 
-- All prompts use `gemini-2.0-flash` model
+- All prompts use `gpt-5-mini` model (OpenAI)
 - All outputs are validated using Zod schemas
 - Roadmap generation requires subscription access
 - News generation runs automatically every 6 hours via cron
