@@ -8,33 +8,30 @@ import { enforceSubscriptionAccess } from "@/services/subscription-access"
 import { getStudentLearningProfile } from "@/services/learning-profile-service"
 
 const roadmapSubjectSchema = z.object({
-  entry_level: z.string(),
-  weekly_lessons: z.number().min(1).max(10),
-  teaching_style: z.string(),
-  difficulty_progression: z.array(z.string()),
+  entry_level: z.enum(["Foundation", "Bridge", "Advanced"]),
+  weekly_lessons: z.number().min(3).max(7),
+  teaching_style: z.enum(["story", "visual", "logic", "mix"]),
+  difficulty_progression: z.enum(["linear", "adaptive", "intensive"]),
   ai_adaptation_strategy: z.string(),
-  mastery_timeline_weeks: z.number().min(1).max(52),
+  estimated_mastery_weeks: z.number().min(1).max(52),
 })
 
 const roadmapSchema = z.object({
   subjects: z.record(z.string(), roadmapSubjectSchema),
-  summary: z.string().optional(),
-})
+  Electives: z.record(z.string(), roadmapSubjectSchema).optional(),
+}).passthrough() // Allow additional fields but validate known ones
 
 function buildRoadmapPrompt({
-  studentName,
   age,
   ageBand,
   religion,
-  interests,
   learningProfile,
   subjects,
+  electiveSubjects,
 }: {
-  studentName: string
   age: number
   ageBand: "4-7" | "8-13"
   religion: "muslim" | "non_muslim"
-  interests: string[]
   learningProfile: {
     academicLevelBySubject: unknown
     learningSpeed: string
@@ -45,45 +42,75 @@ function buildRoadmapPrompt({
     recommendedContentStyle?: string | null
   }
   subjects: Array<{ name: string }>
+  electiveSubjects: Array<{ name: string }>
 }) {
-  return `You are an expert curriculum designer and child psychologist.
+  // Normalize learning speed
+  const learningSpeed = learningProfile.learningSpeed === "slow" ? "slow" : learningProfile.learningSpeed === "fast" ? "fast" : "normal"
+  
+  // Normalize attention span
+  const attentionSpan = learningProfile.attentionSpan === "short" ? "low" : learningProfile.attentionSpan === "long" ? "high" : "medium"
+  
+  // Normalize content style
+  const preferredContentStyle = learningProfile.recommendedContentStyle 
+    ? (learningProfile.recommendedContentStyle.toLowerCase().includes("story") ? "story"
+      : learningProfile.recommendedContentStyle.toLowerCase().includes("visual") ? "visual"
+      : learningProfile.recommendedContentStyle.toLowerCase().includes("logic") ? "logic"
+      : "mix")
+    : "mix"
 
-Generate a personalized learning roadmap for ${studentName}.
+  const studentProfile = {
+    academic_level_by_subject: learningProfile.academicLevelBySubject,
+    learning_speed: learningSpeed,
+    attention_span: attentionSpan,
+    interest_signals: learningProfile.interestSignals,
+    strengths: learningProfile.strengths,
+    gaps: learningProfile.gaps,
+    age_band: ageBand,
+    religion: religion === "muslim" ? "muslim" : "non_muslim",
+    preferred_content_style: preferredContentStyle,
+  }
+
+  return `SYSTEM:
+You are an expert curriculum designer and child psychologist. 
+Your task is to generate a personalized learning roadmap for a child, age 4–13, based on their assessment profile.
 
 INPUT:
-- Student Learning Profile: ${JSON.stringify(learningProfile)}
-- Age: ${age}
-- Age Band: ${ageBand}
-- Religion: ${religion}
-- Interests: ${interests.join(", ")}
-- Subject List: ${subjects.map(s => s.name).join(", ")}
-
-TASK:
-Generate a personalized learning roadmap.
-
-RULES:
-- Use provided subject names only
-- Adapt difficulty to attention span (${learningProfile.attentionSpan})
-- Emphasize interest-aligned subjects
-- Reduce cognitive load in weak areas
-- Consider learning speed: ${learningProfile.learningSpeed}
-- Recommended content style: ${learningProfile.recommendedContentStyle ?? "balanced"}
-
-OUTPUT (STRICT JSON):
-For each subject, provide:
 {
-  "subject_name": {
-    "entry_level": "beginner|intermediate|advanced",
-    "weekly_lessons": number (1-10),
-    "teaching_style": "description of how to teach this subject",
-    "difficulty_progression": ["step1", "step2", ...],
-    "ai_adaptation_strategy": "how AI should adapt content",
-    "mastery_timeline_weeks": number (1-52)
-  }
+  "student_profile": ${JSON.stringify(studentProfile, null, 2)},
+  "subject_list": ${JSON.stringify(subjects.map(s => s.name))}
 }
 
-Include all mandatory subjects. For ${religion === "muslim" ? "Muslim" : "non-Muslim"} students, ${religion === "muslim" ? "include" : "exclude"} Islamic Studies.
-For age band 8-13, include electives.`
+TASK:
+1. Generate a roadmap for each subject in subject_list.
+2. Suggest electives only if age_band = 8-13.
+3. Adapt teaching style based on preferred_content_style.
+4. Reduce cognitive load on weak areas.
+5. Emphasize subjects aligned with interest_signals.
+
+OUTPUT FORMAT (strict JSON):
+{
+  "Language & Communication Arts": {
+    "entry_level": "Foundation | Bridge | Advanced",
+    "weekly_lessons": 3-7,
+    "teaching_style": "story | visual | logic | mix",
+    "difficulty_progression": "linear | adaptive | intensive",
+    "ai_adaptation_strategy": "...",
+    "estimated_mastery_weeks": number
+  },
+  "Mathematical Thinking & Logic": {...},
+  "...": {...},
+  ${ageBand === "8-13" ? `"Electives": {
+    ${electiveSubjects.map(s => `"${s.name}": {...}`).join(",\n    ")}
+  }` : ""}
+}
+
+Always generate JSON, no free text.
+
+Include all mandatory subjects.
+
+Include electives only if age ≥ 8.
+
+Make it age-appropriate and interest-adaptive.`
 }
 
 export async function generateLearningRoadmap(
@@ -173,11 +200,9 @@ export async function generateLearningRoadmap(
   const interests = student.interestsV2.map((i) => i.label)
 
   const prompt = buildRoadmapPrompt({
-    studentName: student.name,
     age,
     ageBand,
     religion: student.profile.religion,
-    interests,
     learningProfile: {
       academicLevelBySubject: learningProfile.academicLevelBySubject,
       learningSpeed: learningProfile.learningSpeed,
@@ -187,7 +212,8 @@ export async function generateLearningRoadmap(
       gaps: learningProfile.gaps,
       recommendedContentStyle: learningProfile.recommendedContentStyle,
     },
-    subjects,
+    subjects: mandatorySubjects.concat(conditionalSubjects),
+    electiveSubjects,
   })
 
   const result = await generateObject({

@@ -8,32 +8,58 @@ const newsItemSchema = z.object({
   title: z.string(),
   summary: z.string(),
   category: z.string(),
+  age_band: z.enum(["4-7", "8-13"]),
+  generated_at: z.string(),
+  expires_at: z.string(),
 })
 
-const newsBatchSchema = z.object({
-  news_items: z.array(newsItemSchema).min(3).max(10),
-})
+const newsBatchSchema = z.array(newsItemSchema).min(3).max(5)
 
 function buildNewsGenerationPrompt(ageBand: "4-7" | "8-13") {
-  return `You are a child-safe news editor.
+  const topics = ["science", "technology", "education", "environment", "culture"]
+  
+  return `SYSTEM:
+You are a child-safe news editor for children aged 4-13. Your task is to generate short, neutral, and age-appropriate news summaries.
+
+INPUT:
+{
+  "age_band": "${ageBand}",
+  "topics": ${JSON.stringify(topics)}
+}
 
 TASK:
-Generate short, neutral, age-appropriate news summaries for children aged ${ageBand === "4-7" ? "4-7" : "8-13"}.
+1. Generate 3-5 news items.
+2. Each news item must include:
+   - Title
+   - 3-5 sentence summary
+   - Category
+   - Age-appropriate reading level
+3. Avoid politics, violence, fear, or adult content.
+4. Use positive, engaging, and explanatory tone.
+5. For age 4-7, simplify language and use very short sentences.
+6. For age 8-13, slightly longer sentences, but keep simple structure.
+7. News panel must refresh every 6 hours.
 
-RULES:
-- No politics
-- No violence
-- No fear-based language
-- Max reading time: 60 seconds per item
-- Explain complex topics simply
-- Use positive, educational framing
-- Categories: science, nature, space, animals, technology, sports, culture, achievements
+OUTPUT FORMAT (JSON):
+[
+  {
+    "title": "...",
+    "summary": "...",
+    "category": "...",
+    "age_band": "${ageBand}",
+    "generated_at": "YYYY-MM-DDTHH:mm:ssZ",
+    "expires_at": "YYYY-MM-DDTHH:mm:ssZ"
+  },
+  {...}
+]
 
-OUTPUT:
-Generate 5-8 news items. Each should have:
-- Title (short, engaging)
-- Summary (3-5 sentences, age-appropriate)
-- Category (one of: science, nature, space, animals, technology, sports, culture, achievements)`
+Notes:
+
+Output strict JSON.
+
+Always generate expires_at 6 hours after generated_at.
+
+Use topic variety to keep daily feed interesting.`
 }
 
 export async function generateChildNews(ageBand: "4-7" | "8-13") {
@@ -54,22 +80,27 @@ export async function generateChildNews(ageBand: "4-7" | "8-13") {
   })
 
   // Create new news items
-  const expiresAt = new Date()
-  expiresAt.setHours(expiresAt.getHours() + 6) // Expires in 6 hours
+  const now = new Date()
+  const expiresAt = new Date(now.getTime() + 6 * 60 * 60 * 1000) // 6 hours from now
 
   const newsItems = await Promise.all(
-    result.object.news_items.map((item) =>
-      prisma.childNews.create({
+    result.object.map((item) => {
+      // Parse dates from AI response or use current time
+      const generatedAt = item.generated_at ? new Date(item.generated_at) : now
+      const itemExpiresAt = item.expires_at ? new Date(item.expires_at) : expiresAt
+
+      return prisma.childNews.create({
         data: {
           title: item.title,
           summary: item.summary,
           category: item.category,
           ageBand: ageBand === "4-7" ? "AGE_4_7" : "AGE_8_13",
           generatedBy: "gemini",
-          expiresAt,
+          generatedAt,
+          expiresAt: itemExpiresAt,
         },
       })
-    )
+    })
   )
 
   return newsItems
