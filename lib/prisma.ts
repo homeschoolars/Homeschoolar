@@ -29,19 +29,19 @@ function getPrismaClient(): PrismaClient {
   }
 
   // Check if we're in build phase - Next.js sets NEXT_PHASE during build
-  // During build, DATABASE_URL is typically not available
+  // During build, we should never reach here because the Proxy returns a mock
+  // But as a safety check, we still validate
   const isBuildTime = 
     process.env.NEXT_PHASE === 'phase-production-build' ||
     process.env.NEXT_PHASE === 'phase-development-build'
 
-  // If we're in build time, throw a clear error to prevent Prisma initialization
-  // This should only happen if code is incorrectly accessing Prisma at module import time
+  // If we're in build time, this is an error - the Proxy should have prevented this
+  // This should never happen if the Proxy is working correctly
   if (isBuildTime) {
     throw new Error(
-      "PrismaClient cannot be initialized during build time. " +
-      "DATABASE_URL is not available during Next.js build. " +
-      "Ensure Prisma is only accessed at runtime in API routes or server functions. " +
-      "Make sure all API routes using Prisma have: export const dynamic = 'force-dynamic'"
+      "PrismaClient.getPrismaClient() was called during build time. " +
+      "This should not happen - the Proxy should return a mock instead. " +
+      "Ensure all API routes using Prisma have: export const dynamic = 'force-dynamic'"
     )
   }
 
@@ -113,35 +113,51 @@ export function getPrisma(): PrismaClient {
  *   await prisma.user.findMany()
  */
 // Build-time mock to prevent Prisma initialization during Next.js build
+// This mock allows Next.js to evaluate modules during build without crashing
 function createBuildTimeMock(): PrismaClient {
-  return new Proxy({} as PrismaClient, {
+  // Create a mock that returns functions for any property access
+  // These functions will throw if actually called (which shouldn't happen during build)
+  const mockHandler: ProxyHandler<PrismaClient> = {
     get(_target, prop) {
       // Return a function that throws if called (should never happen during build)
+      // This allows Next.js to inspect the Proxy without crashing
       return () => {
         throw new Error(
           `PrismaClient.${String(prop)} cannot be used during build time. ` +
-          "This route should have 'export const dynamic = \"force-dynamic\"'"
+          "Ensure this route has 'export const dynamic = \"force-dynamic\"'"
         )
       }
     },
-  }) as PrismaClient
+  }
+  return new Proxy({} as PrismaClient, mockHandler) as PrismaClient
 }
+
+// Cache the build-time mock to avoid creating it multiple times
+let buildTimeMock: PrismaClient | null = null
 
 export const prisma = new Proxy({} as PrismaClient, {
   get(_target, prop) {
-    // Check if we're in build phase before trying to get client
+    // Check if we're in build phase BEFORE doing anything else
     const isBuildTime = 
       process.env.NEXT_PHASE === 'phase-production-build' ||
       process.env.NEXT_PHASE === 'phase-development-build'
     
     // During build, return a safe mock that won't crash module evaluation
+    // Next.js may inspect properties during build, so we need to handle that gracefully
     if (isBuildTime) {
-      const mock = createBuildTimeMock()
-      const value = (mock as unknown as Record<string, unknown>)[prop as string]
+      // Cache the mock to avoid recreating it
+      if (!buildTimeMock) {
+        buildTimeMock = createBuildTimeMock()
+      }
+      // Return the property from the mock
+      const value = (buildTimeMock as unknown as Record<string, unknown>)[prop as string]
+      // If it's a function, return it as-is (it will throw if called)
+      // If it's undefined or another type, return it
       return value
     }
     
     // At runtime, get the actual PrismaClient
+    // This will only execute when the route handler actually runs
     const client = getPrismaClient()
     const value = (client as unknown as Record<string, unknown>)[prop as string]
     if (typeof value === 'function') {

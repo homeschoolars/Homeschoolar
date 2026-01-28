@@ -15,6 +15,7 @@ export async function startCheckoutSession(planType: "monthly" | "yearly") {
     throw new Error("Not authorized")
   }
   const existing = await prisma.subscription.findFirst({ where: { userId: user.id } })
+  // Check if subscription is orphan plan (orphan plans have type = "orphan")
   if (existing?.type === "orphan") {
     throw new Error("Orphan plan cannot initiate billing")
   }
