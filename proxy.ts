@@ -2,16 +2,16 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 /**
- * Next.js Middleware for blocking bot/scanner traffic
+ * Next.js Proxy for blocking bot/scanner traffic
  * 
- * This middleware runs before all requests and blocks:
+ * This proxy runs before all requests and blocks:
  * - WordPress scanner probes (/wp-admin/*, /wp-includes/*, etc.)
  * - Common vulnerability scanners (.env, .git, phpmyadmin, etc.)
  * - Bot traffic patterns
  * 
  * Returns 404 immediately without processing to reduce log noise and server load.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Block common WordPress scanner paths - return 404 immediately without processing
@@ -117,7 +117,7 @@ export function middleware(request: NextRequest) {
   return NextResponse.next()
 }
 
-// Configure which routes this middleware should run on
+// Configure which routes this proxy should run on
 export const config = {
   matcher: [
     /*
