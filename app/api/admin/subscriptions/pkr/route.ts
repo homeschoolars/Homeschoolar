@@ -3,6 +3,10 @@ import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { requireRole } from "@/lib/auth-helpers"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const bodySchema = z.object({
   userId: z.string(),
   planId: z.enum(["trial", "monthly", "yearly"]),

@@ -2,6 +2,10 @@ import { NextResponse } from "next/server"
 import { requireAdminRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function GET() {
   try {
     await requireAdminRole(["super_admin", "finance_admin"])

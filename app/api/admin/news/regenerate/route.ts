@@ -3,6 +3,10 @@ import { requireRole } from "@/lib/auth-helpers"
 import { regenerateNews } from "@/services/news-service"
 import { z } from "zod"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const regenerateNewsSchema = z.object({
   age_band: z.enum(["4-7", "8-13"]).optional(),
 })

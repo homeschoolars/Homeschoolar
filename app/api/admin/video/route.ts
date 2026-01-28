@@ -3,6 +3,10 @@ import { requireRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const createVideoSchema = z.object({
   subject: z.string().min(1),
   age_band: z.enum(["4-7", "8-13"]),

@@ -2,6 +2,10 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const makeAdminSchema = z.object({
   email: z.string().email(),
   admin_role: z.enum(["super_admin", "content_admin", "support_admin", "finance_admin"]).optional(),

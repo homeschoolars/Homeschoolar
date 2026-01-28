@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma"
 import { requireRole } from "@/lib/auth-helpers"
 import { serializeSubject } from "@/lib/serializers"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function GET() {
   try {
     await requireRole("admin")

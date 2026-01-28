@@ -4,6 +4,10 @@ import { requireRole } from "@/lib/auth-helpers"
 import { z } from "zod"
 import type { Payment, User } from "@prisma/client"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 type PaymentWithUser = Payment & { user: User | null }
 
 export async function GET() {

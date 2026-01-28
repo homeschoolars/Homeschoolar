@@ -4,6 +4,10 @@ import { requireAdminRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 import { logAdminAction } from "@/services/admin-audit-service"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const refundSchema = z.object({
   reason: z.string().optional(),
 })

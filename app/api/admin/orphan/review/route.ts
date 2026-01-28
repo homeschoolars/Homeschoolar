@@ -5,6 +5,10 @@ import { prisma } from "@/lib/prisma"
 import { reviewOrphanVerification } from "@/services/orphan-verification-service"
 import { logAdminAction } from "@/services/admin-audit-service"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const reviewSchema = z.object({
   verificationId: z.string().min(1),
   status: z.enum(["approved", "rejected"]),

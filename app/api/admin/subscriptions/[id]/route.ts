@@ -4,6 +4,10 @@ import { requireAdminRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 import { logAdminAction } from "@/services/admin-audit-service"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const updateSchema = z.object({
   status: z.enum(["pending", "active", "past_due", "cancelled", "expired"]).optional(),
   final_amount: z.number().int().positive().optional(),

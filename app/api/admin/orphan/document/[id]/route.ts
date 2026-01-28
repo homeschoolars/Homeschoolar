@@ -4,6 +4,10 @@ import { promises as fs } from "fs"
 import { requireAdminRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const storageDir = process.env.ORPHAN_DOC_STORAGE_DIR || path.join(process.cwd(), "storage", "orphan-docs")
 
 function getMimeType(fileName: string) {
