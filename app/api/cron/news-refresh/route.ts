@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server"
 import { generateChildNews } from "@/services/news-service"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 // This endpoint should be called by a cron job every 6 hours
 // You can use services like Vercel Cron, GitHub Actions, or external cron services
 export async function GET(request: Request) {

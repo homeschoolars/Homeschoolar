@@ -3,6 +3,10 @@ import { auth } from "@/auth"
 import { getLearningRoadmap } from "@/services/roadmap-service"
 import { prisma } from "@/lib/prisma"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 // Next.js 15+ requires params to be Promise and must be awaited
 export async function GET(
   request: Request,

@@ -2,6 +2,10 @@ import { NextResponse } from "next/server"
 import { requireRole, enforceParentChildAccess } from "@/lib/auth-helpers"
 import { getChildRecommendations } from "@/services/insights-service"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireRole(["parent", "admin"])

@@ -3,6 +3,10 @@ import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { requireRole, enforceParentChildAccess } from "@/lib/auth-helpers"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(request: Request) {
   try {
     const session = await requireRole(["parent", "admin"])

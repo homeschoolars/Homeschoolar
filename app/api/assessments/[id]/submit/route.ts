@@ -3,6 +3,10 @@ import { z } from "zod"
 import { requireRole } from "@/lib/auth-helpers"
 import { submitAssessment } from "@/services/assessment-service"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const bodySchema = z.object({
   answers: z.array(
     z.object({

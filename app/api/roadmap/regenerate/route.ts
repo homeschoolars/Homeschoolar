@@ -4,6 +4,10 @@ import { generateLearningRoadmap } from "@/services/roadmap-service"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const regenerateRoadmapSchema = z.object({
   student_id: z.string().uuid(),
 })

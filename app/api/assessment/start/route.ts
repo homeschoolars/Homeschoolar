@@ -3,6 +3,10 @@ import { auth } from "@/auth"
 import { createAssessment } from "@/services/assessment-service"
 import { z } from "zod"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const startAssessmentSchema = z.object({
   student_id: z.string().uuid(),
   subject_id: z.string().uuid(),
