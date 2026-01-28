@@ -3,6 +3,10 @@ import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { requireRole } from "@/lib/auth-helpers"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 function getRange(range: string) {
   const now = new Date()
   switch (range) {
@@ -20,6 +24,14 @@ function getRange(range: string) {
 
 export async function GET(request: Request) {
   try {
+    // Prevent execution during build time
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json(
+        { error: "This endpoint is not available during build time" },
+        { status: 503 }
+      )
+    }
+
     await requireRole("admin")
     const { searchParams } = new URL(request.url)
     const range = searchParams.get("range") ?? "30d"
