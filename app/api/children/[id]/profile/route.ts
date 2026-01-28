@@ -3,6 +3,10 @@ import { z } from "zod"
 import { requireRole } from "@/lib/auth-helpers"
 import { updateChildProfile } from "@/services/onboarding-service"
 
+// Force dynamic rendering - this route makes database calls
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const updateSchema = z.object({
   full_name: z.string().min(1).optional(),
   date_of_birth: z.string().min(1).optional(),

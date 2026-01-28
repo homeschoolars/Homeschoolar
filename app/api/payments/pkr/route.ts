@@ -6,6 +6,10 @@ import { buildPricing } from "@/services/pricing.service"
 import { getParentChildCount } from "@/services/subscription-service"
 import { upsertSubscription } from "@/services/subscription-service"
 
+// Force dynamic rendering - this route makes database calls
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const paymentSchema = z.object({
   planType: z.enum(["monthly", "yearly"]),
   billingPeriod: z.enum(["monthly", "yearly"]),

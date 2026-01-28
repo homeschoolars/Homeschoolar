@@ -3,6 +3,10 @@ import { auth } from "@/auth"
 import { getCurrentNews } from "@/services/news-service"
 import { z } from "zod"
 
+// Force dynamic rendering - this route makes database calls via service
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const getNewsSchema = z.object({
   age_band: z.enum(["4-7", "8-13"]),
 })

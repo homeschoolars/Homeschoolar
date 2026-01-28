@@ -3,6 +3,10 @@ import { z } from "zod"
 import { requireRole } from "@/lib/auth-helpers"
 import { serializePricing, upsertSubscription } from "@/services/subscription-service"
 
+// Force dynamic rendering - this route makes database calls via service
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const createSchema = z.object({
   planType: z.enum(["monthly", "yearly"]),
 })

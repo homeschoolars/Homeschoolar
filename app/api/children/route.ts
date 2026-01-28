@@ -4,6 +4,10 @@ import { requireRole } from "@/lib/auth-helpers"
 import { createChildWithProfile } from "@/services/onboarding-service"
 import { serializeChild } from "@/lib/serializers"
 
+// Force dynamic rendering - this route makes database calls
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const createChildSchema = z.object({
   full_name: z.string().min(1),
   date_of_birth: z.string().min(1),

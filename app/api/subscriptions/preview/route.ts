@@ -4,6 +4,10 @@ import { requireRole } from "@/lib/auth-helpers"
 import { previewSubscription, serializePricing } from "@/services/subscription-service"
 import { getParentChildCount } from "@/services/subscription-service"
 
+// Force dynamic rendering - this route makes database calls via service
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const previewSchema = z.object({
   childCount: z.number().int().positive().optional(),
   planType: z.enum(["monthly", "yearly"]),

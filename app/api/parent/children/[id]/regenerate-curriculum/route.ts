@@ -2,6 +2,10 @@ import { NextResponse } from "next/server"
 import { requireRole, enforceParentChildAccess } from "@/lib/auth-helpers"
 import { generateCurriculumFromAssessment } from "@/services/ai-service"
 
+// Force dynamic rendering - this route makes database and AI calls
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 /** POST regenerate curriculum from assessment. Parent can request a new plan. */
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

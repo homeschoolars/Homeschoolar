@@ -3,6 +3,10 @@ import { requireRole } from "@/lib/auth-helpers"
 import { startTrial } from "@/services/subscription-access"
 import { serializeSubscription } from "@/lib/serializers"
 
+// Force dynamic rendering - this route makes database calls via service
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST() {
   try {
     const session = await requireRole(["parent", "admin"])

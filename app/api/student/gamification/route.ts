@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma"
 import { enforceParentChildAccess } from "@/lib/auth-helpers"
 import { auth } from "@/auth"
 
+// Force dynamic rendering - this route makes database calls
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const XP_PER_WORKSHEET = 10
 const XP_PER_QUIZ = 20
 const XP_PER_LEVEL = 100

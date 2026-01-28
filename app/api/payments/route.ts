@@ -4,6 +4,10 @@ import { requireRole } from "@/lib/auth-helpers"
 import { createPayment } from "@/services/payments.service"
 import { PaymentGateway } from "@prisma/client"
 
+// Force dynamic rendering - this route makes database calls
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const bodySchema = z.object({
   amount: z.number().int().positive(),
   currency: z.enum(["USD", "EUR", "PKR"]),

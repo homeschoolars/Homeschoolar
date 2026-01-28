@@ -2,6 +2,10 @@ import { NextResponse } from "next/server"
 import { enforceParentChildAccess, requireRole } from "@/lib/auth-helpers"
 import { getChildAiProfileSummary } from "@/services/onboarding-service"
 
+// Force dynamic rendering - this route makes database calls
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireRole(["parent", "admin"])

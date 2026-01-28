@@ -3,6 +3,10 @@ import { z } from "zod"
 import { requireRole } from "@/lib/auth-helpers"
 import { submitOrphanVerification } from "@/services/orphan-verification-service"
 
+// Force dynamic rendering - this route makes database calls via service
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const submitSchema = z.object({
   childId: z.string().min(1),
   documentType: z.enum(["death_certificate", "ngo_letter", "other"]),

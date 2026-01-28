@@ -2,6 +2,10 @@ import { NextResponse } from "next/server"
 import { requireRole, enforceParentChildAccess } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
+// Force dynamic rendering - this route makes database calls
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 /** GET curriculum plan (stored paths from assessment). Parent view. */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

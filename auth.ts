@@ -1,11 +1,18 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@auth/prisma-adapter"
-import { prisma } from "@/lib/prisma"
+import { getPrisma } from "@/lib/prisma"
 import { findUserByEmail, verifyPassword } from "@/services/auth-service"
 
+// Lazy adapter initialization - only creates PrismaClient when adapter is actually used
+// This prevents Prisma from initializing during build time
+const getAdapter = () => {
+  // Only create adapter when actually needed (at runtime, not build time)
+  return PrismaAdapter(getPrisma())
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: getAdapter(),
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",

@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma"
 import { requireSession } from "@/lib/auth-helpers"
 import { z } from "zod"
 
+// Force dynamic rendering - this route makes database calls
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function GET() {
   try {
     const session = await requireSession()

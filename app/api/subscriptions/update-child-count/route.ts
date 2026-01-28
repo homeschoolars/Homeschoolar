@@ -2,6 +2,10 @@ import { NextResponse } from "next/server"
 import { requireRole } from "@/lib/auth-helpers"
 import { serializePricing, updateSubscriptionChildCount } from "@/services/subscription-service"
 
+// Force dynamic rendering - this route makes database calls via service
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function PUT() {
   try {
     const session = await requireRole(["parent", "admin"])

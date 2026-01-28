@@ -3,6 +3,10 @@ import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { createAndSendVerificationEmail } from "@/services/email-verification"
 
+// Force dynamic rendering - this route makes database calls
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const RESEND_COOLDOWN_MS = 2 * 60 * 1000
 const recentResends = new Map<string, number>()
 

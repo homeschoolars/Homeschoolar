@@ -3,6 +3,10 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { getStudentLearningProfile } from "@/services/learning-profile-service"
 
+// Force dynamic rendering - this route makes database calls
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function GET(request: Request) {
   try {
     const session = await auth()
