@@ -7,6 +7,7 @@ import { z } from "zod"
 import { enforceSubscriptionAccess } from "@/services/subscription-access"
 import { STATIC_PROFILE_SYSTEM_PROMPT } from "@/lib/static-prompts"
 import { hashStudentData, shouldRegenerateProfile, TOKEN_LIMITS } from "@/lib/openai-cache"
+import { withRetry, isSchemaValidationError, isRateLimitError } from "@/lib/openai-retry"
 
 /**
  * Production-safe JSON Schema for OpenAI Structured Outputs
@@ -94,27 +95,84 @@ function buildLearningProfilePrompt({
   // Build dynamic user content (non-cached)
   const dynamicContent = `Generate a comprehensive Student Learning Profile for ${childName} (age ${age}, age band ${ageBand}, ${religion}).
 
-INPUT DATA:
+CRITICAL: Output MUST be valid JSON matching the exact schema. Verify all required keys are present before responding.
+
+INPUT DATA (USE ONLY THIS DATA - DO NOT INVENT):
+- Student Name: ${childName}
 - Age: ${age}
 - Age Band: ${ageBand}
 - Religion: ${religion}
-- Interests: ${interests.join(", ")}
-- Assessments: ${JSON.stringify(assessments)}
-- Learning Memory: ${JSON.stringify(learningMemory)}
-- Behavioral Memory: ${JSON.stringify(behavioralMemory)}
+- Interests: ${interests.length > 0 ? interests.join(", ") : "None specified"}
 - Available Subjects: ${subjects.map(s => s.name).join(", ")}
 
-TASK:
-Create a detailed learning profile that captures:
-1. Academic level by subject (beginner/intermediate/advanced with confidence scores)
-2. Learning speed (how quickly they grasp new concepts)
-3. Attention span (based on behavioral patterns)
-4. Interest signals (which subjects/topics they show most interest in)
-5. Strengths (areas where they excel)
-6. Gaps (areas needing improvement, with priority levels)
-7. Recommended content style (e.g., "visual-heavy", "story-based", "interactive-games")
+ASSESSMENT DATA:
+${assessments.length > 0 ? assessments.map((a, i) => `
+Assessment ${i + 1}:
+- Subject: ${a.subject || "Unknown"}
+- Score: ${a.score !== null && a.score !== undefined ? a.score : "Not available"}
+- Strengths: ${a.strengths ? JSON.stringify(a.strengths) : "None"}
+- Weaknesses: ${a.weaknesses ? JSON.stringify(a.weaknesses) : "None"}
+`).join("\n") : "No assessment data available"}
 
-Return a structured JSON object matching the schema.`
+LEARNING MEMORY:
+${learningMemory.length > 0 ? learningMemory.map((m, i) => `
+Memory ${i + 1}: ${m.subject} - ${m.concept} (Mastery: ${m.masteryLevel}%)
+`).join("\n") : "No learning memory data"}
+
+BEHAVIORAL MEMORY:
+${behavioralMemory ? `
+- Attention Pattern: ${behavioralMemory.attentionPattern || "Not assessed"}
+- Learning Style: ${behavioralMemory.learningStyle || "Not assessed"}
+` : "No behavioral memory data"}
+
+STRICT OUTPUT REQUIREMENTS:
+1. Academic level by subject: For each subject in "Available Subjects", determine level (beginner/intermediate/advanced) with confidence (0-100)
+   - Base ONLY on provided assessment data
+   - If no assessment for a subject, set confidence to 0 and evidence to []
+   - Evidence array must always be present (can be empty [])
+2. Learning speed: "slow" | "average" | "fast"
+   - Base on assessment completion patterns, learning memory progression, or behavioral memory
+   - If no data, default to "average"
+3. Attention span: "short" | "medium" | "long"
+   - Base on behavioral memory attentionPattern if available
+   - If not available, infer from age band (4-7: typically short/medium, 8-13: typically medium/long)
+4. Interest signals: Object with subject/topic keys and scores (0-100)
+   - ONLY use subjects from "Available Subjects" or topics from "Interests"
+   - Base on provided interests and assessment performance
+5. Strengths: Array of {area, evidence}
+   - Base ONLY on assessment strengths and learning memory
+   - Each strength must have evidence from provided data
+6. Gaps: Array of {area, priority (low/medium/high), evidence}
+   - Base ONLY on assessment weaknesses and learning memory
+   - Priority based on impact on learning progression
+7. Evidence: Array of evidence items
+   - MUST always be present (can be empty [])
+   - Each item must reference provided assessment or memory data
+8. Recommended content style: Optional string
+   - Base on learning style from behavioral memory or infer from patterns
+
+VALIDATION CHECKLIST (VERIFY BEFORE OUTPUT):
+✓ All required top-level keys present
+✓ student_summary: non-empty string (2-3 sentences)
+✓ learning_speed: exactly "slow", "average", or "fast"
+✓ attention_span: exactly "short", "medium", or "long"
+✓ academic_level_by_subject: object with keys matching "Available Subjects" exactly
+✓ Each academic_level entry has: level (string), confidence (0-100), evidence (array, can be empty)
+✓ interest_signals: object with keys from provided subjects/interests only
+✓ strengths: array (can be empty), items have area and evidence
+✓ gaps: array (can be empty), items have area, priority (exact enum), evidence
+✓ evidence: array always present (can be empty)
+
+ANTI-HALLUCINATION RULES:
+- NEVER invent subject names not in "Available Subjects"
+- NEVER add assessment data not in provided assessments array
+- NEVER infer learning speed/attention span beyond what's explicitly stated or age-appropriate defaults
+- ONLY use provided assessment scores, strengths, weaknesses
+- If assessment data missing for a subject, set confidence to 0 and evidence to []
+- Interest signals ONLY for subjects/topics mentioned in interests or assessments
+- All evidence must reference actual provided data
+
+Return a structured JSON object matching the schema. Output must be valid JSON.`
 
   return { staticPrompt: STATIC_PROFILE_SYSTEM_PROMPT, dynamicContent }
 }
@@ -231,11 +289,18 @@ export async function generateStudentLearningProfile(
 
   let result
   try {
-    result = await generateObject({
-      model: openai("gpt-4o-mini"),
-      schema: studentLearningProfileSchema,
-      prompt: fullPrompt,
-    })
+    result = await withRetry(
+      () =>
+        generateObject({
+          model: openai("gpt-4o-mini"),
+          schema: studentLearningProfileSchema,
+          prompt: fullPrompt,
+        }),
+      {
+        maxRetries: 3,
+        retryDelay: 1000,
+      }
+    )
   } catch (error) {
     const err = error as { status?: number; code?: string; message?: string }
     const hint = err?.status ?? err?.code ?? (err?.message ? String(err.message).slice(0, 200) : "unknown")
@@ -246,9 +311,28 @@ export async function generateStudentLearningProfile(
       message: err?.message,
       hint,
       error: String(error),
+      isSchemaError: isSchemaValidationError(error),
+      isRateLimit: isRateLimitError(error),
     })
     
     // Provide specific error messages
+    if (isSchemaValidationError(error)) {
+      throw new Error(
+        `Invalid JSON schema for learning profile (400 Bad Request). ` +
+        `This indicates a schema validation issue. ` +
+        `Error: ${hint}. ` +
+        `Please check server logs for details.`
+      )
+    }
+    
+    if (isRateLimitError(error)) {
+      throw new Error(
+        `OpenAI rate limit exceeded (429 Too Many Requests). ` +
+        `Please wait a moment and try again. ` +
+        `If this persists, check your OpenAI quota and billing.`
+      )
+    }
+    
     if (err?.status === 400) {
       throw new Error(
         `Invalid schema or prompt format (400 Bad Request). ` +

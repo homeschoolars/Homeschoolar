@@ -2,14 +2,20 @@ import type { GenerateWorksheetRequest } from "@/lib/types"
 import { requireSession } from "@/lib/auth-helpers"
 import { generateWorksheet } from "@/services/ai-service"
 import { serializeWorksheet } from "@/lib/serializers"
+import { safeParseRequestJson } from "@/lib/safe-json"
+import { auth } from "@/auth"
 
 export async function POST(req: Request) {
   // Declare body outside try block for access in catch block
   let body: GenerateWorksheetRequest | null = null
   
   try {
-    body = await req.json() as GenerateWorksheetRequest
+    body = await safeParseRequestJson(req, {} as GenerateWorksheetRequest)
     const session = await requireSession()
+    
+    // Check if user is admin - admins bypass subscription checks
+    const isAdmin = session.user.role === "admin"
+    
     const worksheet = await generateWorksheet(body, session.user.id)
     return Response.json({ worksheet: serializeWorksheet(worksheet) })
   } catch (error) {

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { STATIC_NEWS_SYSTEM_PROMPT } from "@/lib/static-prompts"
 import { TOKEN_LIMITS } from "@/lib/openai-cache"
+import { withRetry, isSchemaValidationError, isRateLimitError } from "@/lib/openai-retry"
 
 const newsItemSchema = z.object({
   title: z.string(),
@@ -85,15 +86,49 @@ Current date: ${new Date().toISOString().split('T')[0]}`
 
   let result
   try {
-    result = await generateObject({
-      model: openai("gpt-4o-mini"),
-      schema: newsBatchSchema,
-      prompt: fullPrompt,
-    })
+    result = await withRetry(
+      () =>
+        generateObject({
+          model: openai("gpt-4o-mini"),
+          schema: newsBatchSchema,
+          prompt: fullPrompt,
+        }),
+      {
+        maxRetries: 3,
+        retryDelay: 1000,
+      }
+    )
   } catch (error) {
     const err = error as { status?: number; code?: string; message?: string }
-    const hint = err?.status ?? err?.code ?? (err?.message ? String(err.message).slice(0, 100) : "unknown")
-    console.error(`[News] OpenAI API error (${hint}):`, error)
+    const hint = err?.status ?? err?.code ?? (err?.message ? String(err.message).slice(0, 200) : "unknown")
+    
+    console.error(`[News] OpenAI API error:`, {
+      status: err?.status,
+      code: err?.code,
+      message: err?.message,
+      hint,
+      ageBand,
+      isSchemaError: isSchemaValidationError(error),
+      isRateLimit: isRateLimitError(error),
+    })
+    
+    if (isSchemaValidationError(error)) {
+      throw new Error(
+        `Invalid JSON schema for news generation (400 Bad Request). ` +
+        `This indicates a schema validation issue. ` +
+        `Error: ${hint}. ` +
+        `Please check server logs for details.`
+      )
+    }
+    
+    if (isRateLimitError(error)) {
+      throw new Error(
+        `OpenAI rate limit exceeded (429 Too Many Requests). ` +
+        `Please wait a moment and try again. ` +
+        `If this persists, check your OpenAI quota and billing.`
+      )
+    }
+    
     throw new Error(
       `Failed to generate news: ${hint}. ` +
       "Please check your OpenAI API key, quota, billing, and key restrictions."

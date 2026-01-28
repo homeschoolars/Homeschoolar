@@ -2,13 +2,16 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 /**
- * Proxy to handle common bot/scanner requests gracefully
- * This reduces log noise from WordPress probes and other common scanner patterns
+ * Next.js Middleware for blocking bot/scanner traffic
  * 
- * Note: In Next.js 16+, "middleware" has been renamed to "proxy" for clarity.
- * The functionality remains the same.
+ * This middleware runs before all requests and blocks:
+ * - WordPress scanner probes (/wp-admin/*, /wp-includes/*, etc.)
+ * - Common vulnerability scanners (.env, .git, phpmyadmin, etc.)
+ * - Bot traffic patterns
+ * 
+ * Returns 404 immediately without processing to reduce log noise and server load.
  */
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Block common WordPress scanner paths - return 404 immediately without processing
@@ -79,16 +82,47 @@ export function proxy(request: NextRequest) {
     })
   }
 
+  // Block common bot user agents (optional - can be aggressive)
+  const userAgent = request.headers.get("user-agent")?.toLowerCase() || ""
+  const botPatterns = [
+    /^curl\//i,
+    /^wget\//i,
+    /^python-requests\//i,
+    /^go-http-client\//i,
+    /^java\//i,
+    /^scanner/i,
+    /^bot/i,
+    /^crawler/i,
+    /^spider/i,
+  ]
+
+  // Only block bots on non-API routes to avoid false positives
+  if (!pathname.startsWith("/api/") && botPatterns.some((pattern) => pattern.test(userAgent))) {
+    // Allow legitimate bots (Google, Bing, etc.) but block scanners
+    const allowedBots = ["googlebot", "bingbot", "slurp", "duckduckbot", "baiduspider", "yandexbot"]
+    const isAllowedBot = allowedBots.some((bot) => userAgent.includes(bot))
+    
+    if (!isAllowedBot) {
+      return new NextResponse(null, {
+        status: 403,
+        statusText: "Forbidden",
+        headers: {
+          "X-Robots-Tag": "noindex, nofollow",
+        },
+      })
+    }
+  }
+
   // Continue with normal request processing
   return NextResponse.next()
 }
 
-// Configure which routes this proxy should run on
+// Configure which routes this middleware should run on
 export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api (API routes)
+     * - api (API routes - we want to process these)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)

@@ -6,6 +6,7 @@ import { toApiAgeGroup } from "@/lib/age-group"
 import type { AssessmentType, Difficulty } from "@/lib/types"
 import { enforceSubscriptionAccess } from "@/services/subscription-access"
 import { updateLearningMemoryFromAssessment } from "@/services/memory-service"
+import { withRetry, isSchemaValidationError, isRateLimitError } from "@/lib/openai-retry"
 
 const questionSchema = z.object({
   question: z.string(),
@@ -26,6 +27,12 @@ const assessmentResultSchema = z.object({
   ai_summary: z.string(),
 })
 
+/**
+ * MODE: ASSESSMENT (Non-Grading)
+ * 
+ * Generates discovery questions for diagnostic assessment.
+ * Language is discovery-focused, NOT evaluative.
+ */
 function buildAssessmentPrompt({
   childName,
   ageGroup,
@@ -39,7 +46,14 @@ function buildAssessmentPrompt({
   assessmentType: AssessmentType
   difficulty?: Difficulty | null
 }) {
-  return `Create a ${assessmentType} assessment for ${childName} (age group ${ageGroup}) in ${subjectName}.
+  return `Create a ${assessmentType} discovery activity for ${childName} (age group ${ageGroup}) in ${subjectName}.
+
+MODE: ASSESSMENT (Non-Grading)
+- This is a diagnostic discovery activity, NOT a test or exam
+- Focus on understanding how the child thinks and learns
+- Use discovery-focused language: "Let's explore..." not "Test this..."
+- Questions should help infer reasoning ability and learning style
+
 Use child-friendly language and age-appropriate questions.
 Provide expected answers and short explanations.
 Difficulty hint: ${difficulty ?? "mixed"}.
@@ -135,28 +149,75 @@ export async function submitAssessment({
     throw new Error("Assessment not found")
   }
 
-  const gradingResult = await generateObject({
-    model: openai("gpt-4o-mini"),
-    schema: assessmentResultSchema,
-    prompt: buildAssessmentGradingPrompt({
-      subjectName: assessment.subject.name,
-      questions: assessment.assessmentQuestions.map((q) => ({
-        id: q.id,
-        question: q.question,
-        expected_answer: q.expectedAnswer,
-      })),
-      answers,
-    }),
-  })
+  let gradingResult
+  try {
+    gradingResult = await withRetry(
+      () =>
+        generateObject({
+          model: openai("gpt-4o-mini"),
+          schema: assessmentResultSchema,
+          prompt: buildAssessmentGradingPrompt({
+            subjectName: assessment.subject.name,
+            questions: assessment.assessmentQuestions.map((q) => ({
+              id: q.id,
+              question: q.question,
+              expected_answer: q.expectedAnswer,
+            })),
+            answers,
+          }),
+        }),
+      {
+        maxRetries: 3,
+        retryDelay: 1000,
+      }
+    )
+  } catch (error) {
+    const err = error as { status?: number; code?: string; message?: string }
+    const hint = err?.status ?? err?.code ?? (err?.message ? String(err.message).slice(0, 200) : "unknown")
+    
+    console.error(`[Assessment] OpenAI API error (submit):`, {
+      status: err?.status,
+      code: err?.code,
+      message: err?.message,
+      hint,
+      assessmentId,
+      isSchemaError: isSchemaValidationError(error),
+      isRateLimit: isRateLimitError(error),
+    })
+    
+    if (isSchemaValidationError(error)) {
+      throw new Error(
+        `Invalid JSON schema for assessment grading (400 Bad Request). ` +
+        `This indicates a schema validation issue. ` +
+        `Error: ${hint}. ` +
+        `Please check server logs for details.`
+      )
+    }
+    
+    if (isRateLimitError(error)) {
+      throw new Error(
+        `OpenAI rate limit exceeded (429 Too Many Requests). ` +
+        `Please wait a moment and try again. ` +
+        `If this persists, check your OpenAI quota and billing.`
+      )
+    }
+    
+    throw new Error(
+      `Failed to grade assessment: ${hint}. ` +
+      "Please check your OpenAI API key, quota, billing, and key restrictions."
+    )
+  }
 
   const result = gradingResult.object
 
+  // MODE: ASSESSMENT (Non-Grading)
+  // Store diagnostic insights, NOT scores
   await prisma.assessment.update({
     where: { id: assessmentId },
     data: {
       status: "completed",
       answers: answers as unknown as object,
-      score: result.raw_score,
+      score: 0, // Deprecated - assessment mode doesn't use scores
       completedAt: new Date(),
     },
   })
@@ -164,8 +225,8 @@ export async function submitAssessment({
   const assessmentResult = await prisma.assessmentResult.upsert({
     where: { assessmentId },
     update: {
-      rawScore: result.raw_score,
-      normalizedScore: result.normalized_score,
+      rawScore: 0, // Deprecated - assessment mode doesn't use scores
+      normalizedScore: 0, // Deprecated - assessment mode doesn't use scores
       strengths: result.strengths as unknown as object,
       weaknesses: result.weaknesses as unknown as object,
       aiSummary: result.ai_summary,
@@ -173,8 +234,8 @@ export async function submitAssessment({
     },
     create: {
       assessmentId,
-      rawScore: result.raw_score,
-      normalizedScore: result.normalized_score,
+      rawScore: 0, // Deprecated - assessment mode doesn't use scores
+      normalizedScore: 0, // Deprecated - assessment mode doesn't use scores
       strengths: result.strengths as unknown as object,
       weaknesses: result.weaknesses as unknown as object,
       aiSummary: result.ai_summary,

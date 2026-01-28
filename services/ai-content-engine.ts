@@ -8,6 +8,7 @@ import type { AgeGroup } from "@/lib/types"
 import type { ContentLanguage } from "@/lib/ai-architecture"
 import { buildLessonContentPrompt } from "@/services/ai-prompts"
 import { enforceSubscriptionAccess } from "@/services/subscription-access"
+import { withRetry, isSchemaValidationError, isRateLimitError } from "@/lib/openai-retry"
 
 const videoScriptSectionSchema = z.object({
   label: z.string(),
@@ -69,11 +70,57 @@ export async function generateLessonContent(
     language,
   })
 
-  const result = await generateObject({
-    model: openai("gpt-4o-mini"),
-    schema: videoScriptSchema,
-    prompt,
-  })
+  let result
+  try {
+    result = await withRetry(
+      () =>
+        generateObject({
+          model: openai("gpt-4o-mini"),
+          schema: videoScriptSchema,
+          prompt,
+        }),
+      {
+        maxRetries: 3,
+        retryDelay: 1000,
+      }
+    )
+  } catch (error) {
+    const err = error as { status?: number; code?: string; message?: string }
+    const hint = err?.status ?? err?.code ?? (err?.message ? String(err.message).slice(0, 200) : "unknown")
+    
+    console.error(`[Lesson Content] OpenAI API error:`, {
+      status: err?.status,
+      code: err?.code,
+      message: err?.message,
+      hint,
+      subject: subject_name,
+      topic,
+      isSchemaError: isSchemaValidationError(error),
+      isRateLimit: isRateLimitError(error),
+    })
+    
+    if (isSchemaValidationError(error)) {
+      throw new Error(
+        `Invalid JSON schema for lesson content (400 Bad Request). ` +
+        `This indicates a schema validation issue. ` +
+        `Error: ${hint}. ` +
+        `Please check server logs for details.`
+      )
+    }
+    
+    if (isRateLimitError(error)) {
+      throw new Error(
+        `OpenAI rate limit exceeded (429 Too Many Requests). ` +
+        `Please wait a moment and try again. ` +
+        `If this persists, check your OpenAI quota and billing.`
+      )
+    }
+    
+    throw new Error(
+      `Failed to generate lesson content: ${hint}. ` +
+      "Please check your OpenAI API key, quota, billing, and key restrictions."
+    )
+  }
 
   const script = result.object
 

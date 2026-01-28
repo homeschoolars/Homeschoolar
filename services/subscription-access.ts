@@ -20,6 +20,37 @@ export async function enforceSubscriptionAccess({
   userId: string
   feature: "ai" | "read"
 }) {
+  // Admin users bypass subscription checks
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  })
+
+  if (user?.role === "admin") {
+    // Admins have unlimited access to all features
+    // Return a mock subscription object that satisfies the Subscription type
+    // This allows admins to bypass all subscription checks
+    return {
+      id: "admin-bypass",
+      userId,
+      plan: "trial" as const, // Use existing plan type
+      type: "orphan" as const, // Orphan type bypasses most checks
+      status: "active" as const,
+      isFree: true,
+      childCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      startedAt: new Date(),
+      trialEndsAt: null,
+      startDate: new Date(),
+      endDate: null,
+      finalAmount: null,
+      discountPercentage: null,
+      discountAmount: null,
+      couponCode: null,
+    } as unknown as Awaited<ReturnType<typeof prisma.subscription.findFirst>>
+  }
+
   const subscription = await prisma.subscription.findFirst({ where: { userId } })
   if (!subscription) {
     throw new Error("Subscription required")

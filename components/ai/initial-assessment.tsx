@@ -20,14 +20,30 @@ interface InitialAssessmentProps {
 
 type AssessmentQuestion = Question & { skill_tested: string }
 
-interface AssessmentResult {
-  score: number
-  max_score: number
-  recommended_level: string
-  analysis: string
-  strengths: string[]
-  areas_to_work_on: string[]
-  suggested_starting_topics: string[]
+interface DiagnosticProfile {
+  child_profile: {
+    estimated_age_band: string
+    cognitive_level_fit: "under_challenged" | "well_matched" | "over_challenged"
+    learning_style_signals: Array<"visual" | "verbal" | "logical" | "applied">
+  }
+  concept_mastery: Array<{
+    topic: string
+    mastery_level: "emerging" | "developing" | "secure" | "advanced"
+    confidence_estimate: number
+    evidence: string
+  }>
+  strength_zones: string[]
+  weakness_zones: string[]
+  misconception_patterns: Array<{
+    pattern: string
+    likely_cause: string
+    recommended_intervention: string
+  }>
+  difficulty_baseline_recommendation: "easy" | "medium" | "advanced"
+  priority_learning_areas: string[]
+  content_format_recommendation: Array<"quiz" | "story" | "visual" | "practice">
+  personalization_notes: string
+  progress_benchmark_summary: string
 }
 
 export function InitialAssessment({ childId, childName, ageGroup, subjects, onComplete }: InitialAssessmentProps) {
@@ -39,7 +55,7 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
   const [answers, setAnswers] = useState<Answer[]>([])
   const [selectedAnswer, setSelectedAnswer] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [results, setResults] = useState<AssessmentResult | null>(null)
+  const [results, setResults] = useState<DiagnosticProfile | null>(null)
   const [completedSubjects, setCompletedSubjects] = useState<string[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -166,7 +182,7 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
         return
       }
 
-      const data = JSON.parse(raw) as AssessmentResult
+      const data = JSON.parse(raw) as DiagnosticProfile
       setResults(data)
       setCompletedSubjects((prev) => [...prev, currentSubject.id])
 
@@ -195,7 +211,7 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
           </div>
           <CardTitle className="text-2xl">Welcome, {childName}!</CardTitle>
           <CardDescription className="text-base">
-            Let&apos;s find out what you already know so we can create the perfect learning path for you!
+            Let&apos;s discover your learning style and create a personalized learning journey just for you!
           </CardDescription>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
@@ -207,8 +223,8 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
                   <span className="text-purple-600 font-bold">1</span>
                 </div>
                 <div>
-                  <p className="font-medium">Quick Questions</p>
-                  <p className="text-sm text-gray-500">Answer questions about different subjects</p>
+                  <p className="font-medium">Discovery Questions</p>
+                  <p className="text-sm text-gray-500">Explore what you know about different subjects</p>
                 </div>
               </li>
               <li className="flex items-start gap-3">
@@ -217,7 +233,7 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
                 </div>
                 <div>
                   <p className="font-medium">No Pressure</p>
-                  <p className="text-sm text-gray-500">It&apos;s okay to not know everything!</p>
+                  <p className="text-sm text-gray-500">This helps us understand how you learn best!</p>
                 </div>
               </li>
               <li className="flex items-start gap-3">
@@ -256,9 +272,9 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
           <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-r from-green-400 to-emerald-400 flex items-center justify-center">
             <Trophy className="w-10 h-10 text-white" />
           </div>
-          <CardTitle className="text-2xl">Assessment Complete!</CardTitle>
+          <CardTitle className="text-2xl">Discovery Complete!</CardTitle>
           <CardDescription className="text-base">
-            Great job, {childName}! We&apos;ve created your personalized learning path.
+            Amazing work, {childName}! We&apos;ve learned about your learning style and created a personalized path just for you.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
@@ -285,7 +301,7 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
 
           <div className="text-center py-4">
             <p className="text-gray-600 mb-4">
-              Your learning journey is ready! Let&apos;s start exploring your subjects.
+              Your personalized learning journey is ready! We&apos;ve discovered your learning style and created lessons that match how you learn best.
             </p>
             <Button
               onClick={onComplete}
@@ -349,12 +365,14 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
               <Trophy className="w-8 h-8 text-green-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-800 mb-2">
-              {currentSubject.name.split("(")[0].trim()} Complete!
+              {currentSubject.name.split("(")[0].trim()} Discovery Complete!
             </h3>
             <p className="text-gray-600 mb-4">
-              Level: <span className="font-semibold capitalize">{results.recommended_level}</span>
+              Starting Level: <span className="font-semibold capitalize">
+                {results?.difficulty_baseline_recommendation || "foundation"}
+              </span>
             </p>
-            <p className="text-sm text-gray-500 mb-4">Moving to next subject...</p>
+            <p className="text-sm text-gray-500 mb-4">Great job exploring! Moving to next subject...</p>
             {currentSubjectIndex < subjects.length - 1 && (
               <Button
                 onClick={advanceToNextSubject}
@@ -378,7 +396,7 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
               <span>
                 Question {currentQuestionIndex + 1} of {questions.length}
               </span>
-              <span>{currentQuestion.points} points</span>
+              <span className="text-purple-600 font-medium">Exploring {currentQuestion.skill_tested}</span>
             </div>
 
             <p className="text-lg font-medium text-gray-800">{currentQuestion.question}</p>

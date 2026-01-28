@@ -8,6 +8,7 @@ import { enforceSubscriptionAccess } from "@/services/subscription-access"
 import { getStudentLearningProfile } from "@/services/learning-profile-service"
 import { STATIC_ROADMAP_SYSTEM_PROMPT } from "@/lib/static-prompts"
 import { segmentPrompt, hashStudentData, shouldRegenerateRoadmap, TOKEN_LIMITS } from "@/lib/openai-cache"
+import { withRetry, isSchemaValidationError, isRateLimitError } from "@/lib/openai-retry"
 
 /**
  * Production-safe JSON Schema for OpenAI Structured Outputs - Roadmap
@@ -159,7 +160,11 @@ function buildRoadmapPrompt({
   }
 
   // Build dynamic user content (non-cached)
-  const dynamicContent = `INPUT:
+  const dynamicContent = `Generate a personalized learning roadmap.
+
+CRITICAL: Output MUST be valid JSON matching the exact schema. Verify all required keys are present before responding.
+
+INPUT DATA (USE ONLY THIS DATA - DO NOT INVENT):
 {
   "student_profile": ${studentProfileJson},
   "subject_list": ${subjectListJson},
@@ -167,18 +172,67 @@ function buildRoadmapPrompt({
   "elective_subjects": ${ageBand === "8-13" ? JSON.stringify(electiveSubjects.map(s => s.name)) : "[]"}
 }
 
-TASK:
-1. Generate a roadmap for each subject in subject_list.
-2. Suggest electives only if age_band = 8-13.
-3. Adapt teaching style based on preferred_content_style.
-4. Reduce cognitive load on weak areas.
-5. Emphasize subjects aligned with interest_signals.
+STRICT REQUIREMENTS:
+1. Generate roadmap for EACH subject in subject_list (${subjectListJson.length} subjects)
+   - Use EXACT subject names from subject_list - never modify or invent names
+   - Each subject must have entry_level, weekly_lessons, teaching_style, difficulty_progression, ai_adaptation_strategy, estimated_mastery_weeks
+2. Suggest electives ONLY if age_band = "8-13" AND elective_subjects array is not empty
+   - Use EXACT subject names from elective_subjects
+3. Adapt teaching style based on preferred_content_style from student_profile
+4. Reduce cognitive load on weak areas (from gaps in student_profile)
+5. Emphasize subjects aligned with interest_signals (high scores in student_profile)
+6. academic_level_by_subject: Object with keys matching subject_list exactly
+   - Each entry: {level: string, confidence: number 0-100}
+   - Base on academic_level_by_subject from student_profile
+7. learning_roadmap: Array of roadmap items
+   - Each item: {subject, current_level, target_level, recommended_activities[], estimated_duration_weeks}
+   - Base on current academic levels and learning goals
+8. evidence: Array of evidence items
+   - MUST always be present (can be empty [])
+   - Reference assessment data from student_profile
+9. subjects: Object with keys matching subject_list exactly
+   - Detailed roadmap per mandatory subject
+10. Electives: Object (optional, only if age_band is "8-13")
+    - Keys match elective_subjects exactly
 
-Generate the complete roadmap following the schema requirements.`
+VALIDATION CHECKLIST (VERIFY BEFORE OUTPUT):
+✓ student_summary: non-empty string (2-4 sentences)
+✓ academic_level_by_subject: object with keys matching subject_list exactly (${subjectListJson.length} keys)
+✓ Each academic_level entry has: level (string), confidence (number 0-100)
+✓ learning_roadmap: array (can be empty, but items must reference valid subjects)
+✓ evidence: array always present (can be empty)
+✓ subjects: object with keys matching subject_list exactly (${subjectListJson.length} keys)
+✓ Each subject entry has all required fields: entry_level, weekly_lessons, teaching_style, difficulty_progression, ai_adaptation_strategy, estimated_mastery_weeks
+✓ Electives: only present if age_band is "8-13", keys match elective_subjects exactly
+✓ All enum values match exactly: entry_level ("Foundation"|"Bridge"|"Advanced"), teaching_style ("story"|"visual"|"logic"|"mix"), difficulty_progression ("linear"|"adaptive"|"intensive")
+✓ All confidence scores are numbers 0-100
+✓ All estimated weeks are integers 1-52
+✓ weekly_lessons are integers 3-7
+
+ANTI-HALLUCINATION RULES:
+- NEVER invent subject names not in subject_list or elective_subjects
+- NEVER add data not present in student_profile
+- NEVER modify provided subject names (use exact spelling/capitalization)
+- ONLY use provided assessment data - do not infer beyond what's explicitly stated
+- If data is missing, use empty arrays [] or null (per schema), never invent
+- Base all recommendations on provided academic levels, learning speed, attention span, and interest signals
+- Do not add subjects or topics not mentioned in the input
+
+Generate the complete roadmap following the schema requirements. Output must be valid JSON.`
 
   return { staticPrompt: STATIC_ROADMAP_SYSTEM_PROMPT, dynamicContent }
 }
 
+/**
+ * Generate Learning Roadmap
+ * 
+ * Uses 3-layer curriculum system:
+ * 1. Master Knowledge Framework (static reference)
+ * 2. Student Learning Profile (dynamic, from assessments)
+ * 3. AI Curriculum Composer (generates personalized curriculum)
+ * 
+ * This function now uses the new AI Curriculum Composer for comprehensive curriculum generation.
+ */
 export async function generateLearningRoadmap(
   studentId: string,
   userId: string
@@ -192,6 +246,26 @@ export async function generateLearningRoadmap(
       "Please set OPENAI_API_KEY in your environment variables. " +
       "Get your API key from: https://platform.openai.com/api-keys"
     )
+  }
+
+  // Try new 3-layer curriculum system first
+  try {
+    const curriculumService = await import("@/services/curriculum-composer-service")
+    const curriculum = await curriculumService.generateAICurriculum(studentId, userId)
+    await curriculumService.saveCurriculum(studentId, curriculum)
+    
+    // Convert to roadmap format for backward compatibility
+    const roadmap = await prisma.learningRoadmap.findFirst({
+      where: { studentId },
+      orderBy: { createdAt: "desc" },
+    })
+    
+    if (roadmap) {
+      return roadmap
+    }
+  } catch (error) {
+    console.error("[Roadmap] New curriculum composer failed, falling back to legacy:", error)
+    // Fall through to legacy implementation
   }
 
   const student = await prisma.child.findUnique({
@@ -365,11 +439,18 @@ export async function generateLearningRoadmap(
     // Log prompt length for debugging (without exposing sensitive data)
     console.log(`[Roadmap] Generating roadmap for student ${studentId}, prompt length: ${fullPrompt.length} chars`)
     
-    result = await generateObject({
-      model: openai("gpt-4o-mini"),
-      schema: roadmapSchema,
-      prompt: fullPrompt,
-    })
+    result = await withRetry(
+      () =>
+        generateObject({
+          model: openai("gpt-4o-mini"),
+          schema: roadmapSchema,
+          prompt: fullPrompt,
+        }),
+      {
+        maxRetries: 3,
+        retryDelay: 1000,
+      }
+    )
     
     console.log(`[Roadmap] Successfully generated roadmap for student ${studentId}`)
   } catch (error) {
@@ -383,9 +464,28 @@ export async function generateLearningRoadmap(
       message: err?.message,
       hint,
       error: String(error),
+      isSchemaError: isSchemaValidationError(error),
+      isRateLimit: isRateLimitError(error),
     })
     
     // Provide more specific error messages
+    if (isSchemaValidationError(error)) {
+      throw new Error(
+        `Invalid JSON schema for roadmap (400 Bad Request). ` +
+        `This indicates a schema validation issue. ` +
+        `Error: ${hint}. ` +
+        `Please check server logs for details.`
+      )
+    }
+    
+    if (isRateLimitError(error)) {
+      throw new Error(
+        `OpenAI rate limit exceeded (429 Too Many Requests). ` +
+        `Please wait a moment and try again. ` +
+        `If this persists, check your OpenAI quota and billing.`
+      )
+    }
+    
     if (err?.status === 400) {
       throw new Error(
         `Invalid request to OpenAI API (400 Bad Request). ` +
