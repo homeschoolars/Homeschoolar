@@ -5,6 +5,10 @@ import { serializeWorksheet } from "@/lib/serializers"
 import { safeParseRequestJson } from "@/lib/safe-json"
 import { auth } from "@/auth"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(req: Request) {
   // Declare body outside try block for access in catch block
   let body: GenerateWorksheetRequest | null = null

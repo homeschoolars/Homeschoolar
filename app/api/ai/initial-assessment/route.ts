@@ -6,6 +6,10 @@ import { enforceParentChildAccess } from "@/lib/auth-helpers"
 import { safeParseRequestJson } from "@/lib/safe-json"
 import { z } from "zod"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const initialAssessmentSchema = z.object({
   child_id: z.string().uuid(),
   subject_id: z.string().uuid(),

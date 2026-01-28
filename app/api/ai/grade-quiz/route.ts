@@ -2,6 +2,10 @@ import type { Answer } from "@/lib/types"
 import { gradeQuiz } from "@/services/ai-service"
 import { auth } from "@/auth"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(req: Request) {
   try {
     const { quiz_id, answers, age_group } = (await req.json()) as {

@@ -2,6 +2,10 @@ import type { GradeSubmissionRequest } from "@/lib/types"
 import { requireSession } from "@/lib/auth-helpers"
 import { gradeSubmission } from "@/services/ai-service"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(req: Request) {
   try {
     const body: GradeSubmissionRequest = await req.json()

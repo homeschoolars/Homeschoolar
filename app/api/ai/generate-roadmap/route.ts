@@ -3,6 +3,10 @@ import { auth } from "@/auth"
 import { generateLearningRoadmap } from "@/services/roadmap-service"
 import { z } from "zod"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const generateRoadmapSchema = z.object({
   student_id: z.string().uuid(),
 })

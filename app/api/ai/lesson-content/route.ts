@@ -5,6 +5,10 @@ import { safeParseRequestJson } from "@/lib/safe-json"
 import type { AgeGroup } from "@/lib/types"
 import type { ContentLanguage } from "@/lib/ai-architecture"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(req: Request) {
   try {
     const body = await safeParseRequestJson(req, {} as {

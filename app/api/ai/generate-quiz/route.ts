@@ -4,6 +4,10 @@ import { serializeSurpriseQuiz } from "@/lib/serializers"
 import { auth } from "@/auth"
 import { enforceParentChildAccess } from "@/lib/auth-helpers"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(req: Request) {
   try {
     const { child_id, subject_id, subject_name, age_group, recent_topics } = (await req.json()) as {

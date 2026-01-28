@@ -6,6 +6,10 @@ import { prisma } from "@/lib/prisma"
 import { safeParseRequestJson } from "@/lib/safe-json"
 import { z } from "zod"
 
+// Force dynamic rendering - this is an API route that should never be statically generated
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const answerSchema = z.object({
   question_id: z.string(),
   answer: z.string(),
