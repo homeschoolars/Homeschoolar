@@ -4,15 +4,15 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import { getPrisma } from "@/lib/prisma"
 import { findUserByEmail, verifyPassword } from "@/services/auth-service"
 
-// Lazy adapter initialization - only creates PrismaClient when adapter is actually used
-// This prevents Prisma from initializing during build time
-const getAdapter = () => {
-  // Only create adapter when actually needed (at runtime, not build time)
-  return PrismaAdapter(getPrisma())
-}
+const isBuildTime =
+  process.env.NEXT_PHASE === "phase-production-build" ||
+  process.env.NEXT_PHASE === "phase-development-build"
+
+// Avoid initializing Prisma during build to prevent static evaluation errors.
+const adapter = isBuildTime ? undefined : PrismaAdapter(getPrisma())
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: getAdapter(),
+  adapter,
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
