@@ -1,0 +1,14 @@
+steps:
+  - name: gcr.io/kaniko-project/executor:latest
+    args:
+      - --destination=europe-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/homeschoolar/homeschoolar:$COMMIT_SHA
+      - --destination=europe-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/homeschoolar/homeschoolar:latest
+      - --cache=true
+      - --cache-ttl=6h
+      - --dockerfile=Dockerfile
+      - --context=.
+images:
+  - europe-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/homeschoolar/homeschoolar:$COMMIT_SHA
+  - europe-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/homeschoolar/homeschoolar:latest
+options:
+  logging: CLOUD_LOGGING_ONLY
