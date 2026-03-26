@@ -2,6 +2,8 @@ FROM node:20-bookworm-slim AS deps
 WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-lock.yaml ./
+COPY scripts ./scripts
+COPY prisma ./prisma
 RUN pnpm install --frozen-lockfile
 
 FROM node:20-bookworm-slim AS builder
