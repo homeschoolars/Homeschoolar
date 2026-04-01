@@ -2,6 +2,7 @@
 
 import type React from "react"
 
+import { Suspense } from "react"
 import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
@@ -13,7 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { apiFetch } from "@/lib/api-client"
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const searchParams = useSearchParams()
   const token = searchParams.get("token") ?? ""
 
@@ -140,5 +141,21 @@ export default function ResetPasswordPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-pink-100 via-purple-100 to-cyan-100">
+          <Card className="w-full max-w-md border-2 border-purple-200 shadow-xl bg-white/80 backdrop-blur">
+            <CardContent className="p-8 flex justify-center text-sm text-purple-700">Loading reset form...</CardContent>
+          </Card>
+        </div>
+      }
+    >
+      <ResetPasswordContent />
+    </Suspense>
   )
 }
