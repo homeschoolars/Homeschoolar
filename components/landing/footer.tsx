@@ -38,7 +38,7 @@ export function Footer() {
           <div className="lg:col-span-2">
             <Link href="/" className="flex items-center gap-2 group">
               <Image
-                src="/homeschoolars-logo.png"
+                src="/homeschoolars-logo-v2.png"
                 alt="HomeSchoolar Logo"
                 width={56}
                 height={56}

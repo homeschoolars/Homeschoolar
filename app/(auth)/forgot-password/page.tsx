@@ -55,7 +55,7 @@ export default function ForgotPasswordPage() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex flex-col items-center gap-2 group">
             <Image
-              src="/homeschoolars-logo.png"
+              src="/homeschoolars-logo-v2.png"
               alt="HomeSchoolar Logo"
               width={80}
               height={80}

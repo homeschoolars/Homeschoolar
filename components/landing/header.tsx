@@ -28,7 +28,7 @@ export function Header() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 group">
           <Image
-            src="/homeschoolars-logo.png"
+            src="/homeschoolars-logo-v2.png"
             alt="HomeSchoolar Logo"
             width={48}
             height={48}

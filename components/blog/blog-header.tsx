@@ -6,7 +6,7 @@ export function BlogHeader() {
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2">
-          <Image src="/homeschoolars-logo.png" alt="Homeschoolars" width={36} height={36} className="rounded-lg" />
+          <Image src="/homeschoolars-logo-v2.png" alt="Homeschoolars" width={36} height={36} className="rounded-lg" />
           <span className="font-semibold text-slate-800">Homeschoolars</span>
         </Link>
         <nav className="flex items-center gap-6">
