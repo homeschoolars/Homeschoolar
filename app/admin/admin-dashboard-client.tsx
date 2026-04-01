@@ -187,7 +187,7 @@ export default function AdminDashboardClient({
       <header className="sticky top-0 z-50 bg-slate-900 text-white">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="HomeSchoolar Logo" width={40} height={40} className="rounded-lg" />
+            <Image src="/homeschoolars-logo.png" alt="HomeSchoolar Logo" width={40} height={40} className="rounded-lg" />
             <div>
               <span className="text-xl font-bold">HomeSchoolar</span>
               <span className="ml-2 text-xs bg-teal-500 px-2 py-0.5 rounded-full">Admin</span>

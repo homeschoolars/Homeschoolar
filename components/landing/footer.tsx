@@ -27,7 +27,7 @@ const footerLinks = {
 export function Footer() {
   return (
     <footer
-      className="border-t-4 bg-gradient-to-b from-white to-purple/5"
+      className="relative z-10 border-t-4 bg-gradient-to-b from-white to-purple/5"
       style={{
         borderImage:
           "linear-gradient(90deg, var(--pink), var(--purple), var(--blue), var(--cyan), var(--green), var(--yellow), var(--orange)) 1",
@@ -38,7 +38,7 @@ export function Footer() {
           <div className="lg:col-span-2">
             <Link href="/" className="flex items-center gap-2 group">
               <Image
-                src="/logo.png"
+                src="/homeschoolars-logo.png"
                 alt="HomeSchoolar Logo"
                 width={56}
                 height={56}

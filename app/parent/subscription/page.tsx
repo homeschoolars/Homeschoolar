@@ -38,7 +38,7 @@ export default async function SubscriptionPage() {
       <header className="sticky top-0 z-50 bg-white border-b shadow-sm">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/parent" className="flex items-center gap-2">
-            <Image src="/logo.png" alt="HomeSchoolar Logo" width={40} height={40} />
+            <Image src="/homeschoolars-logo.png" alt="HomeSchoolar Logo" width={40} height={40} />
             <span className="text-xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
               HomeSchoolar
             </span>

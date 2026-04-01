@@ -33,7 +33,7 @@ export function GamifiedHeader({
     <header className="sticky top-0 z-40 border-b-2 border-amber-200/80 bg-white/98 backdrop-blur shadow-sm">
       <div className="container mx-auto px-3 sm:px-4 py-2 flex items-center justify-between gap-2">
         <Link href="/" className="flex items-center gap-2 shrink-0">
-          <Image src="/logo.png" alt="HomeSchoolar" width={34} height={34} className="rounded-lg" />
+          <Image src="/homeschoolars-logo.png" alt="HomeSchoolar" width={34} height={34} className="rounded-lg" />
           <span className="text-base font-bold bg-gradient-to-r from-violet-600 via-fuchsia-600 to-amber-500 bg-clip-text text-transparent hidden sm:inline">
             HomeSchoolar
           </span>

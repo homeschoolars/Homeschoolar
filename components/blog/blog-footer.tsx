@@ -7,7 +7,7 @@ export function BlogFooter() {
       <div className="container mx-auto px-4 py-12">
         <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <Image src="/logo.png" alt="Homeschoolars" width={32} height={32} className="rounded-lg" />
+            <Image src="/homeschoolars-logo.png" alt="Homeschoolars" width={32} height={32} className="rounded-lg" />
             <span className="font-semibold text-slate-800">Homeschoolars</span>
           </Link>
           <nav className="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-600">

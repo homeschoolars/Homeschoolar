@@ -208,7 +208,7 @@ export default function SignupPage() {
         <div className="text-center">
           <Link href="/" className="inline-flex flex-col items-center gap-2 group">
             <Image
-              src="/logo.png"
+              src="/homeschoolars-logo.png"
               alt="HomeSchoolar Logo"
               width={80}
               height={80}

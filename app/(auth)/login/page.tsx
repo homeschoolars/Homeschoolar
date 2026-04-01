@@ -151,7 +151,7 @@ function LoginContent() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex flex-col items-center gap-2 group">
             <Image
-              src="/logo.png"
+              src="/homeschoolars-logo.png"
               alt="HomeSchoolar Logo"
               width={80}
               height={80}
@@ -196,7 +196,12 @@ function LoginContent() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Password</Label>
+                      <Link href="/forgot-password" className="text-xs font-medium text-purple-600 hover:text-purple-700">
+                        Forgot password?
+                      </Link>
+                    </div>
                     <Input
                       id="password"
                       type="password"
