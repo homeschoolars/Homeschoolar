@@ -27,7 +27,7 @@ const footerLinks = {
 export function Footer() {
   return (
     <footer
-      className="relative z-10 border-t-4 bg-gradient-to-b from-white to-purple/5"
+      className="relative z-20 border-t-4 bg-white"
       style={{
         borderImage:
           "linear-gradient(90deg, var(--pink), var(--purple), var(--blue), var(--cyan), var(--green), var(--yellow), var(--orange)) 1",
@@ -46,11 +46,11 @@ export function Footer() {
               />
               <div className="flex flex-col">
                 <span className="font-heading text-2xl font-bold text-rainbow">HomeSchoolar</span>
-                <span className="text-xs text-foreground/60">Raising Thinkers, Not Just Students</span>
+                <span className="text-xs text-slate-600">Raising Thinkers, Not Just Students</span>
               </div>
               <Sparkles className="h-5 w-5 text-yellow animate-pulse" />
             </Link>
-            <p className="mt-4 max-w-sm text-foreground/70 leading-relaxed">
+            <p className="mt-4 max-w-sm text-slate-700 leading-relaxed">
               AI-powered learning platform designed to make homeschooling{" "}
               <span className="font-bold text-pink">joyful</span>,{" "}
               <span className="font-bold text-purple">effective</span>, and{" "}
@@ -87,7 +87,7 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm font-medium text-foreground/70 transition-all hover:text-purple hover:translate-x-1 inline-block"
+                    className="text-sm font-medium text-slate-700 transition-all hover:text-purple hover:translate-x-1 inline-block"
                   >
                     {link.label}
                   </Link>
@@ -106,7 +106,7 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm font-medium text-foreground/70 transition-all hover:text-purple hover:translate-x-1 inline-block"
+                    className="text-sm font-medium text-slate-700 transition-all hover:text-purple hover:translate-x-1 inline-block"
                   >
                     {link.label}
                   </Link>
@@ -125,7 +125,7 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm font-medium text-foreground/70 transition-all hover:text-purple hover:translate-x-1 inline-block"
+                    className="text-sm font-medium text-slate-700 transition-all hover:text-purple hover:translate-x-1 inline-block"
                   >
                     {link.label}
                   </Link>
@@ -136,7 +136,7 @@ export function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t-2 border-purple/10 pt-8 md:flex-row">
-          <p className="text-sm text-foreground/60 flex items-center gap-2">
+          <p className="text-sm text-slate-600 flex items-center gap-2">
             © {new Date().getFullYear()} HomeSchoolar. Made with
             <Heart className="h-4 w-4 text-pink fill-pink animate-pulse" />
             for families everywhere.
