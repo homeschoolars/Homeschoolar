@@ -87,7 +87,7 @@ export function BlogManagement() {
   const [loading, setLoading] = useState(true)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [statusFilter, setStatusFilter] = useState<string>("")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -108,9 +108,7 @@ export function BlogManagement() {
     setLoading(true)
     try {
       const [postsRes, catRes] = await Promise.all([
-        apiFetch(
-          `/api/admin/blog?page=${page}${statusFilter ? `&status=${statusFilter}` : ""}`
-        ),
+        apiFetch(`/api/admin/blog?page=${page}${statusFilter !== "all" ? `&status=${statusFilter}` : ""}`),
         apiFetch("/api/admin/blog/categories"),
       ])
       if (postsRes.ok) {
@@ -253,7 +251,7 @@ export function BlogManagement() {
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All</SelectItem>
+                <SelectItem value="all">All</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="published">Published</SelectItem>
               </SelectContent>
