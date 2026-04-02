@@ -139,7 +139,7 @@ const quizSchema = z.object({
       id: z.string(),
       type: z.enum(["multiple_choice", "true_false"]),
       question: z.string(),
-      options: z.array(z.string()).optional(),
+      options: z.union([z.array(z.string()), z.null()]),
       correct_answer: z.string(),
       points: z.number(),
     }),
