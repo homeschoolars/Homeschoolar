@@ -90,10 +90,10 @@ const questionSchema = z.object({
   id: z.string(),
   type: z.enum(["multiple_choice", "text", "true_false", "fill_blank"]),
   question: z.string(),
-  options: z.array(z.string()).default([]),
+  options: z.union([z.array(z.string()), z.null()]),
   correct_answer: z.string(),
   points: z.number(),
-  hint: z.string().default(""),
+  hint: z.union([z.string(), z.null()]),
 })
 
 const worksheetSchema = z.object({
