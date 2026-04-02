@@ -29,4 +29,4 @@ COPY --from=builder /app/next.config.mjs ./next.config.mjs
 COPY --from=builder /app/prisma ./prisma
 EXPOSE 8080
 USER nodejs
-CMD ["node", "node_modules/next/dist/bin/next", "start", "-p", "8080"]
+CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && node node_modules/next/dist/bin/next start -p 8080"]

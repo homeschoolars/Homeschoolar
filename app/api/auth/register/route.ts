@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { createParentWithChildren } from "@/services/onboarding-service"
+import { Prisma } from "@prisma/client"
 
 const registerSchema = z.object({
   parent: z.object({
@@ -68,6 +69,15 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ userId: user.id })
   } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      (error.code === "P2021" || error.code === "P2022")
+    ) {
+      return NextResponse.json(
+        { error: "Database is not initialized. Please run Prisma migrations." },
+        { status: 503 },
+      )
+    }
     const message = error instanceof Error ? error.message : "Failed to register"
     return NextResponse.json({ error: message }, { status: 400 })
   }
