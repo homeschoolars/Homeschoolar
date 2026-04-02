@@ -31,10 +31,6 @@ export async function POST(req: Request) {
 
     // Authenticate and authorize
     const session = await auth()
-    if (!session?.user?.id) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 })
-    }
-    
     await enforceParentChildAccess(child_id, session)
 
     // Generate assessment with error handling

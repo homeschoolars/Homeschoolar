@@ -1,4 +1,3 @@
-import type { Answer } from "@/lib/types"
 import { completeAssessment } from "@/services/ai-service"
 import { auth } from "@/auth"
 import { enforceParentChildAccess } from "@/lib/auth-helpers"
@@ -34,32 +33,20 @@ export async function POST(req: Request) {
     assessmentId = validated.assessment_id
     const { assessment_id, answers, age_group, is_last_subject } = validated
 
-    // Authenticate
+    // Authenticate if available (student flow is sessionless).
     const session = await auth()
-    if (!session?.user?.id) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 })
+
+    const assessment = await prisma.assessment.findUnique({
+      where: { id: assessment_id },
+      select: { childId: true },
+    })
+
+    if (!assessment) {
+      return Response.json({ error: "Assessment not found" }, { status: 404 })
     }
 
-    // Authorize access (parent must own the child)
-    if (session.user.role === "parent") {
-      const assessment = await prisma.assessment.findUnique({
-        where: { id: assessment_id },
-        select: { childId: true },
-      })
-      
-      if (!assessment) {
-        return Response.json({ error: "Assessment not found" }, { status: 404 })
-      }
-      
-      if (assessment.childId) {
-        const child = await prisma.child.findFirst({
-          where: { id: assessment.childId, parentId: session.user.id },
-          select: { id: true },
-        })
-        if (!child) {
-          return Response.json({ error: "Forbidden" }, { status: 403 })
-        }
-      }
+    if (assessment.childId) {
+      await enforceParentChildAccess(assessment.childId, session)
     }
 
     // Complete assessment with error handling
