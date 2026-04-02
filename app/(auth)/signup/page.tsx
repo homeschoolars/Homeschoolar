@@ -210,8 +210,8 @@ export default function SignupPage() {
             <Image
               src="/homeschoolars-logo-v2.png"
               alt="HomeSchoolar Logo"
-              width={80}
-              height={80}
+              width={96}
+              height={96}
               className="group-hover:scale-105 transition-transform animate-float"
             />
             <span className="text-2xl font-bold bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 bg-clip-text text-transparent">

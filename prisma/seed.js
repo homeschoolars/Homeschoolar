@@ -7,38 +7,42 @@ const prisma = new PrismaClient();
 async function main() {
   const adminPasswordHash = await bcrypt.hash("Admin123!", 10);
   const parentPasswordHash = await bcrypt.hash("Parent123!", 10);
+  const verifiedAt = new Date();
 
   const adminUser = await prisma.user.upsert({
     where: { email: "admin@homeschooler.local" },
-    update: { name: "Admin User", role: "admin", adminRole: "super_admin" },
+    update: { name: "Admin User", role: "admin", adminRole: "super_admin", emailVerified: verifiedAt },
     create: {
       email: "admin@homeschooler.local",
       name: "Admin User",
       role: "admin",
       adminRole: "super_admin",
       passwordHash: adminPasswordHash,
+      emailVerified: verifiedAt,
     },
   });
 
   const parentUser = await prisma.user.upsert({
     where: { email: "parent@homeschooler.local" },
-    update: { name: "Parent User", role: "parent" },
+    update: { name: "Parent User", role: "parent", emailVerified: verifiedAt },
     create: {
       email: "parent@homeschooler.local",
       name: "Parent User",
       role: "parent",
       passwordHash: parentPasswordHash,
+      emailVerified: verifiedAt,
     },
   });
 
   const parentUserTwo = await prisma.user.upsert({
     where: { email: "parent2@homeschooler.local" },
-    update: { name: "Second Parent", role: "parent" },
+    update: { name: "Second Parent", role: "parent", emailVerified: verifiedAt },
     create: {
       email: "parent2@homeschooler.local",
       name: "Second Parent",
       role: "parent",
       passwordHash: parentPasswordHash,
+      emailVerified: verifiedAt,
     },
   });
 

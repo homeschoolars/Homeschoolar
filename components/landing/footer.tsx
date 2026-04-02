@@ -40,8 +40,8 @@ export function Footer() {
               <Image
                 src="/homeschoolars-logo-v2.png"
                 alt="HomeSchoolar Logo"
-                width={56}
-                height={56}
+                width={68}
+                height={68}
                 className="group-hover:scale-105 transition-transform"
               />
               <div className="flex flex-col">

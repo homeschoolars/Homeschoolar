@@ -30,8 +30,8 @@ export function Header() {
           <Image
             src="/homeschoolars-logo-v2.png"
             alt="HomeSchoolar Logo"
-            width={56}
-            height={56}
+            width={68}
+            height={68}
             className="group-hover:scale-105 transition-transform"
           />
           <span className="hidden font-heading text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple via-pink to-orange sm:inline sm:text-3xl">
