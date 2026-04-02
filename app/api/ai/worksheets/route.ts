@@ -1,1 +1,4 @@
-export { dynamic, runtime, POST } from "../generate-worksheet/route"
+export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
+
+export { POST } from "../generate-worksheet/route"
