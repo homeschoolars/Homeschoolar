@@ -21,6 +21,7 @@ export async function POST(req: Request) {
     
     const worksheet = await generateWorksheet(body, session.user.id, {
       bypassSubscriptionChecks: isAdmin,
+      autoApprove: isAdmin,
     })
     return Response.json({ worksheet: serializeWorksheet(worksheet) })
   } catch (error) {

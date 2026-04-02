@@ -563,7 +563,7 @@ const curriculumPlanSchema = z.object({
 export async function generateWorksheet(
   body: GenerateWorksheetRequest,
   userId: string,
-  options?: { bypassSubscriptionChecks?: boolean },
+  options?: { bypassSubscriptionChecks?: boolean; autoApprove?: boolean },
 ) {
   const { subject_id, subject_name, age_group, difficulty, topic, num_questions = 5, child_level } = body
   
@@ -615,7 +615,7 @@ export async function generateWorksheet(
         answerKey: result.object.answer_key,
         explanations: result.object.explanations,
         isAiGenerated: true,
-        isApproved: false,
+        isApproved: options?.autoApprove ?? false,
         aiPrompt: prompt,
         createdBy: userId,
       },

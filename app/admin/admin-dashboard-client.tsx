@@ -52,6 +52,7 @@ interface AdminDashboardClientProps {
   pendingWorksheets: Worksheet[]
   recentUsers: Profile[]
   subjects?: Subject[]
+  initialTab?: string
 }
 
 type AdminSubscription = {
@@ -87,6 +88,7 @@ export default function AdminDashboardClient({
   pendingWorksheets: initialPending,
   recentUsers,
   subjects = [],
+  initialTab = "overview",
 }: AdminDashboardClientProps) {
   const [pendingWorksheets, setPendingWorksheets] = useState(initialPending)
   const [subscriptions, setSubscriptions] = useState<AdminSubscription[]>([])
@@ -229,7 +231,7 @@ export default function AdminDashboardClient({
           <p className="text-slate-600 text-sm">Manage users, content, and monitor platform activity</p>
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs defaultValue={initialTab} className="space-y-6">
           <TabsList className="bg-white border border-slate-200 flex flex-wrap h-auto gap-1 p-1">
             <TabsTrigger value="overview" className="flex items-center gap-1.5 data-[state=active]:bg-slate-100">
               <LayoutDashboard className="w-4 h-4" /> Overview
@@ -382,7 +384,9 @@ export default function AdminDashboardClient({
               <WorksheetGenerator
                 subjects={subjects}
                 onGenerated={(worksheet) => {
-                  setPendingWorksheets([...pendingWorksheets, worksheet])
+                  if (!worksheet.is_approved) {
+                    setPendingWorksheets([...pendingWorksheets, worksheet])
+                  }
                 }}
               />
             </div>
