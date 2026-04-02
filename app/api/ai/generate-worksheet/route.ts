@@ -3,7 +3,6 @@ import { requireSession } from "@/lib/auth-helpers"
 import { generateWorksheet } from "@/services/ai-service"
 import { serializeWorksheet } from "@/lib/serializers"
 import { safeParseRequestJson } from "@/lib/safe-json"
-import { auth } from "@/auth"
 
 // Force dynamic rendering - this is an API route that should never be statically generated
 export const dynamic = 'force-dynamic'
@@ -20,7 +19,9 @@ export async function POST(req: Request) {
     // Check if user is admin - admins bypass subscription checks
     const isAdmin = session.user.role === "admin"
     
-    const worksheet = await generateWorksheet(body, session.user.id)
+    const worksheet = await generateWorksheet(body, session.user.id, {
+      bypassSubscriptionChecks: isAdmin,
+    })
     return Response.json({ worksheet: serializeWorksheet(worksheet) })
   } catch (error) {
     const err = error as Error

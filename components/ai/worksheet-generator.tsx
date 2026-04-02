@@ -60,14 +60,20 @@ export function WorksheetGenerator({
       })
 
       if (!response.ok) {
-        throw new Error("Failed to generate worksheet")
+        const errorData = await response.json().catch(() => ({}))
+        const message =
+          typeof errorData?.error === "string" && errorData.error.trim().length > 0
+            ? errorData.error
+            : "Failed to generate worksheet"
+        throw new Error(message)
       }
 
       const data = await response.json()
       setGenerated(true)
       onGenerated?.(data.worksheet)
     } catch (err) {
-      setError("Failed to generate worksheet. Please try again.")
+      const message = err instanceof Error ? err.message : "Failed to generate worksheet. Please try again."
+      setError(message)
       console.error(err)
     } finally {
       setIsGenerating(false)

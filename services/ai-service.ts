@@ -560,7 +560,11 @@ const curriculumPlanSchema = z.object({
  * Generates worksheets for learning activities.
  * These will be graded with scores for parent progress tracking.
  */
-export async function generateWorksheet(body: GenerateWorksheetRequest, userId: string) {
+export async function generateWorksheet(
+  body: GenerateWorksheetRequest,
+  userId: string,
+  options?: { bypassSubscriptionChecks?: boolean },
+) {
   const { subject_id, subject_name, age_group, difficulty, topic, num_questions = 5, child_level } = body
   
   // Check if OpenAI is configured
@@ -581,7 +585,9 @@ export async function generateWorksheet(body: GenerateWorksheetRequest, userId: 
     childLevel: child_level,
   })
 
-  await enforceSubscriptionAccess({ userId, feature: "ai" })
+  if (!options?.bypassSubscriptionChecks) {
+    await enforceSubscriptionAccess({ userId, feature: "ai" })
+  }
   await enforceDailyLimit(userId, "generate-worksheet")
 
   try {
