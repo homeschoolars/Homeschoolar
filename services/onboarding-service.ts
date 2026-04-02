@@ -15,6 +15,11 @@ import { logAnalyticsEvent } from "@/services/analytics-service"
 import { updateSubscriptionChildCount } from "@/services/subscription-service"
 import { Prisma } from "@prisma/client"
 
+const ONBOARDING_TRANSACTION_OPTIONS = {
+  maxWait: 10_000,
+  timeout: 30_000,
+}
+
 export interface ParentSignupInput {
   fullName: string
   relationship: ParentRelationship
@@ -167,8 +172,9 @@ export async function createChildWithProfile({
   if (existingSubscription?.type === "orphan") {
     throw new Error("Orphan plan does not allow adding more children")
   }
-  const childRecord = await prisma.$transaction((tx) =>
-    createChildWithProfileInternal({ tx, parentId, child, eventUserId }),
+  const childRecord = await prisma.$transaction(
+    (tx) => createChildWithProfileInternal({ tx, parentId, child, eventUserId }),
+    ONBOARDING_TRANSACTION_OPTIONS,
   )
   await updateSubscriptionChildCount(parentId)
   return childRecord
@@ -185,13 +191,14 @@ export async function createParentWithChildren({
     throw new Error("At least one child is required")
   }
 
+  const passwordHash = await hashPassword(parent.password)
+
   return prisma.$transaction(async (tx) => {
     const existing = await tx.user.findUnique({ where: { email: parent.email } })
     if (existing) {
       throw new Error("Email already in use")
     }
 
-    const passwordHash = await hashPassword(parent.password)
     const user = await tx.user.create({
       data: {
         email: parent.email,
@@ -225,7 +232,7 @@ export async function createParentWithChildren({
     })
 
     return user
-  })
+  }, ONBOARDING_TRANSACTION_OPTIONS)
 }
 
 export async function updateChildProfile({
@@ -367,7 +374,7 @@ export async function updateChildProfile({
       where: { id: childId },
       include: { profile: true, preferences: true, interestsV2: true },
     })
-  })
+  }, ONBOARDING_TRANSACTION_OPTIONS)
 }
 
 export async function getChildAiProfileSummary(childId: string) {
