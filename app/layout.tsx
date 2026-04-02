@@ -15,11 +15,13 @@ export const metadata: Metadata = {
   keywords: ["homeschool", "education", "AI learning", "worksheets", "curriculum", "children education"],
   icons: {
     icon: [
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/favicon.ico", type: "image/x-icon" },
       { url: "/favicon-v3.svg", type: "image/svg+xml" },
       { url: "/homeschoolars-logo-v2.png", sizes: "512x512", type: "image/png" },
     ],
     apple: "/homeschoolars-logo-v2.png",
-    shortcut: "/favicon-v3.svg",
+    shortcut: "/favicon.png",
   },
 }
 
