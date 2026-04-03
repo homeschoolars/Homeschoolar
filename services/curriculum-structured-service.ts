@@ -17,12 +17,203 @@ export type CurriculumPromptKind =
   | "research"
   | "reflection"
 
+const VALID_PROMPT_TYPES: CurriculumPromptKind[] = ["story", "worksheet", "quiz", "project", "debate", "research", "reflection"]
+
 type CurriculumContentInput = {
   storyText: string
   activityInstructions: string
   quizConcept: string
   worksheetExample: string
   parentTip: string
+}
+
+type CurriculumImportPromptMap = Partial<Record<CurriculumPromptKind, string>>
+
+type CurriculumImportLesson = {
+  title: string
+  slug?: string
+  displayOrder?: number
+  difficultyIndicator?: string
+  content?: Partial<CurriculumContentInput>
+  prompts?: CurriculumImportPromptMap
+}
+
+type CurriculumImportUnit = {
+  title: string
+  slug?: string
+  displayOrder?: number
+  lessons?: CurriculumImportLesson[]
+}
+
+type CurriculumImportSubject = {
+  name: string
+  slug?: string
+  displayOrder?: number
+  baseSubjectId?: string | null
+  units?: CurriculumImportUnit[]
+}
+
+export type CurriculumImportPayload = {
+  ageGroup?: string
+  stageName?: string
+  subjects?: CurriculumImportSubject[]
+}
+
+function slugifyValue(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+}
+
+export async function importCurriculumForAgeGroup(params: {
+  ageGroup: string
+  stageName?: string
+  payload: CurriculumImportPayload
+}) {
+  const ageGroupName = params.ageGroup.trim()
+  if (!ageGroupName) {
+    throw new Error("ageGroup is required")
+  }
+
+  const subjects = params.payload.subjects ?? []
+  if (!Array.isArray(subjects) || subjects.length === 0) {
+    throw new Error("Payload must include at least one subject")
+  }
+
+  const ageGroup = await prisma.curriculumAgeGroup.upsert({
+    where: { name: ageGroupName },
+    update: { stageName: params.stageName ?? params.payload.stageName ?? "Foundation" },
+    create: {
+      name: ageGroupName,
+      stageName: params.stageName ?? params.payload.stageName ?? "Foundation",
+    },
+    select: { id: true },
+  })
+
+  let subjectCount = 0
+  let unitCount = 0
+  let lessonCount = 0
+
+  for (const [subjectIndex, subject] of subjects.entries()) {
+    const subjectName = subject.name?.trim()
+    if (!subjectName) continue
+    const subjectSlug = (subject.slug?.trim() || slugifyValue(subjectName)) || `subject-${subjectIndex + 1}`
+
+    const createdSubject = await prisma.curriculumSubject.upsert({
+      where: {
+        ageGroupId_slug: {
+          ageGroupId: ageGroup.id,
+          slug: subjectSlug,
+        },
+      },
+      update: {
+        name: subjectName,
+        displayOrder: subject.displayOrder ?? subjectIndex + 1,
+        baseSubjectId: subject.baseSubjectId ?? null,
+      },
+      create: {
+        ageGroupId: ageGroup.id,
+        name: subjectName,
+        slug: subjectSlug,
+        displayOrder: subject.displayOrder ?? subjectIndex + 1,
+        baseSubjectId: subject.baseSubjectId ?? null,
+      },
+      select: { id: true },
+    })
+    subjectCount += 1
+
+    const units = subject.units ?? []
+    for (const [unitIndex, unit] of units.entries()) {
+      const unitTitle = unit.title?.trim()
+      if (!unitTitle) continue
+      const unitSlug = (unit.slug?.trim() || slugifyValue(unitTitle)) || `unit-${unitIndex + 1}`
+
+      const createdUnit = await prisma.curriculumUnit.upsert({
+        where: {
+          subjectId_slug: {
+            subjectId: createdSubject.id,
+            slug: unitSlug,
+          },
+        },
+        update: {
+          title: unitTitle,
+          displayOrder: unit.displayOrder ?? unitIndex + 1,
+        },
+        create: {
+          subjectId: createdSubject.id,
+          title: unitTitle,
+          slug: unitSlug,
+          displayOrder: unit.displayOrder ?? unitIndex + 1,
+        },
+        select: { id: true },
+      })
+      unitCount += 1
+
+      const lessons = unit.lessons ?? []
+      for (const [lessonIndex, lesson] of lessons.entries()) {
+        const lessonTitle = lesson.title?.trim()
+        if (!lessonTitle) continue
+        const lessonSlug = (lesson.slug?.trim() || slugifyValue(lessonTitle)) || `lesson-${lessonIndex + 1}`
+
+        const createdLesson = await prisma.curriculumLesson.upsert({
+          where: {
+            unitId_slug: {
+              unitId: createdUnit.id,
+              slug: lessonSlug,
+            },
+          },
+          update: {
+            title: lessonTitle,
+            displayOrder: lesson.displayOrder ?? lessonIndex + 1,
+            difficultyLevel: lesson.difficultyIndicator ?? "foundation",
+          },
+          create: {
+            unitId: createdUnit.id,
+            title: lessonTitle,
+            slug: lessonSlug,
+            displayOrder: lesson.displayOrder ?? lessonIndex + 1,
+            difficultyLevel: lesson.difficultyIndicator ?? "foundation",
+          },
+          select: { id: true, title: true },
+        })
+        lessonCount += 1
+
+        await prisma.curriculumContent.upsert({
+          where: { lessonId: createdLesson.id },
+          update: {
+            storyText: lesson.content?.storyText ?? "",
+            activityInstructions: lesson.content?.activityInstructions ?? "",
+            quizConcept: lesson.content?.quizConcept ?? "",
+            worksheetExample: lesson.content?.worksheetExample ?? "",
+            parentTip: lesson.content?.parentTip ?? "",
+          },
+          create: {
+            lessonId: createdLesson.id,
+            storyText: lesson.content?.storyText ?? "",
+            activityInstructions: lesson.content?.activityInstructions ?? "",
+            quizConcept: lesson.content?.quizConcept ?? "",
+            worksheetExample: lesson.content?.worksheetExample ?? "",
+            parentTip: lesson.content?.parentTip ?? "",
+          },
+        })
+
+        const promptEntries = Object.entries(lesson.prompts ?? {}) as Array<[string, string | undefined]>
+        for (const [type, template] of promptEntries) {
+          if (!VALID_PROMPT_TYPES.includes(type as CurriculumPromptKind)) continue
+          const promptTemplate = template?.trim()
+          if (!promptTemplate) continue
+          await prisma.curriculumAIPrompt.upsert({
+            where: { lessonId_type: { lessonId: createdLesson.id, type: type as CurriculumPromptKind } },
+            update: { promptTemplate },
+            create: { lessonId: createdLesson.id, type: type as CurriculumPromptKind, promptTemplate },
+          })
+        }
+      }
+    }
+  }
+
+  return { subjects: subjectCount, units: unitCount, lessons: lessonCount }
 }
 
 export async function getCurriculumByAgeGroup(ageGroup: string) {

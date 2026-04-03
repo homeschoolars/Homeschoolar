@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Plus, Trash2, Save } from "lucide-react"
+import { Loader2, Plus, Trash2, Save, Upload } from "lucide-react"
 
-type AgeGroupNode = { id: string; name: string }
+type AgeGroupNode = { id: string; name: string; stageName?: string }
 type SubjectNode = { id: string; name: string; slug: string; displayOrder: number }
 type UnitNode = { id: string; title: string; slug: string; displayOrder: number }
 type LessonNode = { id: string; title: string; slug: string; displayOrder: number }
@@ -57,9 +57,28 @@ function slugify(value: string) {
     .replace(/(^-|-$)/g, "")
 }
 
+function getAgeStart(ageGroup: string) {
+  const first = ageGroup.split("-")[0]
+  const parsed = Number.parseInt(first, 10)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const AGE_GROUP_STAGE_MAP: Record<string, string> = {
+  "4-5": "Little Explorers 🌱",
+  "5-6": "Mini Adventurers 🐾",
+  "6-7": "Curious Minds 🔍",
+  "7-8": "Young Investigators 🧩",
+  "8-9": "Growing Learners 💡",
+  "9-10": "Knowledge Explorers 🚀",
+  "10-11": "Knowledge Builders 🏗️",
+  "11-12": "Skill Sharpeners ⚡",
+  "12-13": "Future Leaders 🌟",
+}
+
 export function CurriculumManagement() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const [ageGroups, setAgeGroups] = useState<AgeGroupNode[]>([])
@@ -84,6 +103,7 @@ export function CurriculumManagement() {
     parentTip: "",
   })
   const [lessonEditor, setLessonEditor] = useState<LessonEditorState | null>(null)
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
 
   const selectedSubject = useMemo(
     () => subjects.find((s) => s.id === selectedSubjectId) ?? null,
@@ -95,9 +115,10 @@ export function CurriculumManagement() {
     const res = await apiFetch("/api/curriculum/age-groups")
     if (!res.ok) throw new Error("Failed to load age groups")
     const payload = (await res.json()) as { ageGroups: AgeGroupNode[] }
-    setAgeGroups(payload.ageGroups)
-    if (!selectedAgeGroup && payload.ageGroups.length > 0) {
-      setSelectedAgeGroup(payload.ageGroups[0].name)
+    const sortedAgeGroups = [...payload.ageGroups].sort((a, b) => getAgeStart(a.name) - getAgeStart(b.name))
+    setAgeGroups(sortedAgeGroups)
+    if (!selectedAgeGroup && sortedAgeGroups.length > 0) {
+      setSelectedAgeGroup(sortedAgeGroups[0].name)
     }
   }
 
@@ -408,6 +429,105 @@ export function CurriculumManagement() {
     }
   }
 
+  const ensureAgeGroups = async () => {
+    setSaving(true)
+    setError(null)
+    try {
+      const res = await apiFetch("/api/curriculum/age-groups", { method: "POST" })
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(payload.error ?? "Failed to ensure age groups")
+      }
+      await loadAgeGroups()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to ensure age groups")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const uploadCurriculumFile = async () => {
+    if (!selectedAgeGroup || !uploadFile) return
+    setUploading(true)
+    setError(null)
+    try {
+      const formData = new FormData()
+      formData.append("ageGroup", selectedAgeGroup)
+      formData.append("file", uploadFile)
+
+      const res = await apiFetch("/api/curriculum/import", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(payload.error ?? "Failed to upload curriculum")
+      }
+
+      setUploadFile(null)
+      await loadSubjects(selectedAgeGroup)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to upload curriculum")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const downloadCurriculumTemplate = () => {
+    const age = selectedAgeGroup || "4-5"
+    const stageName = AGE_GROUP_STAGE_MAP[age] ?? "Foundation"
+    const template = {
+      ageGroup: age,
+      stageName,
+      subjects: [
+        {
+          name: "English",
+          slug: "english",
+          displayOrder: 1,
+          units: [
+            {
+              title: "Reading Basics",
+              slug: "reading-basics",
+              displayOrder: 1,
+              lessons: [
+                {
+                  title: "Sounds and Letters",
+                  slug: "sounds-and-letters",
+                  displayOrder: 1,
+                  difficultyIndicator: "foundation",
+                  content: {
+                    storyText: "Short static story text...",
+                    activityInstructions: "Activity steps for the learner...",
+                    quizConcept: "Core concept to assess...",
+                    worksheetExample: "Worksheet example prompt...",
+                    parentTip: "A helpful tip for parents...",
+                  },
+                  prompts: {
+                    story: "Create an age-appropriate story about {{lessonTitle}}.",
+                    worksheet: "Create a worksheet for {{lessonTitle}}.",
+                    quiz: "Create a quiz for {{lessonTitle}}.",
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const content = JSON.stringify(template, null, 2)
+    const blob = new Blob([content], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `curriculum-template-age-${age}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -436,7 +556,7 @@ export function CurriculumManagement() {
                     </SelectItem>
                     {ageGroups.map((age) => (
                       <SelectItem key={age.id} value={age.name}>
-                        {age.name}
+                        {age.stageName ? `${age.stageName} (${age.name})` : age.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -498,6 +618,41 @@ export function CurriculumManagement() {
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Age Group Setup & Content Upload</CardTitle>
+          <CardDescription>
+            Ensure all required age groups exist, then upload a curriculum JSON file for the selected age group.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={ensureAgeGroups} disabled={saving}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Ensure 9 Age Groups
+            </Button>
+            <Button variant="secondary" onClick={downloadCurriculumTemplate}>
+              Download JSON Template
+            </Button>
+          </div>
+          <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+            <Input
+              type="file"
+              accept=".json,application/json"
+              onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+            />
+            <Button onClick={uploadCurriculumFile} disabled={!selectedAgeGroup || !uploadFile || uploading}>
+              {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+              Upload JSON
+            </Button>
+          </div>
+          <p className="text-xs text-slate-500">
+            Expected JSON root shape: <code>{'{ "subjects": [...], "stageName"?: "..." }'}</code> and each lesson may
+            include content/prompts.
+          </p>
         </CardContent>
       </Card>
 

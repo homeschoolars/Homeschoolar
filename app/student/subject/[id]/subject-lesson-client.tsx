@@ -50,6 +50,18 @@ type GeneratedState = {
 
 type GenerationType = "story" | "worksheet" | "quiz" | "project" | "debate" | "research" | "reflection"
 
+const AGE_GROUP_LABELS: Record<string, string> = {
+  "4-5": "Little Explorers 🌱",
+  "5-6": "Mini Adventurers 🐾",
+  "6-7": "Curious Minds 🔍",
+  "7-8": "Young Investigators 🧩",
+  "8-9": "Growing Learners 💡",
+  "9-10": "Knowledge Explorers 🚀",
+  "10-11": "Knowledge Builders 🏗️",
+  "11-12": "Skill Sharpeners ⚡",
+  "12-13": "Future Leaders 🌟",
+}
+
 function getAgeStart(ageGroup: string) {
   const first = ageGroup.split("-")[0]
   const parsed = Number.parseInt(first, 10)
@@ -58,7 +70,7 @@ function getAgeStart(ageGroup: string) {
 
 export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
   const [ageGroup, setAgeGroup] = useState("4-5")
-  const [availableAgeGroups, setAvailableAgeGroups] = useState<string[]>([])
+  const [availableAgeGroups, setAvailableAgeGroups] = useState<Array<{ name: string; label: string }>>([])
   const [sessionKey, setSessionKey] = useState("global")
   const [subject, setSubject] = useState<CurriculumSubjectResponse["subject"] | null>(null)
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null)
@@ -83,10 +95,14 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
       try {
         const res = await apiFetch("/api/age-groups")
         if (!res.ok) return
-        const payload = (await res.json()) as { ageGroups?: Array<{ name: string }> }
-        const names = (payload.ageGroups ?? []).map((a) => a.name)
-        if (names.length > 0) {
-          setAvailableAgeGroups(names)
+        const payload = (await res.json()) as { ageGroups?: Array<{ name: string; stageName?: string }> }
+        const groups = (payload.ageGroups ?? []).map((a) => ({
+          name: a.name,
+          label: AGE_GROUP_LABELS[a.name] ?? a.stageName ?? a.name,
+        }))
+        groups.sort((a, b) => getAgeStart(a.name) - getAgeStart(b.name))
+        if (groups.length > 0) {
+          setAvailableAgeGroups(groups)
         }
       } catch {
         // Ignore age group fetch errors.
@@ -236,8 +252,8 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                   </SelectTrigger>
                   <SelectContent>
                     {availableAgeGroups.map((age) => (
-                      <SelectItem key={age} value={age}>
-                        {age}
+                      <SelectItem key={age.name} value={age.name}>
+                        {age.label} ({age.name})
                       </SelectItem>
                     ))}
                   </SelectContent>
