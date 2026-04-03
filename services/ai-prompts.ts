@@ -208,22 +208,23 @@ CRITICAL: Output MUST be valid JSON matching the exact schema. Verify all requir
 
 INPUT PARAMETERS:
 - Subject: ${subjectName}
-${recentTopics ? `- Recent Topics Studied: ${recentTopics.join(", ")}` : ""}
+- Recent Topics Studied (MUST prioritize these): ${recentTopics?.length ? recentTopics.join(", ") : "Use only previously studied core topics from this subject"}
 - Age Group: ${ageGroup} years old
 
 STRICT REQUIREMENTS:
-1. Create EXACTLY 5 questions - no more, no less
+1. Create EXACTLY 20 questions - no more, no less
 2. Mix of multiple choice and true/false ONLY
 3. Make it fun and engaging - this is a "surprise" quiz!
 4. Questions should be achievable but slightly challenging
 5. Use encouraging, playful language
-6. Each question worth 2 points (10 total points)
+6. Each question worth 1 point (20 total points)
 7. Age-appropriate content and vocabulary for ${ageGroup} year olds
-8. Focus ONLY on ${subjectName}${recentTopics ? ` and recent topics: ${recentTopics.join(", ")}` : ""}
+8. Focus ONLY on ${subjectName} and topics the child has already studied
+9. Do not introduce brand-new topics the child has not covered yet
 
 STRICT OUTPUT SCHEMA:
 {
-  "questions": array (required, must have exactly 5 items),
+  "questions": array (required, must have exactly 20 items),
     - Each question: {
         "id": string (required, unique, non-empty),
         "type": "multiple_choice" | "true_false" (required, exact match),
@@ -232,21 +233,21 @@ STRICT OUTPUT SCHEMA:
         "correct_answer": string (required, non-empty),
           - For multiple_choice: must match one of the options exactly
           - For true_false: must be exactly "True" or "False",
-        "points": number (required, must be 2)
+        "points": number (required, must be 1)
       }
 }
 
 OUTPUT VALIDATION (CHECK BEFORE RESPONDING):
-✓ questions: array with exactly 5 items
-✓ Each question has: id (unique, non-empty), type (exact enum), question (non-empty), correct_answer (non-empty), points (exactly 2)
+✓ questions: array with exactly 20 items
+✓ Each question has: id (unique, non-empty), type (exact enum), question (non-empty), correct_answer (non-empty), points (exactly 1)
 ✓ Multiple choice questions have exactly 4 options
 ✓ correct_answer for multiple_choice matches one of the options exactly
 ✓ correct_answer for true_false is exactly "True" or "False"
 ✓ All question IDs are unique and non-empty
-✓ Total points = 10 (5 questions × 2 points)
+✓ Total points = 20 (20 questions × 1 point)
 
 ANTI-HALLUCINATION:
-- ONLY create questions about ${subjectName}${recentTopics ? ` and ${recentTopics.join(", ")}` : ""}
+- ONLY create questions about ${subjectName} and already-studied topics
 - NEVER add questions about unrelated subjects or topics
 - Ensure all facts are accurate for ${ageGroup} year olds
 - Do not invent information not appropriate for this age group

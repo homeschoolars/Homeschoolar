@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import Image from "next/image"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -156,6 +157,9 @@ export function SurpriseQuizModal({ quiz, ageGroup, onComplete, onClose }: Surpr
     return (
       <Dialog open onOpenChange={onClose}>
         <DialogContent className="max-w-md">
+          <div className="mb-2 flex justify-center">
+            <Image src="/homeschoolars-logo-v2.png" alt="HomeSchoolar logo" width={120} height={40} className="h-9 w-auto" />
+          </div>
           <DialogHeader>
             <DialogTitle className="text-center flex items-center justify-center gap-2">
               <PartyPopper className="w-6 h-6 text-yellow-500" />
@@ -206,6 +210,9 @@ export function SurpriseQuizModal({ quiz, ageGroup, onComplete, onClose }: Surpr
   return (
     <Dialog open onOpenChange={() => {}}>
       <DialogContent className="max-w-lg" onPointerDownOutside={(e) => e.preventDefault()}>
+        <div className="mb-2 flex justify-center">
+          <Image src="/homeschoolars-logo-v2.png" alt="HomeSchoolar logo" width={120} height={40} className="h-9 w-auto" />
+        </div>
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">

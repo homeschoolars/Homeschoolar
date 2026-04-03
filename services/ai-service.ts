@@ -759,11 +759,31 @@ export async function generateQuiz({
     }
   }
 
+  // Derive recently learned topics from curriculum progress for stronger relevance.
+  let learnedTopics: string[] = []
+  if (targetSubjectId) {
+    const paths = await prisma.curriculumPath.findMany({
+      where: {
+        childId: child_id,
+        subjectId: targetSubjectId,
+      },
+      select: {
+        currentTopic: true,
+        completedTopics: true,
+      },
+      take: 1,
+    })
+    const current = paths[0]?.currentTopic ? [paths[0].currentTopic] : []
+    const completed = paths[0]?.completedTopics ?? []
+    learnedTopics = [...current, ...completed].filter((t): t is string => typeof t === "string" && t.trim().length > 0)
+  }
+  const effectiveRecentTopics = [...(recent_topics ?? []), ...learnedTopics].slice(0, 12)
+
   // Build segmented prompt: static (cacheable) + dynamic (non-cached)
   const dynamicPrompt = buildGenerateQuizPrompt({
     ageGroup: age_group,
     subjectName: targetSubject || "General Knowledge",
-    recentTopics: recent_topics,
+    recentTopics: effectiveRecentTopics,
   })
 
   const fullPrompt = `${STATIC_QUIZ_SYSTEM_PROMPT}\n\n${dynamicPrompt}`
@@ -781,13 +801,19 @@ export async function generateQuiz({
     }
   )
 
-  const maxScore = result.object.questions.reduce((sum, q) => sum + q.points, 0)
+  const questions = result.object.questions.slice(0, 20).map((q, idx) => ({
+    ...q,
+    id: q.id || `quiz-${idx + 1}`,
+    points: 1,
+  }))
+
+  const maxScore = questions.reduce((sum, q) => sum + q.points, 0)
 
   const quiz = await prisma.surpriseQuiz.create({
     data: {
       childId: child_id,
       subjectId: targetSubjectId,
-      questions: result.object.questions,
+      questions,
       maxScore,
     },
   })

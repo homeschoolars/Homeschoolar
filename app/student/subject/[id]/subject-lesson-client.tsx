@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { ChevronLeft, Loader2, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -229,6 +230,10 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
           Back to Dashboard
         </Link>
       </Button>
+
+      <div className="mb-4 flex items-center justify-end">
+        <Image src="/homeschoolars-logo-v2.png" alt="HomeSchoolar logo" width={120} height={40} className="h-10 w-auto" />
+      </div>
 
       {error && (
         <Card className="mb-4 border-red-300">

@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, Loader2 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
@@ -96,6 +97,10 @@ export default function WorksheetPage({ params }: { params: Promise<{ id: string
           Back to Dashboard
         </Link>
       </Button>
+
+      <div className="mx-auto mb-4 flex max-w-4xl justify-end">
+        <Image src="/homeschoolars-logo-v2.png" alt="HomeSchoolar logo" width={120} height={40} className="h-10 w-auto" />
+      </div>
 
       {loading ? (
         <div className="mx-auto max-w-3xl rounded-xl bg-white p-8 text-center shadow-lg">

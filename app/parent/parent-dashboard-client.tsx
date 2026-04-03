@@ -60,6 +60,7 @@ import { ParentOverview } from "@/components/dashboards/parent/parent-overview"
 import { RoadmapViewer } from "@/components/dashboards/parent/roadmap-viewer"
 import { WeeklyAIInsights } from "@/components/dashboards/parent/weekly-ai-insights"
 import { QuickContentActions } from "@/components/parent/quick-content-actions"
+import { FullLessonGenerator } from "@/components/parent/full-lesson-generator"
 import { signOut } from "next-auth/react"
 import { apiFetch } from "@/lib/api-client"
 import {
@@ -75,14 +76,14 @@ import { calculateAgeYears, deriveAgeGroup } from "@/lib/onboarding-utils"
 interface ParentDashboardClientProps {
   profile: Profile | null
   children: Child[]
-  subjects: Subject[]
+  subjectsByAgeGroup: Record<string, Subject[]>
   subscription: Subscription | null
 }
 
 export default function ParentDashboardClient({
   profile,
   children: initialChildren,
-  subjects,
+  subjectsByAgeGroup,
   subscription,
 }: ParentDashboardClientProps) {
   const [children, setChildren] = useState<Child[]>(initialChildren)
@@ -119,6 +120,7 @@ export default function ParentDashboardClient({
 
   const selectedChild = children.find((c) => c.id === selectedChildId)
   const curriculumAgeGroup = selectedChild?.age_group ?? "6-7"
+  const selectedChildSubjects = selectedChild ? (subjectsByAgeGroup[selectedChild.age_group] ?? []) : []
 
   const handleAddChild = async () => {
     if (!newChildName.trim() || !newChildDob || newChildLearningStyles.length === 0 || newChildLearnsBetterWith.length === 0)
@@ -772,7 +774,12 @@ export default function ParentDashboardClient({
                               <Upload className="w-4 h-4 mr-1" /> Verify Orphan
                             </Button>
                           )}
-                          <AssessmentPDFActions child={child} progress={[]} assessments={[]} subjects={subjects} />
+                          <AssessmentPDFActions
+                            child={child}
+                            progress={[]}
+                            assessments={[]}
+                            subjects={subjectsByAgeGroup[child.age_group] ?? []}
+                          />
                         </div>
                       </div>
                     </CardContent>
@@ -840,7 +847,7 @@ export default function ParentDashboardClient({
                   <div className="lg:col-span-2">
                     <QuickContentActions
                       childId={selectedChildId}
-                      subjects={subjects}
+                      subjects={selectedChildSubjects}
                       onWorksheetCreated={() => {
                         // Optional future enhancement: refresh parent-side assignment counters.
                       }}
@@ -851,9 +858,15 @@ export default function ParentDashboardClient({
                   </div>
                 ) : null}
 
+                {selectedChildId ? (
+                  <div className="lg:col-span-2">
+                    <FullLessonGenerator childId={selectedChildId} subjects={selectedChildSubjects} />
+                  </div>
+                ) : null}
+
                 {/* Worksheet Generator */}
                 <WorksheetGenerator
-                  subjects={subjects}
+                  subjects={selectedChildSubjects}
                   childId={selectedChildId || undefined}
                   childAgeGroup={selectedChild?.age_group}
                   childLevel={selectedChild?.current_level}
@@ -894,7 +907,7 @@ export default function ParentDashboardClient({
                   </CardHeader>
                   <CardContent>
                     <CurriculumPDFActions
-                      subjects={subjects}
+                      subjects={selectedChildSubjects}
                       ageGroup={curriculumAgeGroup}
                       childName={selectedChild?.name}
                     />
@@ -912,7 +925,12 @@ export default function ParentDashboardClient({
                       <CardDescription>Assessment results and progress report</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <AssessmentPDFActions child={child} progress={[]} assessments={[]} subjects={subjects} />
+                      <AssessmentPDFActions
+                        child={child}
+                        progress={[]}
+                        assessments={[]}
+                        subjects={subjectsByAgeGroup[child.age_group] ?? []}
+                      />
                     </CardContent>
                   </Card>
                 ))}

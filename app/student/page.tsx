@@ -84,9 +84,6 @@ export default function StudentDashboard() {
 
         if (!data.child.assessment_completed) {
           setShowAssessment(true)
-        } else if (data.pendingQuiz) {
-          setSurpriseQuiz(data.pendingQuiz as SurpriseQuiz)
-          setQuizState("ready")
         } else {
           checkForSurpriseQuiz(data.child)
         }
@@ -187,7 +184,7 @@ export default function StudentDashboard() {
   const checkForSurpriseQuiz = async (childData: Child) => {
     const lastQuizAt = childData.last_quiz_at ? new Date(childData.last_quiz_at) : null
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
-    if (Math.random() < 0.2 && (!lastQuizAt || lastQuizAt < oneHourAgo)) {
+    if (Math.random() < 0.18 && (!lastQuizAt || lastQuizAt < oneHourAgo)) {
       generateQuiz({ childId: childData.id, age_group: childData.age_group })
     }
   }

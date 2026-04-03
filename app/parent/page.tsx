@@ -11,17 +11,19 @@ export default async function ParentDashboard() {
     redirect("/login")
   }
 
-  const { profile, children, subjects, subscription } = await getParentDashboardData(user.id)
+  const { profile, children, subjectsByAgeGroup, subscription } = await getParentDashboardData(user.id)
   const mappedProfile = profile ? serializeProfile(profile) : null
   const mappedChildren = children.map(serializeChild)
-  const mappedSubjects = subjects.map(serializeSubject)
+  const mappedSubjectsByAgeGroup = Object.fromEntries(
+    Object.entries(subjectsByAgeGroup).map(([ageGroup, subjects]) => [ageGroup, subjects.map(serializeSubject)]),
+  )
   const mappedSubscription = subscription ? serializeSubscription(subscription) : null
 
   return (
     <ParentDashboardClient
       profile={mappedProfile}
       children={mappedChildren}
-      subjects={mappedSubjects}
+      subjectsByAgeGroup={mappedSubjectsByAgeGroup}
       subscription={mappedSubscription}
     />
   )
