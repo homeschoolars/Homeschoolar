@@ -84,6 +84,10 @@ export default function StudentDashboard() {
 
         if (!data.child.assessment_completed) {
           setShowAssessment(true)
+        } else if (data.pendingQuiz) {
+          // Always show any pending quiz already generated for this child.
+          setSurpriseQuiz(data.pendingQuiz)
+          setQuizState("ready")
         } else {
           checkForSurpriseQuiz(data.child)
         }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -73,6 +73,12 @@ import {
 } from "@/lib/onboarding-options"
 import { calculateAgeYears, deriveAgeGroup } from "@/lib/onboarding-utils"
 
+type CurriculumSubjectSummary = {
+  id: string
+  name: string
+  units?: Array<{ id: string; title: string }>
+}
+
 interface ParentDashboardClientProps {
   profile: Profile | null
   children: Child[]
@@ -115,12 +121,40 @@ export default function ParentDashboardClient({
   const [orphanDocFile, setOrphanDocFile] = useState<File | null>(null)
   const [orphanSubmitting, setOrphanSubmitting] = useState(false)
   const [orphanMessage, setOrphanMessage] = useState<string | null>(null)
+  const [curriculumSubjects, setCurriculumSubjects] = useState<CurriculumSubjectSummary[]>([])
+  const [curriculumLoading, setCurriculumLoading] = useState(false)
   const orphanInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   const selectedChild = children.find((c) => c.id === selectedChildId)
   const curriculumAgeGroup = selectedChild?.age_group ?? "6-7"
   const selectedChildSubjects = selectedChild ? (subjectsByAgeGroup[selectedChild.age_group] ?? []) : []
+
+  useEffect(() => {
+    if (!selectedChild?.age_group) {
+      setCurriculumSubjects([])
+      return
+    }
+
+    const loadCurriculumSubjects = async () => {
+      setCurriculumLoading(true)
+      try {
+        const response = await apiFetch(
+          `/api/curriculum/subjects?ageGroup=${encodeURIComponent(selectedChild.age_group)}`,
+        )
+        const payload = (await response.json()) as { subjects?: CurriculumSubjectSummary[] }
+        if (!response.ok) throw new Error("Failed to load curriculum subjects")
+        setCurriculumSubjects(payload.subjects ?? [])
+      } catch (error) {
+        console.error("Error loading curriculum subjects:", error)
+        setCurriculumSubjects([])
+      } finally {
+        setCurriculumLoading(false)
+      }
+    }
+
+    loadCurriculumSubjects()
+  }, [selectedChild?.age_group])
 
   const handleAddChild = async () => {
     if (!newChildName.trim() || !newChildDob || newChildLearningStyles.length === 0 || newChildLearnsBetterWith.length === 0)
@@ -842,6 +876,46 @@ export default function ParentDashboardClient({
                     </SelectContent>
                   </Select>
                 </div>
+
+                <Card className="lg:col-span-2 border-teal-200 bg-teal-50/60">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">
+                      Curriculum for age {curriculumAgeGroup}
+                    </CardTitle>
+                    <CardDescription>
+                      Subjects and units are loaded from your uploaded curriculum for this child only.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {curriculumLoading ? (
+                      <p className="text-sm text-gray-600">Loading curriculum...</p>
+                    ) : curriculumSubjects.length > 0 ? (
+                      <div className="grid gap-2 md:grid-cols-2">
+                        {curriculumSubjects.map((subject) => (
+                          <div key={subject.id} className="rounded-md border bg-white p-3">
+                            <p className="font-medium text-slate-800">{subject.name}</p>
+                            <p className="text-xs text-slate-500">
+                              {subject.units?.length ?? 0} unit{(subject.units?.length ?? 0) === 1 ? "" : "s"}
+                            </p>
+                            {subject.units && subject.units.length > 0 ? (
+                              <p className="mt-1 text-xs text-slate-600">
+                                {subject.units
+                                  .slice(0, 2)
+                                  .map((unit) => unit.title)
+                                  .join(" | ")}
+                                {subject.units.length > 2 ? " | ..." : ""}
+                              </p>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-600">
+                        No curriculum subjects found for this age group yet.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
 
                 {selectedChildId ? (
                   <div className="lg:col-span-2">
