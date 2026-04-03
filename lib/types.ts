@@ -1,5 +1,5 @@
 export type UserRole = "parent" | "admin" | "student"
-export type AgeGroup = "4-5" | "5-6" | "6-7" | "7-8" | "8-9" | "9-10" | "10-11" | "11-12" | "12-13"
+export type AgeGroup = "4-5" | "6-7" | "8-9" | "10-11" | "12-13"
 export type Difficulty = "easy" | "medium" | "hard"
 export type AssignmentStatus = "pending" | "in_progress" | "completed" | "graded"
 export type SubscriptionPlan = "trial" | "monthly" | "yearly"
