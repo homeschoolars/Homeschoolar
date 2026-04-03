@@ -1,0 +1,303 @@
+{
+  "ageGroup": "5-6",
+  "stageName": "Basic Understanding",
+  "subjects": [
+    {
+      "name": "English",
+      "slug": "english",
+      "displayOrder": 1,
+      "units": [
+        {
+          "title": "Reading Readiness",
+          "slug": "reading-readiness",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Simple Sentences and Sounds",
+              "slug": "simple-sentences-and-sounds",
+              "difficultyIndicator": "basic-understanding",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Ayaan read a short sentence: \"The sun is bright.\" He smiled when he could sound out each word. With practice, he read another sentence and understood both.",
+                "activityInstructions": "Read three simple sentences aloud and circle words with the same beginning sound.",
+                "quizConcept": "Letter-sound matching and sentence meaning.",
+                "worksheetExample": "Match picture to sentence and fill one missing word.",
+                "parentTip": "Read daily for 10 minutes and celebrate each correct word."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Mathematics",
+      "slug": "mathematics",
+      "displayOrder": 2,
+      "units": [
+        {
+          "title": "Numbers and Patterns",
+          "slug": "numbers-and-patterns",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Counting and Number Bonds",
+              "slug": "counting-and-number-bonds",
+              "difficultyIndicator": "basic-understanding",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Mina used beads to show that 2 and 3 make 5. She tried more pairs and noticed patterns in numbers.",
+                "activityInstructions": "Use counters to make 5 and 10 in different ways.",
+                "quizConcept": "Counting, number bonds, and early pattern recognition.",
+                "worksheetExample": "Fill missing numbers in simple number bond circles.",
+                "parentTip": "Use snacks and toys for hands-on counting practice."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Science",
+      "slug": "science",
+      "displayOrder": 3,
+      "units": [
+        {
+          "title": "Curiosity and Observation",
+          "slug": "curiosity-and-observation",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Living and Non-Living",
+              "slug": "living-and-non-living",
+              "difficultyIndicator": "basic-understanding",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Sami sorted objects into two boxes: living and non-living. He explained why a plant is living and a toy is non-living.",
+                "activityInstructions": "Sort 10 household items into living/non-living groups and explain one reason for each.",
+                "quizConcept": "Basic classification and observation skills.",
+                "worksheetExample": "Circle living things and cross non-living things.",
+                "parentTip": "Ask your child to explain 'why' after each choice."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Geography",
+      "slug": "geography",
+      "displayOrder": 4,
+      "units": [
+        {
+          "title": "My Place and World",
+          "slug": "my-place-and-world",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Home, School, and Neighborhood",
+              "slug": "home-school-and-neighborhood",
+              "difficultyIndicator": "basic-understanding",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Lina drew a map from her home to school and marked important places.",
+                "activityInstructions": "Draw a simple path map and label home, school, and one landmark.",
+                "quizConcept": "Place awareness and basic map thinking.",
+                "worksheetExample": "Match symbols to places on a tiny map.",
+                "parentTip": "Use walks to identify landmarks and directions."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "History",
+      "slug": "history",
+      "displayOrder": 5,
+      "units": [
+        {
+          "title": "Past and Present",
+          "slug": "past-and-present",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Then and Now",
+              "slug": "then-and-now",
+              "difficultyIndicator": "basic-understanding",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Omar saw old and new photos of his family and noticed changes over time.",
+                "activityInstructions": "Compare one old object/photo with a new one and tell two differences.",
+                "quizConcept": "Understanding time change in simple contexts.",
+                "worksheetExample": "Paste or draw 'old' and 'new' items in two columns.",
+                "parentTip": "Share family stories to build time awareness."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Computer & Technology",
+      "slug": "computer-and-technology",
+      "displayOrder": 6,
+      "units": [
+        {
+          "title": "Digital Basics",
+          "slug": "digital-basics",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Using Devices Safely",
+              "slug": "using-devices-safely",
+              "difficultyIndicator": "basic-understanding",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Hiba learned to ask an adult before opening new apps and to keep personal details private.",
+                "activityInstructions": "List three device safety rules and role-play one safe decision.",
+                "quizConcept": "Basic digital safety and guided tech use.",
+                "worksheetExample": "Tick safe actions and cross unsafe actions.",
+                "parentTip": "Use shared screen time and discuss online safety often."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Self Development",
+      "slug": "self-development",
+      "displayOrder": 7,
+      "units": [
+        {
+          "title": "Knowing Myself",
+          "slug": "knowing-myself",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "My Strengths",
+              "slug": "my-strengths",
+              "difficultyIndicator": "basic-understanding",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Rayan made a 'My Strengths' card and felt proud sharing what he can do well.",
+                "activityInstructions": "Write or draw one strength and one goal for this week.",
+                "quizConcept": "Self-awareness and confidence building.",
+                "worksheetExample": "Complete 'I can...' and 'I am learning...' prompts.",
+                "parentTip": "Praise effort and progress, not just results."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Emotional Intelligence",
+      "slug": "emotional-intelligence",
+      "displayOrder": 8,
+      "units": [
+        {
+          "title": "Feelings and Calm Choices",
+          "slug": "feelings-and-calm-choices",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Name the Feeling",
+              "slug": "name-the-feeling",
+              "difficultyIndicator": "basic-understanding",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Sara felt upset when her toy broke. She took deep breaths and asked for help calmly.",
+                "activityInstructions": "Identify feeling faces and choose one calm strategy for each.",
+                "quizConcept": "Emotion naming and simple regulation.",
+                "worksheetExample": "Match feelings with healthy responses.",
+                "parentTip": "Model calm responses during small setbacks."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "slug": "health",
+      "displayOrder": 9,
+      "units": [
+        {
+          "title": "Healthy Habits",
+          "slug": "healthy-habits",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Food and Hygiene",
+              "slug": "food-and-hygiene",
+              "difficultyIndicator": "basic-understanding",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Bilal stayed active after eating healthy food and washing hands before meals.",
+                "activityInstructions": "Create a simple healthy plate and hygiene checklist.",
+                "quizConcept": "Daily health routines and prevention basics.",
+                "worksheetExample": "Sort habits into healthy/unhealthy categories.",
+                "parentTip": "Keep routines consistent and visible with a chart."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Financial Literacy",
+      "slug": "financial-literacy",
+      "displayOrder": 10,
+      "units": [
+        {
+          "title": "Money Basics",
+          "slug": "money-basics",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Needs and Wants",
+              "slug": "needs-and-wants",
+              "difficultyIndicator": "basic-understanding",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Areeba learned to choose needs first, then save for wants.",
+                "activityInstructions": "Classify 8 items into needs and wants.",
+                "quizConcept": "Basic money decision habits.",
+                "worksheetExample": "Circle needs and color wants.",
+                "parentTip": "Use pocket money to teach simple choices."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Islamic Studies",
+      "slug": "islamic-studies",
+      "displayOrder": 11,
+      "units": [
+        {
+          "title": "Good Character",
+          "slug": "good-character",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Honesty and Kindness",
+              "slug": "honesty-and-kindness",
+              "difficultyIndicator": "basic-understanding",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Zayd told the truth about a mistake and helped fix it kindly.",
+                "activityInstructions": "Discuss one honesty scenario and one kindness action for the day.",
+                "quizConcept": "Core Islamic values in daily life.",
+                "worksheetExample": "Choose honest and kind actions from scenarios.",
+                "parentTip": "Praise truthful behavior immediately."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

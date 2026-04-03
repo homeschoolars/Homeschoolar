@@ -7,8 +7,9 @@ import { Baby, BookOpen, Lightbulb, GraduationCap, Rocket, Star, Sparkles } from
 const ageGroups = [
   {
     id: "4-5",
-    label: "Ages 4-5",
+    label: "Little Explorers",
     title: "Little Explorers",
+    ageRange: "Ages 4-5",
     icon: Baby,
     color: "pink",
     bgGradient: "from-pink to-orange",
@@ -30,8 +31,9 @@ const ageGroups = [
   },
   {
     id: "6-7",
-    label: "Ages 6-7",
+    label: "Curious Minds",
     title: "Curious Minds",
+    ageRange: "Ages 6-7",
     icon: BookOpen,
     color: "orange",
     bgGradient: "from-orange to-yellow",
@@ -53,8 +55,9 @@ const ageGroups = [
   },
   {
     id: "8-9",
-    label: "Ages 8-9",
+    label: "Growing Learners",
     title: "Growing Learners",
+    ageRange: "Ages 8-9",
     icon: Lightbulb,
     color: "purple",
     bgGradient: "from-purple to-blue",
@@ -76,8 +79,9 @@ const ageGroups = [
   },
   {
     id: "10-11",
-    label: "Ages 10-11",
+    label: "Knowledge Builders",
     title: "Knowledge Builders",
+    ageRange: "Ages 10-11",
     icon: GraduationCap,
     color: "cyan",
     bgGradient: "from-cyan to-green",
@@ -98,8 +102,9 @@ const ageGroups = [
   },
   {
     id: "12-13",
-    label: "Ages 12-13",
+    label: "Future Leaders",
     title: "Future Leaders",
+    ageRange: "Ages 12-13",
     icon: Rocket,
     color: "green",
     bgGradient: "from-green to-teal",
@@ -176,7 +181,7 @@ export function AgeSelector() {
                       {group.label}
                     </p>
                     <p className={cn("text-xs md:text-sm", isSelected ? "text-white/80" : "text-muted-foreground")}>
-                      {group.emoji} {group.title}
+                      {group.emoji} {group.ageRange}
                     </p>
                   </div>
                 </button>

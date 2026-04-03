@@ -1,0 +1,291 @@
+{
+  "ageGroup": "8-9",
+  "subjects": [
+    {
+      "name": "English",
+      "slug": "english",
+      "displayOrder": 1,
+      "units": [
+        {
+          "title": "Creative Reading and Writing",
+          "slug": "creative-reading-and-writing",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Main Idea and Supporting Details",
+              "slug": "main-idea-and-supporting-details",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Sana read a short story about a boy who planted a school garden. At first, she thought every sentence was equally important. Her teacher showed her how one central thought holds the story together: the class worked as a team to improve the school. Then Sana highlighted supporting details, like watering schedules and shared tools. She realized that understanding the main idea helps readers think deeply and remember what matters most.",
+                "activityInstructions": "Read one paragraph and ask the child to write one sentence for the main idea and two supporting details. Then discuss why each detail supports the core idea.",
+                "quizConcept": "Identifying the central message and separating key details from minor information.",
+                "worksheetExample": "Given a passage, underline the main idea sentence and list three supporting details in a table.",
+                "parentTip": "After reading together, ask 'What is this mostly about?' before asking factual questions."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Mathematics",
+      "slug": "mathematics",
+      "displayOrder": 2,
+      "units": [
+        {
+          "title": "Problem Solving Strategies",
+          "slug": "problem-solving-strategies",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Multi-Step Word Problems",
+              "slug": "multi-step-word-problems",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Ahmed bought 3 packs of pencils, and each pack had 6 pencils. He gave 5 pencils to his cousin and used 4 at school. He first guessed an answer, then learned to solve step by step: multiply to find total pencils, then subtract what was given and used. His answer was clear and correct. Ahmed understood that solving in steps makes hard-looking problems easier and improves confidence.",
+                "activityInstructions": "Guide the child to read a word problem, circle important numbers, and write steps before calculating. Ask them to explain their reasoning aloud.",
+                "quizConcept": "Sequential reasoning, arithmetic operations in context, and explanation of mathematical thinking.",
+                "worksheetExample": "Solve 4 multi-step word problems and show operation steps in a structured workspace.",
+                "parentTip": "Encourage children to draw quick models or bar diagrams before doing calculations."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Science",
+      "slug": "science",
+      "displayOrder": 3,
+      "units": [
+        {
+          "title": "Scientific Thinking",
+          "slug": "scientific-thinking",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Forces: Push and Pull",
+              "slug": "forces-push-and-pull",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "During sports day, Mariam noticed that a gentle push moved a light ball far, but a heavy box needed a stronger push. She asked why. Her teacher explained force and invited students to test objects with different weights. The class recorded observations and compared results. Mariam learned that science is not just facts; it is asking questions, testing ideas, and using evidence to explain what happens.",
+                "activityInstructions": "Test push and pull with two objects of different weights. Record which object moves farther and discuss why.",
+                "quizConcept": "Understanding force, comparing outcomes, and evidence-based reasoning.",
+                "worksheetExample": "Predict and observe object movement under different pushes; complete claim-evidence table.",
+                "parentTip": "Ask 'What do you predict?' before experiments to build scientific habits of thinking."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Social Studies",
+      "slug": "social-studies",
+      "displayOrder": 4,
+      "units": [
+        {
+          "title": "Communities and Decisions",
+          "slug": "communities-and-decisions",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Rights and Responsibilities",
+              "slug": "rights-and-responsibilities",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "In class, students debated whether everyone should get equal turn time in the computer lab. Some wanted extra time for games, while others reminded them of fairness. Their teacher asked them to list rights and responsibilities. The class agreed that rights work best when everyone respects shared rules. They created a class charter together. The activity showed how communities solve problems through discussion and responsible choices.",
+                "activityInstructions": "Create a two-column chart of rights and responsibilities at home or school, then discuss one conflict scenario.",
+                "quizConcept": "Civic reasoning, fairness, and balancing personal freedom with community rules.",
+                "worksheetExample": "Match situations to right/responsibility categories and justify one decision in writing.",
+                "parentTip": "Invite children into simple family decisions to practice respectful discussion and accountability."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Self-Awareness",
+      "slug": "self-awareness",
+      "displayOrder": 5,
+      "units": [
+        {
+          "title": "Growth Mindset",
+          "slug": "growth-mindset",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Strengths, Weaknesses, and Reflection",
+              "slug": "strengths-weaknesses-and-reflection",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Haris loved drawing but got nervous during class presentations. Instead of avoiding practice, he started a reflection journal. After each activity, he wrote what went well and what he wanted to improve. Over time, his speaking confidence increased. Haris discovered that knowing yourself clearly helps you set realistic goals and improve steadily. Reflection turned small efforts into visible progress.",
+                "activityInstructions": "Ask the child to write one strength, one challenge, and one action step for the week in a reflection sheet.",
+                "quizConcept": "Self-reflection, personal goal-setting, and growth mindset behaviors.",
+                "worksheetExample": "Complete 'I can / I am learning / My next step' boxes and track progress across 5 days.",
+                "parentTip": "Focus on effort language such as 'You improved because you practiced consistently.'"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Etiquettes",
+      "slug": "etiquettes",
+      "displayOrder": 6,
+      "units": [
+        {
+          "title": "Respectful Communication",
+          "slug": "respectful-communication",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Listening and Speaking Politely",
+              "slug": "listening-and-speaking-politely",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "In a group task, Ali kept interrupting others and the group became frustrated. His teacher introduced a speaking token system: listen first, then share clearly. Ali waited for his turn and noticed teammates responded better. The project improved because everyone felt heard. Ali learned that etiquette is not only polite words; it is also careful listening and respectful timing.",
+                "activityInstructions": "Run a 5-minute family discussion where each person speaks after listening and summarizing the previous speaker.",
+                "quizConcept": "Conversation etiquette, active listening, and collaborative behavior.",
+                "worksheetExample": "Rewrite impolite dialogue into respectful dialogue and identify good listening behaviors.",
+                "parentTip": "Practice turn-taking in regular conversations so respectful habits become automatic."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Emotional Management",
+      "slug": "emotional-management",
+      "displayOrder": 7,
+      "units": [
+        {
+          "title": "Emotions and Decisions",
+          "slug": "emotions-and-decisions",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Handling Frustration Constructively",
+              "slug": "handling-frustration-constructively",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Nimra felt upset when her puzzle solution failed three times. She wanted to quit, but remembered her class strategy: pause, breathe, and break the problem into parts. She asked a classmate for one hint and tried again. This time she solved it and felt proud. Nimra realized that managing emotions helps the brain think clearly and solve problems better.",
+                "activityInstructions": "Teach the 'Stop-Think-Choose' model and apply it to one school-related frustration scenario.",
+                "quizConcept": "Emotional regulation strategies linked to improved thinking and problem-solving.",
+                "worksheetExample": "Complete scenario cards by choosing healthy responses and explaining the reason.",
+                "parentTip": "Model calm language during stress so children learn practical emotional habits."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "slug": "health",
+      "displayOrder": 8,
+      "units": [
+        {
+          "title": "Body and Mind Wellness",
+          "slug": "body-and-mind-wellness",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Nutrition, Sleep, and Focus",
+              "slug": "nutrition-sleep-and-focus",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Rayan noticed he could focus better on days he slept early and ate breakfast. His teacher challenged the class to track habits for one week. Students compared sleep time, food choices, and class focus. Rayan saw clear patterns: healthy routines improved mood and learning speed. He understood that health choices are connected to school performance and mental clarity.",
+                "activityInstructions": "Track sleep hours, water intake, and breakfast for 5 days, then reflect on concentration levels.",
+                "quizConcept": "Linking wellness habits with focus, memory, and classroom behavior.",
+                "worksheetExample": "Analyze a sample routine chart and suggest three improvements with reasons.",
+                "parentTip": "Use consistent bedtime and balanced breakfasts during school days to support attention."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Financial Education",
+      "slug": "financial-education",
+      "displayOrder": 9,
+      "units": [
+        {
+          "title": "Money Planning Basics",
+          "slug": "money-planning-basics",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Budgeting for Needs and Goals",
+              "slug": "budgeting-for-needs-and-goals",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Areeb received weekly allowance and spent it quickly on snacks. When he wanted a science kit, he had no savings. His father helped him make a simple budget: needs first, savings next, then wants. After four weeks, Areeb bought the kit and still had some money saved. He learned that planning money helps you make smarter choices and reach goals confidently.",
+                "activityInstructions": "Give a mock allowance and ask the child to allocate amounts to needs, wants, and savings.",
+                "quizConcept": "Basic budgeting, delayed gratification, and goal-focused spending.",
+                "worksheetExample": "Complete a weekly budget table and solve one spending decision scenario.",
+                "parentTip": "Let children make small money decisions and review outcomes without judgment."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Computer & Technology",
+      "slug": "computer-and-technology",
+      "displayOrder": 10,
+      "units": [
+        {
+          "title": "AI Awareness and Digital Life",
+          "slug": "ai-awareness-and-digital-life",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "How AI Helps in Daily Life",
+              "slug": "how-ai-helps-in-daily-life",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Huda asked her voice assistant for weather updates before school and used subtitles on educational videos. Her brother recommended songs through a streaming app. Their teacher explained that these tools use AI to recognize patterns and suggest useful options. Huda also learned that humans still make final decisions and should verify information. She became curious about where AI helps and where careful human thinking is still needed.",
+                "activityInstructions": "List three daily tools that may use AI (maps, recommendations, voice assistant) and discuss one benefit and one limitation for each.",
+                "quizConcept": "AI awareness, responsible use, and human judgment in technology-supported decisions.",
+                "worksheetExample": "Fill a Human vs AI comparison chart and analyze two real-life use cases.",
+                "parentTip": "Ask your child to explain technology outputs in their own words to build critical digital thinking."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Islamic Studies",
+      "slug": "islamic-studies",
+      "displayOrder": 11,
+      "units": [
+        {
+          "title": "Character and Responsibility",
+          "slug": "character-and-responsibility",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Amanah (Trust) in Daily Actions",
+              "slug": "amanah-in-daily-actions",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "When Bilal found a classmate's pencil case, he could have kept it quietly. Instead, he took it to the teacher and helped find the owner. His class discussed Amanah, the value of being trustworthy with things, words, and responsibilities. Bilal felt respected by friends because he made the honest choice. He learned that trust is built through small actions done sincerely.",
+                "activityInstructions": "Discuss three school or home examples of Amanah and ask the child to choose one action to practice this week.",
+                "quizConcept": "Islamic character values, honesty, responsibility, and trustworthiness.",
+                "worksheetExample": "Read short scenarios and identify which actions show Amanah and why.",
+                "parentTip": "Praise trustworthy behavior with specific feedback to reinforce values-based decision making."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

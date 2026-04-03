@@ -209,6 +209,9 @@ export default function AdminDashboardClient({
             <Link href="/admin/analytics" className="text-sm font-medium text-gray-300 hover:text-white">
               Analytics
             </Link>
+            <Link href="/admin/curriculum" className="text-sm font-medium text-gray-300 hover:text-white">
+              Curriculum
+            </Link>
           </nav>
 
           <div className="flex items-center gap-3">

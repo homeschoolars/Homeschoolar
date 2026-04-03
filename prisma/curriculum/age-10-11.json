@@ -1,0 +1,317 @@
+{
+  "ageGroup": "10-11",
+  "subjects": [
+    {
+      "name": "English",
+      "slug": "english",
+      "displayOrder": 1,
+      "units": [
+        {
+          "title": "Analytical Reading and Expression",
+          "slug": "analytical-reading-and-expression",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Author's Purpose and Evidence",
+              "slug": "authors-purpose-and-evidence",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "During a class debate, Rehan read two articles about plastic waste. One article used emotional words to persuade readers to stop using plastic bags, while the other used statistics and research findings. At first, both felt equally convincing. His teacher asked, 'What is the writer trying to do, and what evidence supports it?' Rehan identified purpose and compared evidence quality. He learned that strong readers do more than understand words; they question intent, check proof, and form thoughtful conclusions.",
+                "activityInstructions": "Read two short texts and identify whether each text is informing, persuading, or entertaining. Highlight one strong evidence line from each.",
+                "quizConcept": "Author's purpose, evidence analysis, and critical reading judgment.",
+                "worksheetExample": "Complete a comparison table: text purpose, evidence type, reliability score, and final reflection.",
+                "parentTip": "When your child reads online, ask 'How do we know this is true?' to build evaluation habits."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Mathematics",
+      "slug": "mathematics",
+      "displayOrder": 2,
+      "units": [
+        {
+          "title": "Applied Problem Solving",
+          "slug": "applied-problem-solving",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Fractions in Real-Life Decisions",
+              "slug": "fractions-in-real-life-decisions",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Amina planned a class snack event. She had a budget and needed to divide pizza fairly among classmates. She used fractions to compare portions and costs, then adjusted quantities to avoid waste. A quick estimate looked correct, but her exact calculations showed one tray was still short. By checking her steps, she solved the issue before ordering. Amina discovered that math supports real decisions and prevents practical mistakes.",
+                "activityInstructions": "Present a budget and quantity scenario using fractions. Ask students to compute exact portions and justify why their plan is fair and cost-effective.",
+                "quizConcept": "Fraction operations, reasoning, and practical decision-making.",
+                "worksheetExample": "Solve 4 real-life fraction problems and explain method selection for each.",
+                "parentTip": "Use recipe measurements or shopping discounts to connect fraction skills with daily life."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Science",
+      "slug": "science",
+      "displayOrder": 3,
+      "units": [
+        {
+          "title": "Inquiry and Investigation",
+          "slug": "inquiry-and-investigation",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Designing a Fair Test",
+              "slug": "designing-a-fair-test",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "The class wanted to test which material keeps water coolest: metal, plastic, or glass. Hamna first changed two variables at once and got confusing results. Her teacher explained fair testing by changing one variable while controlling others. After redesigning the experiment, the results became clear and repeatable. Hamna learned that science needs careful planning, not just observation. Good experiments produce trustworthy conclusions.",
+                "activityInstructions": "Design a mini experiment identifying independent, dependent, and controlled variables. Predict results before testing.",
+                "quizConcept": "Scientific method, variable control, and evidence-based reasoning.",
+                "worksheetExample": "Fill a fair-test planning sheet and interpret sample data table.",
+                "parentTip": "Encourage children to explain why a result happened, not only what happened."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Geography",
+      "slug": "geography",
+      "displayOrder": 4,
+      "units": [
+        {
+          "title": "People, Place, and Environment",
+          "slug": "people-place-and-environment",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Climate and Human Adaptation",
+              "slug": "climate-and-human-adaptation",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Musa compared two regions in his project: one hot and dry, another cold and snowy. He noticed differences in homes, clothing, and transport. At first, he thought these were just cultural choices. Later he understood how climate shapes daily life and resource use. He presented maps, examples, and recommendations for safer planning. Musa learned that geography explains how humans adapt to natural conditions with creative solutions.",
+                "activityInstructions": "Compare two climates and list adaptations in housing, food, and transport. Explain one adaptation in detail.",
+                "quizConcept": "Climate zones, adaptation strategies, and environment-human interaction.",
+                "worksheetExample": "Analyze case cards and match region challenges with practical adaptation solutions.",
+                "parentTip": "Use weather discussions to connect global geography with local daily decisions."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "History",
+      "slug": "history",
+      "displayOrder": 5,
+      "units": [
+        {
+          "title": "Cause, Change, and Perspective",
+          "slug": "cause-change-and-perspective",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Understanding Cause and Effect",
+              "slug": "understanding-cause-and-effect",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Saba studied an old city that changed rapidly after a new trade route opened. At first she memorized dates, but her teacher asked deeper questions: What caused the change? Who benefited? Who struggled? Saba examined maps and accounts from different groups. She saw that one event can create many effects over time. History became a puzzle of reasons and consequences, not just names and years.",
+                "activityInstructions": "Given a historical event summary, build a cause-effect chain with at least three linked outcomes.",
+                "quizConcept": "Historical causation, multiple perspectives, and consequence analysis.",
+                "worksheetExample": "Complete timeline and cause/effect organizer using short historical source snippets.",
+                "parentTip": "Ask children to compare past and present solutions to similar social problems."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Self-Awareness",
+      "slug": "self-awareness",
+      "displayOrder": 6,
+      "units": [
+        {
+          "title": "Independent Learning Habits",
+          "slug": "independent-learning-habits",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Goal Setting and Self-Monitoring",
+              "slug": "goal-setting-and-self-monitoring",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Usman wanted to improve science marks but studied without a plan. His mentor introduced SMART goals and weekly progress checks. Usman set a target, broke tasks into small actions, and reviewed mistakes after each quiz. He noticed steady improvement and reduced stress. He learned that independent learning grows when goals are clear and progress is tracked honestly.",
+                "activityInstructions": "Create one weekly learning goal and a daily tracker. Reflect on what worked and what needs adjustment.",
+                "quizConcept": "Self-management, reflective practice, and independent learning strategy.",
+                "worksheetExample": "Fill SMART goal template and weekly reflection chart with action-review cycle.",
+                "parentTip": "Support your child in reviewing process quality, not only final scores."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Etiquettes",
+      "slug": "etiquettes",
+      "displayOrder": 7,
+      "units": [
+        {
+          "title": "Social Responsibility and Conduct",
+          "slug": "social-responsibility-and-conduct",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Conflict Resolution with Respect",
+              "slug": "conflict-resolution-with-respect",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "During a group assignment, two teammates argued over leadership. The task stopped and everyone became frustrated. Their teacher guided them through respectful disagreement: listen, summarize, suggest, and agree on shared goals. They assigned roles based on strengths and completed the project successfully. Students realized etiquette includes fairness, patience, and problem-focused communication.",
+                "activityInstructions": "Role-play a disagreement and apply a 4-step respectful resolution method.",
+                "quizConcept": "Etiquette in teamwork, active listening, and constructive conflict handling.",
+                "worksheetExample": "Transform reactive responses into respectful alternatives and justify choices.",
+                "parentTip": "Encourage children to state feelings and needs without blaming language."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Emotional Management",
+      "slug": "emotional-management",
+      "displayOrder": 8,
+      "units": [
+        {
+          "title": "Regulation and Resilience",
+          "slug": "regulation-and-resilience",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Stress Triggers and Healthy Responses",
+              "slug": "stress-triggers-and-healthy-responses",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Before exams, Zoya felt anxious and could not focus. She learned to identify triggers: unfinished revision and negative self-talk. With guidance, she used a response plan: breathing, planning, and realistic statements. Her concentration improved and panic reduced. Zoya discovered that emotions are manageable when we notice patterns and apply healthy strategies early.",
+                "activityInstructions": "Identify three personal stress triggers and map one healthy response for each trigger.",
+                "quizConcept": "Emotional awareness, trigger-response mapping, and resilience skills.",
+                "worksheetExample": "Complete 'Trigger -> Thought -> Action -> Better Choice' reflection matrix.",
+                "parentTip": "Normalize stress conversations and practice calming routines before high-pressure tasks."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "slug": "health",
+      "displayOrder": 9,
+      "units": [
+        {
+          "title": "Wellbeing and Prevention",
+          "slug": "wellbeing-and-prevention",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Balanced Routine for Body and Mind",
+              "slug": "balanced-routine-for-body-and-mind",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Arham stayed up late on screens and skipped morning exercise. He felt tired and unmotivated in class. A health project asked students to redesign daily routines for better energy. Arham reduced screen time, improved sleep, added movement breaks, and drank more water. Within days he felt more focused. He learned that health is a system of habits, not one quick fix.",
+                "activityInstructions": "Audit a daily routine and redesign it with balanced sleep, movement, meals, and screen limits.",
+                "quizConcept": "Habit systems, prevention mindset, and personal health planning.",
+                "worksheetExample": "Evaluate a sample routine and propose evidence-based improvements.",
+                "parentTip": "Co-create realistic routines with children so they feel ownership of healthy choices."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Financial Education",
+      "slug": "financial-education",
+      "displayOrder": 10,
+      "units": [
+        {
+          "title": "Planning, Saving, and Decision Making",
+          "slug": "planning-saving-and-decision-making",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Budget Trade-Offs and Priorities",
+              "slug": "budget-trade-offs-and-priorities",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Hiba wanted new headphones and books but had limited allowance. She created a budget and ranked priorities. At first she spent quickly on small treats, then reviewed her goal and changed strategy. She delayed one purchase and reached her target in three weeks. Hiba learned that budgeting is about trade-offs, priorities, and disciplined choices.",
+                "activityInstructions": "Give a fixed budget with mixed needs/wants and ask students to justify a spending plan.",
+                "quizConcept": "Trade-off analysis, prioritization, and financial self-control.",
+                "worksheetExample": "Complete budget scenarios and explain why one plan is more sustainable.",
+                "parentTip": "Let children experience small consequences of spending decisions to build practical judgment."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Computer & Technology",
+      "slug": "computer-and-technology",
+      "displayOrder": 11,
+      "units": [
+        {
+          "title": "Digital Literacy and AI Awareness",
+          "slug": "digital-literacy-and-ai-awareness",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "How AI Supports Everyday Tools",
+              "slug": "how-ai-supports-everyday-tools",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "When Faizan searched videos for homework, recommendations appeared instantly. Navigation apps predicted traffic, and voice assistants answered questions. His teacher explained that AI helps by finding patterns in data. Faizan also learned to verify information, protect privacy, and avoid sharing personal details online. He realized technology is powerful when used with critical thinking and safety awareness.",
+                "activityInstructions": "Identify three digital tools that may use AI and evaluate each tool's benefit and potential risk.",
+                "quizConcept": "AI awareness, digital safety, and critical use of technology.",
+                "worksheetExample": "Fill Human vs AI comparison chart, list real-world use cases, and write two safety rules.",
+                "parentTip": "Discuss online safety and fact-checking regularly as part of everyday technology use."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Islamic Studies",
+      "slug": "islamic-studies",
+      "displayOrder": 12,
+      "units": [
+        {
+          "title": "Ethics and Responsibility",
+          "slug": "ethics-and-responsibility",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Integrity in Decisions",
+              "slug": "integrity-in-decisions",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "A student found exam notes in the classroom before a test. Some friends suggested using them secretly, but he remembered the value of integrity. He handed the notes to his teacher and chose to rely on honest effort. Though nervous, he felt peaceful after the exam. The class later discussed how true success includes character. He learned that integrity protects trust, fairness, and self-respect.",
+                "activityInstructions": "Analyze two moral dilemmas and explain how Islamic values guide responsible choices.",
+                "quizConcept": "Ethical reasoning, accountability, and integrity in daily actions.",
+                "worksheetExample": "Read scenarios and justify decisions using value-based reasoning.",
+                "parentTip": "Reinforce that ethical choices matter more than short-term gains."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

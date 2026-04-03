@@ -400,6 +400,55 @@ export interface CurriculumPath {
   created_at: string
 }
 
+export type CurriculumPromptType =
+  | "story"
+  | "worksheet"
+  | "quiz"
+  | "project"
+  | "debate"
+  | "research"
+  | "reflection"
+
+export interface CurriculumAgeGroupNode {
+  id: string
+  name: string
+}
+
+export interface CurriculumSubjectNode {
+  id: string
+  name: string
+  slug: string
+  age_group_id: string
+  base_subject_id: string | null
+  display_order: number
+}
+
+export interface CurriculumUnitNode {
+  id: string
+  title: string
+  slug: string
+  subject_id: string
+  display_order: number
+}
+
+export interface CurriculumLessonNode {
+  id: string
+  title: string
+  slug: string
+  unit_id: string
+  display_order: number
+}
+
+export interface CurriculumContentNode {
+  id: string
+  lesson_id: string
+  story_text: string
+  activity_instructions: string
+  quiz_concept: string
+  worksheet_example: string
+  parent_tip: string
+}
+
 // AI Request/Response types
 export interface GenerateWorksheetRequest {
   subject_id: string

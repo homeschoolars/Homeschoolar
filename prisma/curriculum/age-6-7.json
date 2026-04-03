@@ -1,0 +1,265 @@
+{
+  "ageGroup": "6-7",
+  "subjects": [
+    {
+      "name": "English",
+      "slug": "english",
+      "displayOrder": 1,
+      "units": [
+        {
+          "title": "Reading and Sentence Skills",
+          "slug": "reading-and-sentence-skills",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Building Clear Sentences",
+              "slug": "building-clear-sentences",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Hina wrote, \"Cat run fast.\" Her teacher smiled and said, \"Great idea. Now let us make it a full sentence.\" Hina added a capital letter and changed it to, \"The cat runs fast.\" She then wrote, \"The cat runs fast to catch the red ball.\" Her class read it aloud. Hina learned that strong sentences have a clear subject, a correct verb, and enough details for the reader.",
+                "activityInstructions": "Ask the child to read three short sentences and identify the subject and verb. Then give scrambled words and ask them to arrange them into complete sentences.",
+                "quizConcept": "Sentence structure, capitalization, punctuation, and subject-verb agreement.",
+                "worksheetExample": "Rewrite incomplete lines into full sentences, add punctuation marks, and underline the subject in each sentence.",
+                "parentTip": "Encourage your child to describe daily events in one complete sentence at dinner time."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Mathematics",
+      "slug": "mathematics",
+      "displayOrder": 2,
+      "units": [
+        {
+          "title": "Number Patterns and Logic",
+          "slug": "number-patterns-and-logic",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Skip Counting and Patterns",
+              "slug": "skip-counting-and-patterns",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Omar planted flowers in rows. He counted by 2s: 2, 4, 6, 8. Then he counted by 5s for tree pots: 5, 10, 15. He noticed patterns helped him count faster and avoid mistakes. When one number was missing, he looked at the pattern and found it quickly. Omar learned that patterns are like number clues that help us solve problems step by step.",
+                "activityInstructions": "Practice skip counting by 2, 5, and 10 using beads or blocks. Give pattern sequences with one missing number and ask the child to fill in the blank.",
+                "quizConcept": "Skip counting, identifying number patterns, and early logical reasoning.",
+                "worksheetExample": "Complete pattern tables (2s, 5s, 10s), circle correct missing numbers, and solve one short logic puzzle.",
+                "parentTip": "Use stairs, claps, or jumps for skip counting to combine movement with memory."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Science",
+      "slug": "science",
+      "displayOrder": 3,
+      "units": [
+        {
+          "title": "Living Things and Their Needs",
+          "slug": "living-things-and-their-needs",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "How Plants Grow",
+              "slug": "how-plants-grow",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Sara planted a bean seed in a cup of soil. She gave it sunlight and water each day. After a few days, a tiny green sprout appeared. She measured it every week and wrote notes in a chart. When she forgot water one day, the plant looked weak. Sara learned that plants need sunlight, water, air, and care to grow healthy and strong.",
+                "activityInstructions": "Plant a seed in a cup and observe it for one week. Ask the child to record changes in size and leaf color.",
+                "quizConcept": "Basic plant needs, growth stages, and observation skills.",
+                "worksheetExample": "Label seed, sprout, stem, and leaf; match each plant need to its purpose.",
+                "parentTip": "Let your child be responsible for daily watering to build consistency and scientific habits."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Social Studies",
+      "slug": "social-studies",
+      "displayOrder": 4,
+      "units": [
+        {
+          "title": "Community and Responsibility",
+          "slug": "community-and-responsibility",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Helpers in Our Neighborhood",
+              "slug": "helpers-in-our-neighborhood",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Areeb saw many helpers in his neighborhood in one day. The teacher guided students, the nurse helped a sick child, and the cleaner kept the park tidy. A firefighter visited school and explained safety rules. Areeb wrote thank-you notes for each helper. He learned that communities work best when everyone does their part and respects one another.",
+                "activityInstructions": "Discuss five community helpers and what each does. Ask the child to role-play one helper and explain how they support people.",
+                "quizConcept": "Roles of community helpers, social responsibility, and respect.",
+                "worksheetExample": "Match helper names to tools and write one sentence about how each helper serves the community.",
+                "parentTip": "When outside, point out real helpers and ask your child to describe their roles."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Self-Awareness",
+      "slug": "self-awareness",
+      "displayOrder": 5,
+      "units": [
+        {
+          "title": "Knowing My Strengths",
+          "slug": "knowing-my-strengths",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "My Skills and Goals",
+              "slug": "my-skills-and-goals",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Maha liked drawing but felt shy in reading class. Her teacher asked her to list one strength and one goal. Maha wrote, \"I draw well,\" and, \"I want to read one page clearly.\" She practiced a little each day and tracked her progress with stars. After one week, she read confidently to her class. Maha learned that self-awareness helps us grow with patience and effort.",
+                "activityInstructions": "Ask the child to write or say one strength, one challenge, and one weekly goal. Review progress at the end of the week.",
+                "quizConcept": "Identifying strengths, setting simple goals, and self-reflection.",
+                "worksheetExample": "Fill in a mini goal chart: 'I am good at...', 'I want to improve...', 'My first step...'.",
+                "parentTip": "Praise effort and strategy, not only outcomes, to build a growth mindset."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Etiquettes",
+      "slug": "etiquettes",
+      "displayOrder": 6,
+      "units": [
+        {
+          "title": "Good Manners in Daily Life",
+          "slug": "good-manners-in-daily-life",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Polite Words and Actions",
+              "slug": "polite-words-and-actions",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "At lunch, Hamza forgot to say \"please\" and grabbed the jug quickly. His friend looked upset. Hamza paused, smiled, and said, \"Please pass the water.\" Later he said, \"Thank you\" to the lunch helper and held the door for others. Everyone smiled back. Hamza learned that polite words and respectful actions make school happier and friendships stronger.",
+                "activityInstructions": "Practice role-play situations: borrowing a pencil, waiting in line, and greeting elders respectfully.",
+                "quizConcept": "Using polite language, turn-taking, and respectful behavior.",
+                "worksheetExample": "Choose polite responses for daily situations and rewrite rude lines in polite form.",
+                "parentTip": "Model polite language at home so children copy consistent behavior."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Emotional Management",
+      "slug": "emotional-management",
+      "displayOrder": 7,
+      "units": [
+        {
+          "title": "Understanding Feelings",
+          "slug": "understanding-feelings",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Pause, Breathe, Respond",
+              "slug": "pause-breathe-respond",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "During a game, Zain lost and felt very angry. He wanted to shout, but he remembered his class rule: pause, breathe, respond. He took three deep breaths and said, \"I feel upset. Can we play again?\" His friends agreed and praised his calm words. Zain felt proud. He learned that strong feelings are normal, and smart choices help solve problems peacefully.",
+                "activityInstructions": "Teach a 3-step calm routine: pause, deep breath, and kind words. Practice with simple school-life scenarios.",
+                "quizConcept": "Emotion recognition, self-regulation, and healthy response strategies.",
+                "worksheetExample": "Match feelings to calm actions and complete 'If I feel ___, I can ___' sentences.",
+                "parentTip": "Name emotions openly at home to normalize feelings and teach regulation."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "slug": "health",
+      "displayOrder": 8,
+      "units": [
+        {
+          "title": "Healthy Habits",
+          "slug": "healthy-habits",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Food, Water, Sleep, Exercise",
+              "slug": "food-water-sleep-exercise",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Rida felt tired in class and could not focus. Her mother checked her routine and noticed she slept late and skipped breakfast. They made a new plan: healthy breakfast, enough water, evening play, and bedtime on time. After a few days, Rida felt active and cheerful. She answered questions better in class. Rida learned that healthy habits help both body and brain work well.",
+                "activityInstructions": "Create a daily health tracker with boxes for water, fruit, movement, and bedtime. Review completion together.",
+                "quizConcept": "Balanced lifestyle habits and their effect on energy and learning.",
+                "worksheetExample": "Sort habits into healthy/unhealthy groups and design a one-day healthy routine chart.",
+                "parentTip": "Keep a predictable sleep schedule because rest strongly affects learning behavior."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Financial Education",
+      "slug": "financial-education",
+      "displayOrder": 9,
+      "units": [
+        {
+          "title": "Saving and Spending",
+          "slug": "saving-and-spending",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Needs, Wants, and Smart Choices",
+              "slug": "needs-wants-and-smart-choices",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Ayaan had 100 rupees and wanted a toy and a notebook. He asked his sister, \"Which one should I buy first?\" She said, \"Think about needs and wants.\" Ayaan bought the notebook and saved the rest in his jar. Next week, he had enough to buy a small toy too. He learned that smart spending and saving help us reach goals without waste.",
+                "activityInstructions": "Give simple shopping scenarios and ask the child to classify each item as a need or a want.",
+                "quizConcept": "Needs vs wants, saving habits, and responsible spending decisions.",
+                "worksheetExample": "Circle needs, cross wants, and solve one short coin-budget puzzle.",
+                "parentTip": "Use a small pocket-money routine to teach planning and delayed gratification."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Islamic Studies",
+      "slug": "islamic-studies",
+      "displayOrder": 10,
+      "units": [
+        {
+          "title": "Faith and Good Character",
+          "slug": "faith-and-good-character",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Truthfulness and Trust",
+              "slug": "truthfulness-and-trust",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Bilal accidentally broke a pencil box at school and felt nervous. He thought about hiding it, but then he remembered the value of truthfulness. He told his teacher honestly and offered to help fix it. The teacher thanked him for being trustworthy. Bilal felt relief and respect from his classmates. He learned that honesty builds trust and brings peace to the heart.",
+                "activityInstructions": "Discuss two scenarios where telling the truth is difficult and role-play honest responses.",
+                "quizConcept": "Islamic values of honesty, responsibility, and trustworthiness in daily life.",
+                "worksheetExample": "Read short scenarios and choose truthful actions; write one sentence on why honesty matters.",
+                "parentTip": "Praise honesty immediately, especially when your child admits a mistake."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

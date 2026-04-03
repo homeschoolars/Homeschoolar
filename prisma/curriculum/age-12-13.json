@@ -1,0 +1,317 @@
+{
+  "ageGroup": "12-13",
+  "subjects": [
+    {
+      "name": "English",
+      "slug": "english",
+      "displayOrder": 1,
+      "units": [
+        {
+          "title": "Argumentative Writing and Analysis",
+          "slug": "argumentative-writing-and-analysis",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Building Strong Arguments with Evidence",
+              "slug": "building-strong-arguments-with-evidence",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "A school council planned to ban mobile phones during break. Daniyal first supported the idea without much thought. After interviewing classmates and teachers, he discovered both benefits and concerns. Some students used phones for helpful study reminders, while others became distracted. Daniyal prepared an argument with balanced evidence and proposed a middle path: limited, supervised phone zones. His team accepted the proposal. He learned that good arguments require listening, evidence, and thoughtful compromise.",
+                "activityInstructions": "Write one claim, two supporting reasons, and one counterargument with response on a school-related topic.",
+                "quizConcept": "Claim-evidence-reasoning, counterargument handling, and persuasive clarity.",
+                "worksheetExample": "Complete an argument organizer and draft a short evidence-based paragraph.",
+                "parentTip": "Discuss current issues at home and ask your child to support opinions with reasons."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Mathematics",
+      "slug": "mathematics",
+      "displayOrder": 2,
+      "units": [
+        {
+          "title": "Applied Algebra and Data Reasoning",
+          "slug": "applied-algebra-and-data-reasoning",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Linear Patterns and Real-Life Modelling",
+              "slug": "linear-patterns-and-real-life-modelling",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Mira tracked weekly savings to buy a bicycle. She noticed her savings grew in a steady pattern, so she represented it with a simple linear rule. When unexpected expenses appeared, she adjusted the model and predicted a new target date. Instead of feeling discouraged, she used math to plan better. Mira learned that algebra helps turn real situations into clear decisions.",
+                "activityInstructions": "Use a simple real-life table (time vs amount) to identify pattern, write linear rule, and make predictions.",
+                "quizConcept": "Pattern recognition, linear relationships, and decision-making through modeling.",
+                "worksheetExample": "Given 3 scenarios, create expressions and solve for unknown values with explanation.",
+                "parentTip": "Connect algebra to budgeting and planning to show why abstract math matters."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Science",
+      "slug": "science",
+      "displayOrder": 3,
+      "units": [
+        {
+          "title": "Scientific Reasoning and Systems",
+          "slug": "scientific-reasoning-and-systems",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Ecosystem Balance and Human Impact",
+              "slug": "ecosystem-balance-and-human-impact",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "A community pond once had many fish and birds, but pollution changed the water quality. Students investigated causes and observed how one change affected many living things. They proposed cleanup steps and awareness campaigns. Over time, conditions improved. The class understood that ecosystems are connected systems, and responsible human choices can either harm or restore balance.",
+                "activityInstructions": "Map one ecosystem and identify how removing one factor affects the rest. Propose one practical intervention.",
+                "quizConcept": "Systems thinking, cause-effect chains, and environmental responsibility.",
+                "worksheetExample": "Analyze a case study and complete impact-mitigation table with justification.",
+                "parentTip": "Encourage children to link science learning with local environmental actions."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Geography",
+      "slug": "geography",
+      "displayOrder": 4,
+      "units": [
+        {
+          "title": "Sustainability and Resource Use",
+          "slug": "sustainability-and-resource-use",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Water Resources and Conservation Planning",
+              "slug": "water-resources-and-conservation-planning",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "During summer, Nadia noticed water shortages in her area. She researched rainfall, storage systems, and household usage patterns. Her class designed a conservation plan combining awareness, leak checks, and smart use habits. They presented realistic solutions to school management. Nadia realized geography is not only maps; it is planning for people, resources, and long-term sustainability.",
+                "activityInstructions": "Audit water usage in home/school and create a conservation plan with measurable targets.",
+                "quizConcept": "Resource geography, sustainability planning, and practical policy thinking.",
+                "worksheetExample": "Interpret a resource chart and prioritize three conservation actions with reasons.",
+                "parentTip": "Let children lead one family conservation challenge and review weekly outcomes."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "History",
+      "slug": "history",
+      "displayOrder": 5,
+      "units": [
+        {
+          "title": "Historical Inquiry and Perspective",
+          "slug": "historical-inquiry-and-perspective",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Interpreting Sources and Bias",
+              "slug": "interpreting-sources-and-bias",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Arsalan read two accounts of the same historical protest. One praised it as a movement for justice, while the other called it disorder. Confused, he asked how both could exist. His teacher explained perspective, bias, and source context. By comparing authors, audience, and evidence, Arsalan formed a balanced conclusion. He learned that responsible historical understanding requires questioning sources, not copying them.",
+                "activityInstructions": "Compare two short historical accounts and identify possible bias indicators and missing perspectives.",
+                "quizConcept": "Source analysis, bias detection, and evidence-based historical interpretation.",
+                "worksheetExample": "Fill source reliability rubric and write a short balanced conclusion.",
+                "parentTip": "Teach children to ask who wrote information and why before accepting it."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Computer & Technology",
+      "slug": "computer-and-technology",
+      "displayOrder": 6,
+      "units": [
+        {
+          "title": "Digital Citizenship and AI",
+          "slug": "digital-citizenship-and-ai",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "AI Tools, Ethics, and Online Safety",
+              "slug": "ai-tools-ethics-and-online-safety",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Zara used AI tools to summarize notes and brainstorm project ideas. She was impressed by speed, but once copied an inaccurate answer without checking. Her teacher showed how to verify information, protect privacy, and credit sources responsibly. Zara updated her workflow: use AI for support, then validate with trusted references. She learned that digital intelligence means using powerful tools ethically and safely.",
+                "activityInstructions": "List three AI-supported tasks and evaluate each for benefit, risk, and required safety step.",
+                "quizConcept": "AI literacy, ethical use, verification habits, and digital safety practices.",
+                "worksheetExample": "Complete AI use-case matrix: tool, benefit, risk, safety guideline, human check.",
+                "parentTip": "Discuss online ethics and source verification whenever your child uses AI tools."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Self-Awareness",
+      "slug": "self-awareness",
+      "displayOrder": 7,
+      "units": [
+        {
+          "title": "Leadership and Identity",
+          "slug": "leadership-and-identity",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Values-Based Decision Making",
+              "slug": "values-based-decision-making",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Hamid was asked to lead a team project, but his friends wanted to ignore one quiet teammate's ideas. He had to choose between popularity and fairness. Remembering his values, he created a process where everyone contributed. The final project improved because of diverse ideas. Hamid learned that leadership means making principled decisions, even when it is uncomfortable.",
+                "activityInstructions": "Reflect on one difficult choice and map decision options with possible consequences and values alignment.",
+                "quizConcept": "Identity, values, leadership behavior, and consequence awareness.",
+                "worksheetExample": "Use a decision matrix to compare options and justify chosen action.",
+                "parentTip": "Ask children to explain why a choice matches their values, not just their goals."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Etiquettes & Manners",
+      "slug": "etiquettes-and-manners",
+      "displayOrder": 8,
+      "units": [
+        {
+          "title": "Professional Conduct Foundations",
+          "slug": "professional-conduct-foundations",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Respectful Communication in Teams",
+              "slug": "respectful-communication-in-teams",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "In a student council meeting, opinions clashed and voices grew louder. Sana suggested a simple rule: listen fully, summarize fairly, then respond respectfully. The tone changed, and better ideas surfaced. Members who were silent earlier began sharing useful points. Sana realized manners are not only formal words; they are practical tools for better teamwork and leadership.",
+                "activityInstructions": "Run a structured discussion where each student must paraphrase the previous speaker before responding.",
+                "quizConcept": "Collaborative etiquette, listening discipline, and respectful disagreement.",
+                "worksheetExample": "Rewrite conflict dialogue into constructive communication patterns.",
+                "parentTip": "Model respectful disagreement at home to strengthen communication maturity."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Emotional Management",
+      "slug": "emotional-management",
+      "displayOrder": 9,
+      "units": [
+        {
+          "title": "Resilience and Reflection",
+          "slug": "resilience-and-reflection",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Responding to Failure Constructively",
+              "slug": "responding-to-failure-constructively",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "After losing a competition, Bilal blamed his team and felt defeated. Later, his coach asked him to review what was controllable and what was not. Bilal shifted from blame to learning goals and built a better practice plan. In the next event, his team performed much better. He learned that emotional management turns setbacks into growth opportunities.",
+                "activityInstructions": "Use a setback reflection sheet: event, feelings, lessons, next action, and support needed.",
+                "quizConcept": "Resilience, ownership mindset, and adaptive emotional responses.",
+                "worksheetExample": "Complete failure-to-growth framework using a real or sample scenario.",
+                "parentTip": "Praise recovery behaviors after mistakes, not only achievements."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Health & Well-Being",
+      "slug": "health-and-well-being",
+      "displayOrder": 10,
+      "units": [
+        {
+          "title": "Holistic Wellness",
+          "slug": "holistic-wellness",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Balancing Physical, Mental, and Digital Health",
+              "slug": "balancing-physical-mental-and-digital-health",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Rafay stayed busy with studies but ignored exercise and sleep. He felt tired and anxious before tests. His teacher introduced a wellbeing planner with movement, focus breaks, sleep targets, and digital boundaries. After applying it for two weeks, Rafay noticed stronger concentration and better mood. He learned that performance improves when health is managed as a balanced system.",
+                "activityInstructions": "Create a weekly wellbeing plan including sleep, movement, hydration, study blocks, and screen limits.",
+                "quizConcept": "Integrated wellbeing planning and preventive health decision-making.",
+                "worksheetExample": "Audit current habits and design a realistic improvement plan with measurable indicators.",
+                "parentTip": "Review weekly wellbeing goals with your child and celebrate consistent routines."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Financial Education",
+      "slug": "financial-education",
+      "displayOrder": 11,
+      "units": [
+        {
+          "title": "Smart Money and Future Planning",
+          "slug": "smart-money-and-future-planning",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Budgeting, Saving, and Opportunity Cost",
+              "slug": "budgeting-saving-and-opportunity-cost",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Hoor had a fixed monthly budget and wanted both a new game and a coding course. She learned about opportunity cost: choosing one option means giving up another. After comparing long-term value, she chose the course and saved for the game later. The decision felt difficult but rewarding. She understood that financial choices shape future opportunities.",
+                "activityInstructions": "Compare two spending options using cost, benefit, and long-term impact, then justify final choice.",
+                "quizConcept": "Budgeting logic, opportunity cost, and long-term planning.",
+                "worksheetExample": "Solve planning scenarios with budget constraints and explain decision rationale.",
+                "parentTip": "Discuss trade-offs openly so children learn to evaluate value over impulse."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Islamic Studies",
+      "slug": "islamic-studies",
+      "displayOrder": 12,
+      "units": [
+        {
+          "title": "Character, Responsibility, and Society",
+          "slug": "character-responsibility-and-society",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Accountability and Ethical Leadership",
+              "slug": "accountability-and-ethical-leadership",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "As class monitor, Yusuf could mark attendance without checks. One day a close friend asked him to mark present despite absence. Yusuf hesitated, knowing the request was unfair. He chose honesty and explained that leadership requires accountability to everyone, not favoritism. Though his friend was upset initially, trust in Yusuf grew across the class. He learned that ethical leadership protects justice and community respect.",
+                "activityInstructions": "Discuss one leadership dilemma and apply accountability principles to decide an ethical response.",
+                "quizConcept": "Ethics, justice, accountability, and leadership grounded in Islamic values.",
+                "worksheetExample": "Analyze case studies and identify decisions that uphold fairness and trust.",
+                "parentTip": "Talk about responsibility in small daily roles to prepare children for larger leadership duties."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

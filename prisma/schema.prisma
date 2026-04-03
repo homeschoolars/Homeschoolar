@@ -216,11 +216,118 @@ model Subject {
   learningMemory     LearningMemory[]
   lessonContents     LessonContent[]
   lessonQuizzes      LessonQuiz[]
+  curriculumSubjects CurriculumSubject[]
   progress           Progress[]
   quizzes            SurpriseQuiz[]
   worksheets         Worksheet[]
 
   @@map("subjects")
+}
+
+model CurriculumAgeGroup {
+  id        String              @id @default(uuid())
+  name      String              @unique
+  stageName String              @default("Foundation") @map("stage_name")
+  createdAt DateTime            @default(now()) @map("created_at")
+  updatedAt DateTime            @updatedAt @map("updated_at")
+  subjects  CurriculumSubject[]
+
+  @@map("curriculum_age_groups")
+}
+
+model CurriculumSubject {
+  id          String              @id @default(uuid())
+  name        String
+  slug        String
+  ageGroupId  String              @map("age_group_id")
+  baseSubjectId String?           @map("base_subject_id")
+  displayOrder Int                @default(0) @map("display_order")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+  ageGroup    CurriculumAgeGroup  @relation(fields: [ageGroupId], references: [id], onDelete: Cascade)
+  baseSubject Subject?            @relation(fields: [baseSubjectId], references: [id], onDelete: SetNull)
+  units       CurriculumUnit[]
+
+  @@unique([ageGroupId, slug])
+  @@index([baseSubjectId])
+  @@map("curriculum_subjects")
+}
+
+model CurriculumUnit {
+  id          String             @id @default(uuid())
+  title       String
+  slug        String
+  subjectId   String             @map("subject_id")
+  displayOrder Int               @default(0) @map("display_order")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+  subject     CurriculumSubject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  lessons     CurriculumLesson[]
+
+  @@unique([subjectId, slug])
+  @@map("curriculum_units")
+}
+
+model CurriculumLesson {
+  id          String                     @id @default(uuid())
+  title       String
+  slug        String
+  unitId      String                     @map("unit_id")
+  difficultyLevel String                 @default("foundation") @map("difficulty_level")
+  displayOrder Int                       @default(0) @map("display_order")
+  createdAt   DateTime                   @default(now()) @map("created_at")
+  updatedAt   DateTime                   @updatedAt @map("updated_at")
+  unit        CurriculumUnit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  content     CurriculumContent?
+  aiPrompts   CurriculumAIPrompt[]
+  generations CurriculumGeneratedContent[]
+
+  @@unique([unitId, slug])
+  @@map("curriculum_lessons")
+}
+
+model CurriculumContent {
+  id                   String           @id @default(uuid())
+  lessonId             String           @unique @map("lesson_id")
+  storyText            String           @map("story_text")
+  activityInstructions String           @map("activity_instructions")
+  quizConcept          String           @map("quiz_concept")
+  worksheetExample     String           @map("worksheet_example")
+  parentTip            String           @map("parent_tip")
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
+  lesson               CurriculumLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@map("curriculum_contents")
+}
+
+model CurriculumAIPrompt {
+  id             String               @id @default(uuid())
+  lessonId       String               @map("lesson_id")
+  type           CurriculumPromptType
+  promptTemplate String               @map("prompt_template")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+  lesson         CurriculumLesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, type])
+  @@map("curriculum_ai_prompts")
+}
+
+model CurriculumGeneratedContent {
+  id             String               @id @default(uuid())
+  lessonId       String               @map("lesson_id")
+  type           CurriculumPromptType
+  sessionKey     String               @default("global") @map("session_key")
+  content        String
+  promptSnapshot String               @map("prompt_snapshot")
+  model          String               @default("gpt-4o-mini")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+  lesson         CurriculumLesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, type, sessionKey])
+  @@map("curriculum_generated_contents")
 }
 
 model Worksheet {
@@ -988,4 +1095,14 @@ enum ConductedBy {
 enum BlogPostStatus {
   draft
   published
+}
+
+enum CurriculumPromptType {
+  story
+  worksheet
+  quiz
+  project
+  debate
+  research
+  reflection
 }

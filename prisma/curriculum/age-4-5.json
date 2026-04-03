@@ -1,0 +1,119 @@
+{
+  "ageGroup": "4-5",
+  "subjects": [
+    {
+      "name": "English",
+      "slug": "english",
+      "displayOrder": 1,
+      "units": [
+        {
+          "title": "Alphabet Adventures",
+          "slug": "alphabet-adventures",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Letter A and Apple",
+              "slug": "letter-a-and-apple",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Ava the ant found a shiny red apple under a big tree. She asked her friend Amir, \"Can you say A for apple?\" They clapped and laughed, \"A-A-Apple!\" Then they drew big and small letter A in the sand. At snack time, they shared apple slices and said thank you. Ava learned that practicing letters can be fun with friends and kindness.",
+                "activityInstructions": "Say the letter A sound together. Ask the child to trace uppercase and lowercase A using finger paint or crayons. Place 3 picture cards (apple, ball, ant) and ask the child to circle the pictures that start with A.",
+                "quizConcept": "Recognizing letter A and identifying words that begin with A sound.",
+                "worksheetExample": "Trace Aa on dotted lines, color an apple, then circle A-starting pictures from a mixed set.",
+                "parentTip": "Keep sessions short (5-7 minutes) and celebrate each correct sound with positive words."
+              }
+            },
+            {
+              "title": "Letter B and Ball",
+              "slug": "letter-b-and-ball",
+              "displayOrder": 2,
+              "content": {
+                "storyText": "Bilal bounced a blue ball in the park. \"B says b-b-ball!\" he cheered. His bunny friend Bella hopped around and found a basket. Together they put the ball in the basket and shouted, \"Great B words!\" On the way home, Bilal drew letter B on paper and showed it to his mom. She smiled and said, \"Learning is better when we play and help each other.\"",
+                "activityInstructions": "Practice saying B sound. Let the child trace B on paper. Use toy objects and ask which ones start with B (ball, book, banana).",
+                "quizConcept": "Identifying letter B, matching sound to object, and early phonics awareness.",
+                "worksheetExample": "Trace Bb, match B to picture cards, and color only the objects that start with B.",
+                "parentTip": "Use real household objects so letter-sound connection feels practical and memorable."
+              }
+            }
+          ]
+        },
+        {
+          "title": "Rhymes and Sounds",
+          "slug": "rhymes-and-sounds",
+          "displayOrder": 2,
+          "lessons": [
+            {
+              "title": "Cat and Hat Rhyming",
+              "slug": "cat-and-hat-rhyming",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "A tiny cat wore a funny hat and sat on a mat. \"Cat, hat, mat!\" giggled Mia. She listened for words that sounded the same at the end. Her brother said, \"Bat!\" and they all clapped. They made a rhyme song and danced around. Mia learned that rhyming helps her hear sounds and enjoy words.",
+                "activityInstructions": "Say two words and ask if they rhyme (cat-hat, sun-bag). Use claps for each rhyme pair. Draw two columns: rhyme and not rhyme.",
+                "quizConcept": "Hearing ending sounds and identifying simple rhyming pairs.",
+                "worksheetExample": "Circle rhyming pairs and draw a line between words that rhyme.",
+                "parentTip": "Use songs and bedtime stories with rhyme to make sound learning natural."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Math",
+      "slug": "math",
+      "displayOrder": 2,
+      "units": [
+        {
+          "title": "Numbers Around Us",
+          "slug": "numbers-around-us",
+          "displayOrder": 1,
+          "lessons": [
+            {
+              "title": "Counting 1 to 5",
+              "slug": "counting-1-to-5",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "Noor found five bright stars stickers. She placed them one by one: one, two, three, four, five! Her teddy counted with her and pointed to each sticker. Then Noor gave one sticker to her sister and counted again to check. She smiled, \"Counting helps me know how many!\" Noor learned that counting carefully means touching each object once.",
+                "activityInstructions": "Count toys from 1 to 5 by touching each object. Ask child to place correct number of blocks for each number card.",
+                "quizConcept": "One-to-one counting and recognizing numbers from 1 to 5.",
+                "worksheetExample": "Trace numbers 1-5, count objects in each box, and circle the matching numeral.",
+                "parentTip": "Let your child move objects physically while counting to strengthen number sense."
+              }
+            },
+            {
+              "title": "More and Less",
+              "slug": "more-and-less",
+              "displayOrder": 2,
+              "content": {
+                "storyText": "Sara had two cookies and Ali had four cookies. \"Who has more?\" asked Dad. Sara counted and said, \"Ali has more, I have less.\" Then Dad split cookies kindly so both felt happy. They compared toy cars and blocks too. Sara learned that numbers help us compare and share fairly.",
+                "activityInstructions": "Create two groups of objects and ask which has more or less. Switch quantities and repeat with visuals.",
+                "quizConcept": "Comparing small quantities using more/less language.",
+                "worksheetExample": "Look at two groups and circle the group with more; color the group with less.",
+                "parentTip": "Use snack time for playful comparison questions using real items."
+              }
+            }
+          ]
+        },
+        {
+          "title": "Shapes and Patterns",
+          "slug": "shapes-and-patterns",
+          "displayOrder": 2,
+          "lessons": [
+            {
+              "title": "Circle, Square, Triangle",
+              "slug": "circle-square-triangle",
+              "displayOrder": 1,
+              "content": {
+                "storyText": "At the playground, Zoya saw a round ball, a square window, and a triangle flag. She shouted, \"Circle, square, triangle!\" Her friend made shape drawings with chalk and they jumped on each one. \"Shapes are everywhere,\" said Zoya. On the way home, she found more shapes in signs and toys. She learned to observe and name shapes with confidence.",
+                "activityInstructions": "Show three shape cards and ask child to name each. Hunt for these shapes around the room and sort objects by shape.",
+                "quizConcept": "Recognizing basic 2D shapes in objects and pictures.",
+                "worksheetExample": "Trace each shape, color by shape type, and match object pictures to circle/square/triangle.",
+                "parentTip": "Encourage shape hunting during walks for real-world learning transfer."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
