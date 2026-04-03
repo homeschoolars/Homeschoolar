@@ -79,6 +79,7 @@ export function CurriculumManagement() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [importingHtml, setImportingHtml] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const [ageGroups, setAgeGroups] = useState<AgeGroupNode[]>([])
@@ -104,6 +105,7 @@ export function CurriculumManagement() {
   })
   const [lessonEditor, setLessonEditor] = useState<LessonEditorState | null>(null)
   const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [htmlUploadFile, setHtmlUploadFile] = useState<File | null>(null)
 
   const selectedSubject = useMemo(
     () => subjects.find((s) => s.id === selectedSubjectId) ?? null,
@@ -528,6 +530,36 @@ export function CurriculumManagement() {
     URL.revokeObjectURL(url)
   }
 
+  const importCurriculumHtml = async () => {
+    if (!htmlUploadFile) return
+    setImportingHtml(true)
+    setError(null)
+    try {
+      const formData = new FormData()
+      formData.append("file", htmlUploadFile)
+
+      const res = await apiFetch("/api/curriculum/import-html", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(payload.error ?? "Failed to import HTML curriculum")
+      }
+
+      setHtmlUploadFile(null)
+      await loadAgeGroups()
+      if (selectedAgeGroup) {
+        await loadSubjects(selectedAgeGroup)
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to import HTML curriculum")
+    } finally {
+      setImportingHtml(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -653,6 +685,24 @@ export function CurriculumManagement() {
             Expected JSON root shape: <code>{'{ "subjects": [...], "stageName"?: "..." }'}</code> and each lesson may
             include content/prompts.
           </p>
+          <div className="border-t pt-4">
+            <p className="mb-2 text-sm font-medium text-slate-700">Import structured curriculum from HTML file</p>
+            <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+              <Input
+                type="file"
+                accept=".html,text/html"
+                onChange={(e) => setHtmlUploadFile(e.target.files?.[0] ?? null)}
+              />
+              <Button onClick={importCurriculumHtml} disabled={!htmlUploadFile || importingHtml}>
+                {importingHtml ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                Import HTML (All Ages)
+              </Button>
+            </div>
+            <p className="mt-2 text-xs text-slate-500">
+              Use this for files like <code>homeschoolars_curriculum_content.html</code>. It imports all age groups from
+              4-5 through 12-13 in one run.
+            </p>
+          </div>
         </CardContent>
       </Card>
 

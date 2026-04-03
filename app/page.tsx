@@ -1,6 +1,7 @@
 import { Header } from "@/components/landing/header"
 import { Hero } from "@/components/landing/hero"
 import { AgeSelector } from "@/components/landing/age-selector"
+import CurriculumExplorer from "@/components/landing/curriculum-explorer"
 import { Features } from "@/components/landing/features"
 import { HowItWorks } from "@/components/landing/how-it-works"
 import { Testimonials } from "@/components/landing/testimonials"
@@ -24,6 +25,9 @@ export default function HomePage() {
         </div>
         <Hero />
         <AgeSelector />
+        <section className="mx-auto w-full max-w-6xl px-6 pb-6">
+          <CurriculumExplorer />
+        </section>
         <Features />
         <HowItWorks />
         <Testimonials />
