@@ -821,8 +821,8 @@ export default function ParentDashboardClient({
                           </div>
                           <Progress value={0} className="h-2" />
                         </div>
-                        <div className="flex items-center gap-2 pt-2">
-                          <Button variant="outline" className="flex-1 bg-transparent" asChild>
+                        <div className="flex flex-wrap items-center gap-2 pt-2">
+                          <Button variant="outline" className="min-w-[130px] flex-1 bg-transparent" asChild>
                             <Link href={`/parent/child/${child.id}`}>
                               View Details <ChevronRight className="w-4 h-4 ml-1" />
                             </Link>
@@ -830,7 +830,7 @@ export default function ParentDashboardClient({
                           {child.orphan_status !== "verified" && (
                             <Button
                               variant="outline"
-                              className="flex-1 bg-transparent"
+                              className="min-w-[130px] flex-1 bg-transparent"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 setOrphanChildId(child.id)
@@ -840,12 +840,14 @@ export default function ParentDashboardClient({
                               <Upload className="w-4 h-4 mr-1" /> Verify Orphan
                             </Button>
                           )}
-                          <AssessmentPDFActions
-                            child={child}
-                            progress={[]}
-                            assessments={[]}
-                            subjects={subjectsByAgeGroup[child.age_group] ?? []}
-                          />
+                          <div className="w-full sm:w-auto">
+                            <AssessmentPDFActions
+                              child={child}
+                              progress={[]}
+                              assessments={[]}
+                              subjects={subjectsByAgeGroup[child.age_group] ?? []}
+                            />
+                          </div>
                         </div>
                       </div>
                     </CardContent>

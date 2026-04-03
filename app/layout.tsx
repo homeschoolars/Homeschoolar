@@ -36,7 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} ${nunito.variable} ${fredoka.variable} font-sans antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
           {children}
           <Toaster richColors position="top-right" />
         </ThemeProvider>

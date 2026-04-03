@@ -93,7 +93,7 @@ interface AssessmentPDFActionsProps {
 
 export function AssessmentPDFActions({ child, progress, assessments, subjects }: AssessmentPDFActionsProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <DownloadButton
         pdfType="assessment"
         data={{ child, progress, assessments, subjects }}
