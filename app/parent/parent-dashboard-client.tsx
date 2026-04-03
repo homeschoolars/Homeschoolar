@@ -59,6 +59,7 @@ import { NotificationCenter } from "@/components/notifications/notification-cent
 import { ParentOverview } from "@/components/dashboards/parent/parent-overview"
 import { RoadmapViewer } from "@/components/dashboards/parent/roadmap-viewer"
 import { WeeklyAIInsights } from "@/components/dashboards/parent/weekly-ai-insights"
+import { QuickContentActions } from "@/components/parent/quick-content-actions"
 import { signOut } from "next-auth/react"
 import { apiFetch } from "@/lib/api-client"
 import {
@@ -834,6 +835,21 @@ export default function ParentDashboardClient({
                     </SelectContent>
                   </Select>
                 </div>
+
+                {selectedChildId ? (
+                  <div className="lg:col-span-2">
+                    <QuickContentActions
+                      childId={selectedChildId}
+                      subjects={subjects}
+                      onWorksheetCreated={() => {
+                        // Optional future enhancement: refresh parent-side assignment counters.
+                      }}
+                      onQuizCreated={() => {
+                        // Student will see generated quiz in their dashboard flow.
+                      }}
+                    />
+                  </div>
+                ) : null}
 
                 {/* Worksheet Generator */}
                 <WorksheetGenerator

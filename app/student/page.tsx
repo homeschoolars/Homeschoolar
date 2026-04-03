@@ -84,6 +84,9 @@ export default function StudentDashboard() {
 
         if (!data.child.assessment_completed) {
           setShowAssessment(true)
+        } else if (data.pendingQuiz) {
+          setSurpriseQuiz(data.pendingQuiz as SurpriseQuiz)
+          setQuizState("ready")
         } else {
           checkForSurpriseQuiz(data.child)
         }

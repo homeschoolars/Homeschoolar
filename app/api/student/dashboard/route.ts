@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getStudentDashboard } from "@/services/student-service"
-import { serializeAssignment, serializeChild, serializeProgress, serializeSubject } from "@/lib/serializers"
+import { serializeAssignment, serializeChild, serializeProgress, serializeSubject, serializeSurpriseQuiz } from "@/lib/serializers"
 import { auth } from "@/auth"
 import { enforceParentChildAccess } from "@/lib/auth-helpers"
 
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const session = await auth()
     await enforceParentChildAccess(childId, session)
 
-    const { subjects, assignments, progress, child } = await getStudentDashboard(childId)
+    const { subjects, assignments, progress, child, pendingQuiz } = await getStudentDashboard(childId)
 
     const response = {
       success: true,
@@ -32,6 +32,7 @@ export async function POST(request: Request) {
       ),
       progress: (progress || []).map(serializeProgress),
       child: child ? serializeChild(child) : null,
+      pendingQuiz: pendingQuiz ? serializeSurpriseQuiz(pendingQuiz) : null,
     }
 
     return NextResponse.json(response)

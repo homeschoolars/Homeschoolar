@@ -28,7 +28,7 @@ export async function findChildByLoginCode(loginCode: string) {
 
 export async function getStudentDashboard(childId: string) {
   await ensureDefaultSubjects()
-  const [subjects, assignments, progress, child] = await Promise.all([
+  const [subjects, assignments, progress, child, pendingQuiz] = await Promise.all([
     prisma.subject.findMany({ orderBy: { displayOrder: "asc" } }),
     prisma.worksheetAssignment.findMany({
       where: { childId, status: "pending" },
@@ -37,6 +37,10 @@ export async function getStudentDashboard(childId: string) {
     }),
     prisma.progress.findMany({ where: { childId } }),
     prisma.child.findUnique({ where: { id: childId } }),
+    prisma.surpriseQuiz.findFirst({
+      where: { childId, completedAt: null },
+      orderBy: { createdAt: "desc" },
+    }),
   ])
 
   return {
@@ -44,5 +48,6 @@ export async function getStudentDashboard(childId: string) {
     assignments,
     progress,
     child,
+    pendingQuiz,
   }
 }
