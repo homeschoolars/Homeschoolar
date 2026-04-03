@@ -268,10 +268,38 @@ export async function getCurriculumSubject({
   })
   if (!age) return null
 
-  return prisma.curriculumSubject.findFirst({
+  const directMatch = await prisma.curriculumSubject.findFirst({
     where: {
       ageGroupId: age.id,
       OR: [{ id: subjectId }, { slug: subjectId }, { baseSubjectId: subjectId }],
+    },
+    include: {
+      units: {
+        orderBy: { displayOrder: "asc" },
+        include: {
+          lessons: {
+            orderBy: { displayOrder: "asc" },
+          },
+        },
+      },
+    },
+  })
+
+  if (directMatch) return directMatch
+
+  // Fallback: when route carries canonical Subject table id but curriculum rows were imported
+  // without baseSubjectId linkage, resolve by normalized subject name/slug.
+  const baseSubject = await prisma.subject.findUnique({
+    where: { id: subjectId },
+    select: { name: true },
+  })
+  if (!baseSubject?.name) return null
+
+  const baseSlug = slugifyValue(baseSubject.name)
+  return prisma.curriculumSubject.findFirst({
+    where: {
+      ageGroupId: age.id,
+      OR: [{ slug: baseSlug }, { name: { equals: baseSubject.name, mode: "insensitive" } }],
     },
     include: {
       units: {

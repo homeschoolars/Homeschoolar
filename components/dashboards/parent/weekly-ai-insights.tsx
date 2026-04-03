@@ -35,16 +35,20 @@ export function WeeklyAIInsights({ studentId, studentName }: WeeklyAIInsightsPro
       try {
         setLoading(true)
         setError(null)
-        let response = await apiFetch(`/api/parent/children/${studentId}/assessment-signals`)
+        // Prefer stable endpoint first to avoid expected 404 noise in console.
+        let response = await apiFetch(`/api/parent/children/${studentId}/insights`)
+        if (response.ok) {
+          const directData = (await response.json()) as { insights?: Insight[] }
+          setInsights(directData.insights || [])
+          return
+        }
 
-        // Backward-compatible fallback for deployments where assessment-signals route is unavailable.
-        if (response.status === 404) {
-          response = await apiFetch(`/api/parent/children/${studentId}/insights`)
-          if (response.ok) {
-            const fallbackData = (await response.json()) as { insights?: Insight[] }
-            setInsights(fallbackData.insights || [])
-            return
-          }
+        // Backward-compatible fallback for deployments that only expose assessment-signals.
+        response = await apiFetch(`/api/parent/children/${studentId}/assessment-signals`)
+        if (response.ok) {
+          const legacyData = (await response.json()) as { signals?: Insight[] }
+          setInsights(legacyData.signals || [])
+          return
         }
 
         if (!response.ok) {
