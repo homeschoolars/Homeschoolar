@@ -1,0 +1,74 @@
+
+> homeschoolar-app@0.1.0 lint
+> eslint .
+
+
+/Users/ghost/Documents/Homeschoolars/Homeschoolars/app/admin/admin-dashboard-client.tsx
+  139:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/ghost/Documents/Homeschoolars/Homeschoolars/app/admin/admin-dashboard-client.tsx:139:5
+  137 |
+  138 |   useEffect(() => {
+> 139 |     loadSubscriptions()
+      |     ^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  140 |     loadOrphanQueue()
+  141 |   }, [])
+  142 |  react-hooks/set-state-in-effect
+
+/Users/ghost/Documents/Homeschoolars/Homeschoolars/app/parent/page.tsx
+  25:7  error  Do not pass children as props. Instead, nest children between the opening and closing tags  react/no-children-prop
+
+/Users/ghost/Documents/Homeschoolars/Homeschoolars/components/admin/curriculum-management.tsx
+  222:5  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+  235:5  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+  248:5  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+  261:5  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+
+/Users/ghost/Documents/Homeschoolars/Homeschoolars/components/admin/pkr-payment-verification.tsx
+   61:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/ghost/Documents/Homeschoolars/Homeschoolars/components/admin/pkr-payment-verification.tsx:61:5
+  59 |
+  60 |   useEffect(() => {
+> 61 |     fetchPendingPayments()
+     |     ^^^^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  62 |   }, [])
+  63 |
+  64 |   const viewReceipt = async (payment: PendingPayment) => {  react-hooks/set-state-in-effect
+  277:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @next/next/no-img-element
+
+/Users/ghost/Documents/Homeschoolars/Homeschoolars/components/ai/curriculum-plan-card.tsx
+  53:6  warning  React Hook useEffect has a missing dependency: 'loadPlan'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/ghost/Documents/Homeschoolars/Homeschoolars/components/ai/initial-assessment.tsx
+  146:6  warning  React Hook useCallback has a missing dependency: 'loadSubjectAssessment'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/ghost/Documents/Homeschoolars/Homeschoolars/components/ai/recommendations-panel.tsx
+  37:6  warning  React Hook useEffect has a missing dependency: 'loadRecommendations'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/ghost/Documents/Homeschoolars/Homeschoolars/components/analytics/admin-analytics.tsx
+  64:7  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/set-state-in-effect')
+  82:7  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/set-state-in-effect')
+
+/Users/ghost/Documents/Homeschoolars/Homeschoolars/components/analytics/parent-analytics.tsx
+  57:7  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/set-state-in-effect')
+  81:7  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/set-state-in-effect')
+
+/Users/ghost/Documents/Homeschoolars/Homeschoolars/components/notifications/notification-center.tsx
+  20:5  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/set-state-in-effect')
+
+✖ 16 problems (3 errors, 13 warnings)
+  0 errors and 9 warnings potentially fixable with the `--fix` option.
+

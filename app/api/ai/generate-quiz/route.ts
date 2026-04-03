@@ -2,7 +2,8 @@ import type { AgeGroup } from "@/lib/types"
 import { generateQuiz } from "@/services/ai-service"
 import { serializeSurpriseQuiz } from "@/lib/serializers"
 import { auth } from "@/auth"
-import { enforceParentChildAccess } from "@/lib/auth-helpers"
+import { enforceParentOrStudentChildAccess } from "@/lib/auth-helpers"
+import { fail, ok, statusFromErrorMessage } from "@/lib/api-response"
 
 // Force dynamic rendering - this is an API route that should never be statically generated
 export const dynamic = 'force-dynamic'
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
     }
 
     const session = await auth()
-    await enforceParentChildAccess(child_id, session)
+    await enforceParentOrStudentChildAccess({ childId: child_id, session, request: req })
 
     const quiz = await generateQuiz({
       child_id,
@@ -28,11 +29,10 @@ export async function POST(req: Request) {
       age_group,
       recent_topics,
     })
-    return Response.json({ quiz: serializeSurpriseQuiz(quiz) })
+    return ok({ quiz: serializeSurpriseQuiz(quiz) })
   } catch (error) {
     console.error("Error generating quiz:", error)
     const message = error instanceof Error ? error.message : "Failed to generate quiz"
-    const status = message === "Unauthorized" || message === "Forbidden" ? 403 : 400
-    return Response.json({ error: message }, { status })
+    return fail(message, statusFromErrorMessage(message, 400))
   }
 }

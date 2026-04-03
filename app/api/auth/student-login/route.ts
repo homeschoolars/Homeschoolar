@@ -2,6 +2,11 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { findChildByLoginCode } from "@/services/student-service"
 import { serializeChild } from "@/lib/serializers"
+import {
+  createStudentSessionToken,
+  getStudentSessionCookieOptions,
+  STUDENT_SESSION_COOKIE,
+} from "@/lib/student-session"
 
 export async function POST(request: Request) {
   try {
@@ -21,7 +26,7 @@ export async function POST(request: Request) {
     const serialized = serializeChild(child)
 
     // Return child data (without sensitive parent info)
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       child: {
         id: serialized.id,
@@ -32,6 +37,8 @@ export async function POST(request: Request) {
         login_code: serialized.login_code,
       },
     })
+    response.cookies.set(STUDENT_SESSION_COOKIE, createStudentSessionToken(serialized.id), getStudentSessionCookieOptions())
+    return response
   } catch (error) {
     console.error("Student login error:", error)
     const message = error instanceof Error ? error.message : "An unexpected error occurred"

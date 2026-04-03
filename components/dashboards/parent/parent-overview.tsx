@@ -17,16 +17,29 @@ interface ParentOverviewProps {
 }
 
 type AnalyticsData = {
-  summary: {
+  success?: boolean
+  data?: {
+    summary?: {
+      averageScore: number
+      worksheetsCompleted: number
+      improvementPercent: number
+      weeklyActivityCount: number
+      streak?: number
+    }
+    progressData?: Array<{ week: string; score: number }>
+    subjectScores?: Array<{ subject: string; score: number; fullMark: number }>
+    weeklyActivity?: Array<{ day: string; worksheets: number; quizzes: number }>
+  }
+  summary?: {
     averageScore: number
     worksheetsCompleted: number
     improvementPercent: number
     weeklyActivityCount: number
     streak?: number
   }
-  progressData: Array<{ week: string; score: number }>
-  subjectScores: Array<{ subject: string; score: number; fullMark: number }>
-  weeklyActivity: Array<{ day: string; worksheets: number; quizzes: number }>
+  progressData?: Array<{ week: string; score: number }>
+  subjectScores?: Array<{ subject: string; score: number; fullMark: number }>
+  weeklyActivity?: Array<{ day: string; worksheets: number; quizzes: number }>
 }
 
 type InsightsData = {
@@ -54,13 +67,9 @@ export function ParentOverview({ children, subjects }: ParentOverviewProps) {
   const selectedChild = children.find((c) => c.id === selectedChildId)
 
   useEffect(() => {
-    if (!selectedChildId) {
-      setAnalytics(null)
-      setInsights(null)
-      setActivities([])
-      setLoading(false)
-      return
-    }
+    if (!selectedChildId) return
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     const abort = new AbortController()
     Promise.all([
@@ -78,7 +87,22 @@ export function ParentOverview({ children, subjects }: ParentOverviewProps) {
     ])
       .then(([analyticsRes, insightsRes, activityRes]) => {
         if (abort.signal.aborted) return
-        setAnalytics(analyticsRes as AnalyticsData)
+        const normalizedAnalytics = analyticsRes as AnalyticsData
+        setAnalytics(
+          normalizedAnalytics.data
+            ? {
+                summary: normalizedAnalytics.data.summary ?? {
+                  averageScore: 0,
+                  worksheetsCompleted: 0,
+                  improvementPercent: 0,
+                  weeklyActivityCount: 0,
+                },
+                progressData: normalizedAnalytics.data.progressData ?? [],
+                subjectScores: normalizedAnalytics.data.subjectScores ?? [],
+                weeklyActivity: normalizedAnalytics.data.weeklyActivity ?? [],
+              }
+            : (normalizedAnalytics as AnalyticsData),
+        )
         setInsights((insightsRes as { insights?: InsightsData })?.insights ?? null)
         setActivities((activityRes as { activities?: ActivityItem[] })?.activities ?? [])
       })

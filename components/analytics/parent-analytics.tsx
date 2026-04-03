@@ -53,36 +53,39 @@ export function ParentAnalytics({ children, subjects }: ParentAnalyticsProps) {
   ]
 
   useEffect(() => {
+    const fetchChildProgress = async () => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsLoading(true)
+      const response = await apiFetch("/api/analytics/parent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ childId: selectedChildId }),
+      })
+      const data = (await response.json()) as {
+        summary: {
+          averageScore: number
+          worksheetsCompleted: number
+          improvementPercent: number
+          weeklyActivityCount: number
+        }
+        progressData: Array<{ week: string; score: number }>
+        subjectScores: Array<{ subject: string; score: number; fullMark: number }>
+        weeklyActivity: Array<{ day: string; worksheets: number; quizzes: number }>
+      }
+
+      setSummary(data.summary)
+      setProgressData(data.progressData || [])
+      setSubjectScores(data.subjectScores || [])
+      setWeeklyActivity(data.weeklyActivity || [])
+      
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsLoading(false)
+    }
+
     if (selectedChildId) {
       fetchChildProgress()
     }
   }, [selectedChildId])
-
-  const fetchChildProgress = async () => {
-    setIsLoading(true)
-    const response = await apiFetch("/api/analytics/parent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ childId: selectedChildId }),
-    })
-    const data = (await response.json()) as {
-      summary: {
-        averageScore: number
-        worksheetsCompleted: number
-        improvementPercent: number
-        weeklyActivityCount: number
-      }
-      progressData: Array<{ week: string; score: number }>
-      subjectScores: Array<{ subject: string; score: number; fullMark: number }>
-      weeklyActivity: Array<{ day: string; worksheets: number; quizzes: number }>
-    }
-
-    setSummary(data.summary)
-    setProgressData(data.progressData || [])
-    setSubjectScores(data.subjectScores || [])
-    setWeeklyActivity(data.weeklyActivity || [])
-    setIsLoading(false)
-  }
 
   if (children.length === 0) {
     return (

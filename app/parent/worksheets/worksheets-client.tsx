@@ -4,10 +4,9 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { FileText, Calendar, BookOpen, CheckCircle, Clock } from "lucide-react"
-import Link from "next/link"
 import type { Child } from "@/lib/types"
+import { ParentPageShell } from "@/components/layout/parent-page-shell"
 
 type Assignment = {
   id: string
@@ -44,17 +43,7 @@ export default function WorksheetsPageClient({ children, assignments }: Workshee
   const completedCount = filteredAssignments.filter((a) => a.status === "completed").length
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Worksheets</h1>
-            <p className="text-gray-600 mt-1">View and manage assigned worksheets</p>
-          </div>
-          <Link href="/parent">
-            <Button variant="outline">Back to Dashboard</Button>
-          </Link>
-        </div>
+    <ParentPageShell title="Worksheets" subtitle="View and manage assigned worksheets">
 
         {/* Filters */}
         <Card className="mb-6">
@@ -152,7 +141,6 @@ export default function WorksheetsPageClient({ children, assignments }: Workshee
             ))}
           </div>
         )}
-      </div>
-    </div>
+    </ParentPageShell>
   )
 }

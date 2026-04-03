@@ -247,7 +247,7 @@ export function AgeSelector() {
             <Star className="inline-block h-8 w-8 text-yellow fill-yellow ml-2 animate-wiggle" />
           </h2>
           <p className="mt-4 text-lg text-foreground/70 text-pretty">
-            Our AI adapts content to match your child's developmental stage, ensuring the right challenge at the right
+            Our AI adapts content to match your child&apos;s developmental stage, ensuring the right challenge at the right
             time.
           </p>
         </div>

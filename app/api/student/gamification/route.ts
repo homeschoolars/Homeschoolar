@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { enforceParentChildAccess } from "@/lib/auth-helpers"
+import { enforceParentOrStudentChildAccess } from "@/lib/auth-helpers"
 import { auth } from "@/auth"
+import { fail, ok, statusFromErrorMessage } from "@/lib/api-response"
 
 // Force dynamic rendering - this route makes database calls
 export const dynamic = 'force-dynamic'
@@ -21,11 +22,11 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const childId = searchParams.get("childId")
     if (!childId) {
-      return NextResponse.json({ error: "childId required" }, { status: 400 })
+      return fail("childId required", 400)
     }
 
     const session = await auth()
-    await enforceParentChildAccess(childId, session)
+    await enforceParentOrStudentChildAccess({ childId, session, request })
 
     const [progressRows, quizCount, submissionDays, quizDays] = await Promise.all([
       prisma.progress.findMany({
@@ -110,7 +111,7 @@ export async function GET(request: Request) {
       },
     ]
 
-    return NextResponse.json({
+    return ok({
       xp: totalXp,
       level,
       stars,
@@ -127,7 +128,6 @@ export async function GET(request: Request) {
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load gamification"
-    const status = message === "Unauthorized" || message === "Forbidden" ? 403 : 500
-    return NextResponse.json({ error: message }, { status })
+    return fail(message, statusFromErrorMessage(message, 500))
   }
 }

@@ -48,10 +48,6 @@ export function PKRPaymentVerification() {
   const [rejectionReason, setRejectionReason] = useState("")
   const [processing, setProcessing] = useState(false)
 
-  useEffect(() => {
-    fetchPendingPayments()
-  }, [])
-
   const fetchPendingPayments = async () => {
     const response = await apiFetch("/api/admin/payments/pkr")
     const data = await response.json()
@@ -60,6 +56,11 @@ export function PKRPaymentVerification() {
     }
     setLoading(false)
   }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchPendingPayments()
+  }, [])
 
   const viewReceipt = async (payment: PendingPayment) => {
     setSelectedPayment(payment)

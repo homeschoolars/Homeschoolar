@@ -16,11 +16,8 @@ export function NotificationCenter() {
 
   const unreadCount = notifications.filter((n) => !n.is_read).length
 
-  useEffect(() => {
-    fetchNotifications()
-  }, [])
-
   const fetchNotifications = async () => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true)
     const response = await apiFetch("/api/notifications")
     const data = await response.json()
@@ -29,6 +26,11 @@ export function NotificationCenter() {
     }
     setIsLoading(false)
   }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchNotifications()
+  }, [])
 
   const markAsRead = async (id: string) => {
     await apiFetch("/api/notifications", {

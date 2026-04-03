@@ -25,6 +25,7 @@ export function SurpriseQuizModal({ quiz, ageGroup, onComplete, onClose }: Surpr
   const [answers, setAnswers] = useState<Answer[]>([])
   const [selectedAnswer, setSelectedAnswer] = useState<string>("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [results, setResults] = useState<{
     score: number
     max_score: number
@@ -64,6 +65,7 @@ export function SurpriseQuizModal({ quiz, ageGroup, onComplete, onClose }: Surpr
   // Define submitQuiz before useEffect so it's in scope and stable
   const submitQuiz = async (finalAnswers: Answer[]) => {
     setIsSubmitting(true)
+    setSubmitError(null)
 
     try {
       const response = await apiFetch("/api/ai/grade-quiz", {
@@ -76,23 +78,35 @@ export function SurpriseQuizModal({ quiz, ageGroup, onComplete, onClose }: Surpr
         }),
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        setResults(data)
+      const data = (await response.json()) as
+        | {
+            score: number
+            max_score: number
+            graded_answers: { question_id: string; is_correct: boolean; feedback: string }[]
+            overall_feedback: string
+            encouragement: string
+          }
+        | { error?: string }
 
-        // Trigger confetti for good scores
-        if (data.score >= data.max_score * 0.7) {
-          confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { y: 0.6 },
-          })
-        }
-
-        onComplete(data.score)
+      if (!response.ok) {
+        throw new Error("error" in data && data.error ? data.error : "Could not submit quiz. Please try again.")
       }
+
+      setResults(data)
+
+      // Trigger confetti for good scores
+      if (data.score >= data.max_score * 0.7) {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+        })
+      }
+
+      onComplete(data.score)
     } catch (error) {
       console.error("Error submitting quiz:", error)
+      setSubmitError(error instanceof Error ? error.message : "Could not submit quiz. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
@@ -128,6 +142,7 @@ export function SurpriseQuizModal({ quiz, ageGroup, onComplete, onClose }: Surpr
 
   const handleNext = () => {
     if (!selectedAnswer) return
+    setSubmitError(null)
 
     const newAnswers = [...answers, { question_id: question.id, answer: selectedAnswer }]
     setAnswers(newAnswers)
@@ -314,6 +329,7 @@ export function SurpriseQuizModal({ quiz, ageGroup, onComplete, onClose }: Surpr
               )}
             </Button>
           </div>
+          {submitError ? <p className="text-sm text-red-600">{submitError}</p> : null}
         </div>
       </DialogContent>
     </Dialog>

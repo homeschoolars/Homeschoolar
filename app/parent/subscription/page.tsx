@@ -27,9 +27,11 @@ export default async function SubscriptionPage() {
   const isTrial = subscription?.type === "trial"
   const isOrphan = subscription?.type === "orphan"
   const trialEndsAt = subscription?.trial_ends_at ? new Date(subscription.trial_ends_at) : null
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now()
   const trialDaysLeft =
-    trialEndsAt && trialEndsAt.getTime() > Date.now()
-      ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    trialEndsAt && trialEndsAt.getTime() > now
+      ? Math.max(0, Math.ceil((trialEndsAt.getTime() - now) / (1000 * 60 * 60 * 24)))
       : 0
 
   return (

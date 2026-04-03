@@ -2,7 +2,7 @@ import type { AgeGroup } from "@/lib/types"
 import { generateInitialAssessment } from "@/services/ai-service"
 import { serializeAssessment } from "@/lib/serializers"
 import { auth } from "@/auth"
-import { enforceParentChildAccess } from "@/lib/auth-helpers"
+import { enforceParentOrStudentChildAccess } from "@/lib/auth-helpers"
 import { safeParseRequestJson } from "@/lib/safe-json"
 import { z } from "zod"
 
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
 
     // Authenticate and authorize
     const session = await auth()
-    await enforceParentChildAccess(child_id, session)
+    await enforceParentOrStudentChildAccess({ childId: child_id, session, request: req })
 
     // Generate assessment with error handling
     const { assessment, source, fallback_reason } = await generateInitialAssessment({

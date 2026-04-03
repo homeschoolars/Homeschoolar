@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import Image from "next/image"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -47,8 +48,8 @@ export function PayPalCheckout({ billingPeriod, amount, currency, trigger }: Pay
           </DialogHeader>
 
           <div className="py-6 text-center">
-            <div className="mb-6">
-              <img src="/paypal-logo.png" alt="PayPal" className="h-12 mx-auto" />
+            <div className="mb-6 flex justify-center">
+              <Image src="/paypal-logo.png" alt="PayPal" width={120} height={48} className="h-12 w-auto object-contain" />
             </div>
             <Button
               onClick={handlePayPalPayment}

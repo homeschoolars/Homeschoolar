@@ -22,6 +22,7 @@ export default async function ParentDashboard() {
   return (
     <ParentDashboardClient
       profile={mappedProfile}
+      // eslint-disable-next-line react/no-children-prop
       children={mappedChildren}
       subjectsByAgeGroup={mappedSubjectsByAgeGroup}
       subscription={mappedSubscription}

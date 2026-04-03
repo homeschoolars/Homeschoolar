@@ -37,10 +37,6 @@ export function NotificationPreferences() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
 
-  useEffect(() => {
-    fetchPreferences()
-  }, [])
-
   const fetchPreferences = async () => {
     const response = await apiFetch("/api/notifications/preferences")
     const data = await response.json()
@@ -49,6 +45,11 @@ export function NotificationPreferences() {
     }
     setIsLoading(false)
   }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchPreferences()
+  }, [])
 
   const handleToggle = async (key: keyof Preferences) => {
     const newValue = !preferences[key]

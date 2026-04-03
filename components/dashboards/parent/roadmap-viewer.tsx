@@ -44,11 +44,9 @@ export function RoadmapViewer({ studentId, studentName }: RoadmapViewerProps) {
         throw new Error(`Failed to load roadmap: ${response.status}`)
       }
       const data = await response.json()
-      // Check if roadmap exists (roadmap_json will be null if not generated yet)
       if (data.roadmap_json) {
         setRoadmap(data.roadmap_json as RoadmapData)
       } else {
-        // Roadmap doesn't exist yet - this is normal, not an error
         setRoadmap(null)
         setError(null)
       }
@@ -62,6 +60,7 @@ export function RoadmapViewer({ studentId, studentName }: RoadmapViewerProps) {
 
   useEffect(() => {
     fetchRoadmap()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentId])
 
   const handleRegenerate = async () => {

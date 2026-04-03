@@ -60,29 +60,31 @@ export function AdminAnalytics() {
   const [aiUsageData, setAiUsageData] = useState<AdminAnalyticsResponse["aiUsageData"]>([])
 
   useEffect(() => {
+    const fetchStats = async () => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsLoading(true)
+
+      const response = await apiFetch(`/api/admin/analytics?range=${timeRange}`)
+      const data = (await response.json()) as AdminAnalyticsResponse
+
+      setStats(data.stats)
+      setUserGrowthData(data.userGrowthData || [])
+      setRevenueData(data.revenueData || [])
+      setPlanDistribution(
+        (data.planDistribution || []).map((entry, index) => ({
+          ...entry,
+          color: COLORS[index % COLORS.length],
+        })),
+      )
+      setSubjectEngagement(data.subjectEngagement || [])
+      setAiUsageData(data.aiUsageData || [])
+
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsLoading(false)
+    }
+
     fetchStats()
   }, [timeRange])
-
-  const fetchStats = async () => {
-    setIsLoading(true)
-
-    const response = await apiFetch(`/api/admin/analytics?range=${timeRange}`)
-    const data = (await response.json()) as AdminAnalyticsResponse
-
-    setStats(data.stats)
-    setUserGrowthData(data.userGrowthData || [])
-    setRevenueData(data.revenueData || [])
-    setPlanDistribution(
-      (data.planDistribution || []).map((entry, index) => ({
-        ...entry,
-        color: COLORS[index % COLORS.length],
-      })),
-    )
-    setSubjectEngagement(data.subjectEngagement || [])
-    setAiUsageData(data.aiUsageData || [])
-
-    setIsLoading(false)
-  }
 
   return (
     <div className="space-y-6">

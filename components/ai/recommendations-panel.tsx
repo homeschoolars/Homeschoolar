@@ -31,35 +31,55 @@ export function RecommendationsPanel({ childId, childName }: RecommendationsPane
   const [recommendations, setRecommendations] = useState<AIRecommendation[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadRecommendations()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [childId])
 
   const loadRecommendations = async () => {
     setIsLoading(true)
+    setError(null)
     try {
-      const response = await apiFetch("/api/ai/recommend-curriculum", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ child_id: childId }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setRecommendations(data.recommendations)
-      }
+      const response = await apiFetch(`/api/parent/children/${encodeURIComponent(childId)}/recommendations`)
+      const data = (await response.json()) as
+        | { recommendations?: AIRecommendation[]; error?: string }
+        | { success?: boolean; data?: { recommendations?: AIRecommendation[] }; error?: string }
+      if (!response.ok) throw new Error(data.error || "Failed to load recommendations")
+      const recommendationsPayload =
+        "data" in data && data.data ? data.data.recommendations : ("recommendations" in data ? data.recommendations : [])
+      setRecommendations(recommendationsPayload ?? [])
     } catch (error) {
       console.error("Error loading recommendations:", error)
+      setError(error instanceof Error ? error.message : "Failed to load recommendations")
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleRefresh = async () => {
+    setError(null)
     setIsRefreshing(true)
-    await loadRecommendations()
-    setIsRefreshing(false)
+    try {
+      const response = await apiFetch("/api/ai/recommend-curriculum", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ child_id: childId }),
+      })
+      const data = (await response.json()) as
+        | { recommendations?: AIRecommendation[]; error?: string }
+        | { success?: boolean; data?: { recommendations?: AIRecommendation[] }; error?: string }
+      if (!response.ok) throw new Error(data.error || "Failed to refresh recommendations")
+      const recommendationsPayload =
+        "data" in data && data.data ? data.data.recommendations : ("recommendations" in data ? data.recommendations : [])
+      setRecommendations(recommendationsPayload ?? [])
+    } catch (error) {
+      console.error("Error refreshing recommendations:", error)
+      setError(error instanceof Error ? error.message : "Failed to refresh recommendations")
+    } finally {
+      setIsRefreshing(false)
+    }
   }
 
   const handleDismiss = (index: number) => {
@@ -94,6 +114,9 @@ export function RecommendationsPanel({ childId, childName }: RecommendationsPane
         </div>
       </CardHeader>
       <CardContent className="p-4 space-y-3">
+        {error ? (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+        ) : null}
         {recommendations.length > 0 ? (
           recommendations.map((rec, index) => {
             const Icon = typeIcons[rec.type]

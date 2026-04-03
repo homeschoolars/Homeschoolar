@@ -1,6 +1,6 @@
 import { completeAssessment } from "@/services/ai-service"
 import { auth } from "@/auth"
-import { enforceParentChildAccess } from "@/lib/auth-helpers"
+import { enforceParentOrStudentChildAccess } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 import { safeParseRequestJson } from "@/lib/safe-json"
 import { z } from "zod"
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     }
 
     if (assessment.childId) {
-      await enforceParentChildAccess(assessment.childId, session)
+      await enforceParentOrStudentChildAccess({ childId: assessment.childId, session, request: req })
     }
 
     // Complete assessment with error handling

@@ -67,33 +67,35 @@ export default function StudentDashboard() {
 
       const data = await response.json()
 
-      if (data.subjects) {
-        setSubjects(data.subjects)
+      const payload = data?.data ?? data
+
+      if (payload.subjects) {
+        setSubjects(payload.subjects)
       }
-      if (data.assignments) {
-        setAssignments(data.assignments)
+      if (payload.assignments) {
+        setAssignments(payload.assignments)
       }
-      if (data.progress) {
-        setProgress(data.progress)
+      if (payload.progress) {
+        setProgress(payload.progress)
       }
 
       // Update child data from server (in case it changed)
-      if (data.child) {
-        setChild(data.child)
-        sessionStorage.setItem("student_child", JSON.stringify(data.child))
+      if (payload.child) {
+        setChild(payload.child)
+        sessionStorage.setItem("student_child", JSON.stringify(payload.child))
 
-        if (!data.child.assessment_completed) {
+        if (!payload.child.assessment_completed) {
           setShowAssessment(true)
-        } else if (data.pendingQuiz) {
+        } else if (payload.pendingQuiz) {
           // Always show any pending quiz already generated for this child.
-          setSurpriseQuiz(data.pendingQuiz)
+          setSurpriseQuiz(payload.pendingQuiz)
           setQuizState("ready")
         } else {
-          checkForSurpriseQuiz(data.child)
+          checkForSurpriseQuiz(payload.child)
         }
       }
 
-      const id = data.child?.id
+      const id = payload.child?.id
       if (id) {
         const gRes = await apiFetch(`/api/student/gamification?childId=${encodeURIComponent(id)}`)
         if (gRes.ok) {

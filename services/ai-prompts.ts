@@ -110,6 +110,7 @@ export function buildGradeSubmissionPrompt({
   worksheetTitle: string
   subject: string
   questions: Array<{
+    id: string
     question: string
     correct_answer: string
     student_answer: string
@@ -134,7 +135,7 @@ Questions and Answers:
 ${questions
   .map(
     (q, i) => `
-Question ${i + 1} (${q.points} points): ${q.question}
+Question ${i + 1} [ID: ${q.id}] (${q.points} points): ${q.question}
 Correct Answer: ${q.correct_answer}
 Student's Answer: ${q.student_answer}
 `,
@@ -266,7 +267,7 @@ export function buildGradeQuizPrompt({
   questions,
 }: {
   ageGroup: string
-  questions: Array<{ question: string; correct_answer: string; student_answer: string }>
+  questions: Array<{ id: string; question: string; correct_answer: string; student_answer: string; points: number }>
 }) {
   return `MODE: LEARNING (Grading Enabled)
 
@@ -284,7 +285,7 @@ Questions and Answers:
 ${questions
   .map(
     (q, i) => `
-Question ${i + 1}: ${q.question}
+Question ${i + 1} [ID: ${q.id}] (${q.points} point${q.points === 1 ? "" : "s"}): ${q.question}
 Correct Answer: ${q.correct_answer}
 Student's Answer: ${q.student_answer}
 `,

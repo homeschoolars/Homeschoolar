@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -20,12 +20,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import Link from "next/link"
 import Image from "next/image"
+import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import {
   BookOpen,
   Plus,
   Users,
-  Settings,
   LogOut,
   Star,
   Copy,
@@ -38,7 +38,6 @@ import {
   FileText,
   BarChart3,
   Upload,
-  LayoutDashboard,
 } from "lucide-react"
 import type {
   Profile,
@@ -51,12 +50,10 @@ import type {
   Religion,
   ScreenTolerance,
 } from "@/lib/types"
-import { WorksheetGenerator } from "@/components/ai/worksheet-generator"
 import { RecommendationsPanel } from "@/components/ai/recommendations-panel"
 import { CurriculumPlanCard } from "@/components/ai/curriculum-plan-card"
 import { CurriculumPDFActions, AssessmentPDFActions } from "@/components/pdf/pdf-actions"
 import { NotificationCenter } from "@/components/notifications/notification-center"
-import { ParentOverview } from "@/components/dashboards/parent/parent-overview"
 import { RoadmapViewer } from "@/components/dashboards/parent/roadmap-viewer"
 import { WeeklyAIInsights } from "@/components/dashboards/parent/weekly-ai-insights"
 import { QuickContentActions } from "@/components/parent/quick-content-actions"
@@ -72,6 +69,22 @@ import {
   screenToleranceOptions,
 } from "@/lib/onboarding-options"
 import { calculateAgeYears, deriveAgeGroup } from "@/lib/onboarding-utils"
+
+const ParentOverview = dynamic(
+  () => import("@/components/dashboards/parent/parent-overview").then((m) => m.ParentOverview),
+  {
+    ssr: false,
+    loading: () => <div className="h-40 animate-pulse rounded-lg border bg-white" />,
+  },
+)
+
+const WorksheetGenerator = dynamic(
+  () => import("@/components/ai/worksheet-generator").then((m) => m.WorksheetGenerator),
+  {
+    ssr: false,
+    loading: () => <div className="h-40 animate-pulse rounded-lg border bg-white" />,
+  },
+)
 
 type CurriculumSubjectSummary = {
   id: string
@@ -129,6 +142,15 @@ export default function ParentDashboardClient({
   const selectedChild = children.find((c) => c.id === selectedChildId)
   const curriculumAgeGroup = selectedChild?.age_group ?? "6-7"
   const selectedChildSubjects = selectedChild ? (subjectsByAgeGroup[selectedChild.age_group] ?? []) : []
+  const allDashboardSubjects = useMemo(() => {
+    const map = new Map<string, Subject>()
+    Object.values(subjectsByAgeGroup)
+      .flat()
+      .forEach((subject) => {
+        map.set(subject.id, subject)
+      })
+    return Array.from(map.values())
+  }, [subjectsByAgeGroup])
 
   useEffect(() => {
     if (!selectedChild?.age_group) {
@@ -305,12 +327,22 @@ export default function ParentDashboardClient({
 
           <div className="flex items-center gap-3">
             <NotificationCenter />
-            <Button variant="ghost" size="icon">
-              <Settings className="w-5 h-5" />
-            </Button>
             <Button variant="ghost" size="icon" onClick={handleLogout}>
               <LogOut className="w-5 h-5" />
             </Button>
+          </div>
+        </div>
+        <div className="border-t bg-white md:hidden">
+          <div className="container mx-auto flex items-center gap-4 px-4 py-2 text-sm">
+            <Link href="/parent" className="font-medium text-teal-600">
+              Dashboard
+            </Link>
+            <Link href="/parent/worksheets" className="font-medium text-gray-600 hover:text-teal-600">
+              Worksheets
+            </Link>
+            <Link href="/parent/progress" className="font-medium text-gray-600 hover:text-teal-600">
+              Progress
+            </Link>
           </div>
         </div>
       </header>
@@ -422,7 +454,7 @@ export default function ParentDashboardClient({
         </div>
 
         <Tabs defaultValue="children" className="space-y-6">
-          <TabsList className="bg-white border">
+          <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto bg-white border p-1">
             <TabsTrigger value="children">Children</TabsTrigger>
             <TabsTrigger value="ai-tools" className="flex items-center gap-1">
               <Sparkles className="w-4 h-4" /> AI Tools
@@ -965,6 +997,10 @@ export default function ParentDashboardClient({
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-6">
+            <ParentOverview children={children} subjects={allDashboardSubjects} />
           </TabsContent>
 
           <TabsContent value="documents" className="space-y-6">

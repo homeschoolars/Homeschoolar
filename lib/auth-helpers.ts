@@ -2,6 +2,7 @@ import { auth } from "@/auth"
 import type { UserRole } from "@/lib/types"
 import type { Session } from "next-auth"
 import { prisma } from "@/lib/prisma"
+import { STUDENT_SESSION_COOKIE, verifyStudentSessionToken } from "@/lib/student-session"
 
 export async function requireSession() {
   const session = await auth()
@@ -34,7 +35,7 @@ export async function requireAdminRole(roles: Array<"super_admin" | "content_adm
 
 export async function enforceParentChildAccess(childId: string, session: Session | null) {
   if (!session?.user?.id) {
-    return
+    throw new Error("Unauthorized")
   }
   if (session.user.role === "admin") {
     return
@@ -47,6 +48,43 @@ export async function enforceParentChildAccess(childId: string, session: Session
     select: { id: true },
   })
   if (!child) {
+    throw new Error("Forbidden")
+  }
+}
+
+function readCookie(request: Request, cookieName: string) {
+  const cookieHeader = request.headers.get("cookie")
+  if (!cookieHeader) return null
+  const chunks = cookieHeader.split(";")
+  for (const chunk of chunks) {
+    const [rawName, ...rest] = chunk.trim().split("=")
+    if (rawName === cookieName) {
+      return decodeURIComponent(rest.join("="))
+    }
+  }
+  return null
+}
+
+export async function enforceParentOrStudentChildAccess({
+  childId,
+  session,
+  request,
+}: {
+  childId: string
+  session: Session | null
+  request: Request
+}) {
+  if (session?.user?.id) {
+    await enforceParentChildAccess(childId, session)
+    return
+  }
+
+  const token = readCookie(request, STUDENT_SESSION_COOKIE)
+  if (!token) {
+    throw new Error("Unauthorized")
+  }
+  const payload = verifyStudentSessionToken(token)
+  if (!payload || payload.childId !== childId) {
     throw new Error("Forbidden")
   }
 }

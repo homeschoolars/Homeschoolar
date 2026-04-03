@@ -2,7 +2,8 @@ import { NextResponse } from "next/server"
 import { getStudentDashboard } from "@/services/student-service"
 import { serializeAssignment, serializeChild, serializeProgress, serializeSubject, serializeSurpriseQuiz } from "@/lib/serializers"
 import { auth } from "@/auth"
-import { enforceParentChildAccess } from "@/lib/auth-helpers"
+import { enforceParentOrStudentChildAccess } from "@/lib/auth-helpers"
+import { fail, ok, statusFromErrorMessage } from "@/lib/api-response"
 
 // Force dynamic rendering - this is an API route that should never be statically generated
 export const dynamic = 'force-dynamic'
@@ -13,16 +14,15 @@ export async function POST(request: Request) {
     const { childId } = await request.json()
 
     if (!childId) {
-      return NextResponse.json({ error: "Child ID is required" }, { status: 400 })
+      return fail("Child ID is required", 400)
     }
 
     const session = await auth()
-    await enforceParentChildAccess(childId, session)
+    await enforceParentOrStudentChildAccess({ childId, session, request })
 
     const { subjects, assignments, progress, child, pendingQuiz } = await getStudentDashboard(childId)
 
     const response = {
-      success: true,
       subjects: (subjects || []).map(serializeSubject),
       assignments: (assignments || []).map((assignment) =>
         serializeAssignment({
@@ -35,9 +35,10 @@ export async function POST(request: Request) {
       pendingQuiz: pendingQuiz ? serializeSurpriseQuiz(pendingQuiz) : null,
     }
 
-    return NextResponse.json(response)
+    return ok(response)
   } catch (error) {
     console.error("Student dashboard error:", error)
-    return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 })
+    const message = error instanceof Error ? error.message : "An unexpected error occurred"
+    return fail(message, statusFromErrorMessage(message, 500))
   }
 }

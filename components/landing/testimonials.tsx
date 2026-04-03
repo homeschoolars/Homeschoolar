@@ -1,5 +1,5 @@
 import { Star, Heart, Quote } from "lucide-react"
-
+import Image from "next/image"
 const testimonials = [
   {
     name: "Sarah M.",
@@ -70,14 +70,16 @@ export function Testimonials() {
                   />
                 ))}
               </div>
-              <p className="flex-1 text-foreground leading-relaxed font-medium">"{testimonial.content}"</p>
+              <p className="flex-1 text-foreground leading-relaxed font-medium">&quot;{testimonial.content}&quot;</p>
               <div
                 className="mt-6 flex items-center gap-3 border-t-2 pt-4"
                 style={{ borderColor: `var(--${testimonial.color})30` }}
               >
-                <img
+                <Image
                   src={testimonial.avatar || "/placeholder.svg"}
                   alt={testimonial.name}
+                  width={56}
+                  height={56}
                   className="h-14 w-14 rounded-full object-cover border-3 shadow-lg"
                   style={{ borderColor: `var(--${testimonial.color})` }}
                 />

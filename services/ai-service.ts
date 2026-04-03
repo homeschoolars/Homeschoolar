@@ -576,7 +576,7 @@ export async function generateWorksheet(
     )
   }
   
-  const prompt = buildWorksheetPrompt({
+  const dynamicPrompt = buildWorksheetPrompt({
     subjectName: subject_name,
     ageGroup: age_group,
     difficulty,
@@ -584,6 +584,7 @@ export async function generateWorksheet(
     numQuestions: num_questions,
     childLevel: child_level,
   })
+  const prompt = `${STATIC_WORKSHEET_SYSTEM_PROMPT}\n\n${dynamicPrompt}`
 
   if (!options?.bypassSubscriptionChecks) {
     await enforceSubscriptionAccess({ userId, feature: "ai" })
@@ -801,11 +802,15 @@ export async function generateQuiz({
     }
   )
 
-  const questions = result.object.questions.slice(0, 20).map((q, idx) => ({
+  const generatedQuestions = result.object.questions.slice(0, 20).map((q, idx) => ({
     ...q,
     id: q.id || `quiz-${idx + 1}`,
     points: 1,
   }))
+  if (generatedQuestions.length !== 20) {
+    throw new Error(`Quiz generation returned ${generatedQuestions.length} questions. Expected exactly 20.`)
+  }
+  const questions = generatedQuestions
 
   const maxScore = questions.reduce((sum, q) => sum + q.points, 0)
 
@@ -885,11 +890,27 @@ export async function gradeQuiz({
     }
   )
 
+  const normalizedGradedAnswers = questions.map((question) => {
+    const aiMatch = result.object.graded_answers.find((answer) => answer.question_id === question.id)
+    const studentAnswer = answers.find((answer) => answer.question_id === question.id)?.answer || "Not answered"
+    const isCorrect = studentAnswer.trim().toLowerCase() === question.correct_answer.trim().toLowerCase()
+    return {
+      question_id: question.id,
+      is_correct: isCorrect,
+      feedback:
+        aiMatch?.feedback ||
+        (isCorrect
+          ? "Great job! You got this one right."
+          : `Good effort. The correct answer is ${question.correct_answer}.`),
+    }
+  })
+  const computedScore = normalizedGradedAnswers.filter((answer) => answer.is_correct).reduce((sum) => sum + 1, 0)
+
   await prisma.surpriseQuiz.update({
     where: { id: quiz_id },
     data: {
       answers: answers as unknown as object,
-      score: result.object.score,
+      score: computedScore,
       feedback: result.object.overall_feedback,
       completedAt: new Date(),
     },
@@ -901,7 +922,7 @@ export async function gradeQuiz({
     eventData: { quizId: quiz_id, ageGroup: age_group },
   })
 
-  return { ...result.object, max_score: quiz.maxScore }
+  return { ...result.object, score: computedScore, graded_answers: normalizedGradedAnswers, max_score: quiz.maxScore }
 }
 
 export async function generateInitialAssessment({

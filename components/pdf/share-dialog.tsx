@@ -81,7 +81,7 @@ export function ShareDialog({ pdfType, data, title, children }: ShareDialogProps
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Share via Email</DialogTitle>
-          <DialogDescription>Send "{title}" as a PDF attachment to an email address.</DialogDescription>
+          <DialogDescription>Send &quot;{title}&quot; as a PDF attachment to an email address.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">

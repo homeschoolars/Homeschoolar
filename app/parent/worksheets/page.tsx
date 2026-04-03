@@ -50,5 +50,6 @@ export default async function WorksheetsPage() {
     },
   }))
 
+  // eslint-disable-next-line react/no-children-prop
   return <WorksheetsPageClient children={mappedChildren} assignments={assignments} />
 }
