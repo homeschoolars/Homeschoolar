@@ -25,11 +25,33 @@ export function WeeklyAIInsights({ studentId, studentName }: WeeklyAIInsightsPro
 
   useEffect(() => {
     const fetchInsights = async () => {
+      if (!studentId) {
+        setInsights([])
+        setLoading(false)
+        setError(null)
+        return
+      }
+
       try {
         setLoading(true)
         setError(null)
-        const response = await apiFetch(`/api/parent/children/${studentId}/assessment-signals`)
+        let response = await apiFetch(`/api/parent/children/${studentId}/assessment-signals`)
+
+        // Backward-compatible fallback for deployments where assessment-signals route is unavailable.
+        if (response.status === 404) {
+          response = await apiFetch(`/api/parent/children/${studentId}/insights`)
+          if (response.ok) {
+            const fallbackData = (await response.json()) as { insights?: Insight[] }
+            setInsights(fallbackData.insights || [])
+            return
+          }
+        }
+
         if (!response.ok) {
+          if (response.status === 400 || response.status === 404) {
+            setInsights([])
+            return
+          }
           throw new Error("Failed to load insights")
         }
         const data = await response.json()

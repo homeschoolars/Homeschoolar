@@ -33,6 +33,8 @@ export function RoadmapViewer({ studentId, studentName }: RoadmapViewerProps) {
   const [regenerating, setRegenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const isMissingAssessmentError = error?.toLowerCase().includes("assessment data is missing") ?? false
+
   const fetchRoadmap = async () => {
     try {
       setLoading(true)
@@ -178,7 +180,9 @@ export function RoadmapViewer({ studentId, studentName }: RoadmapViewerProps) {
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <p className="text-destructive mb-4">{error}</p>
+            <p className={isMissingAssessmentError ? "text-muted-foreground mb-4" : "text-destructive mb-4"}>
+              {error}
+            </p>
             <Button onClick={handleRegenerate} disabled={regenerating}>
               {regenerating ? (
                 <>
@@ -189,39 +193,6 @@ export function RoadmapViewer({ studentId, studentName }: RoadmapViewerProps) {
                 <>
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Retry
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  // No roadmap exists yet - show generate button (this is normal, not an error)
-  if (!loading && !roadmap && !error) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <BookOpen className="mr-2 h-5 w-5" />
-            Learning Roadmap
-          </CardTitle>
-          <CardDescription>Personalized learning path for {studentName}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <p className="text-muted-foreground mb-4">No roadmap found. Generate one to get started.</p>
-            <Button onClick={handleRegenerate} disabled={regenerating}>
-              {regenerating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Generate Roadmap
                 </>
               )}
             </Button>
