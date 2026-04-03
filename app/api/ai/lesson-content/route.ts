@@ -37,6 +37,9 @@ export async function POST(req: Request) {
       language: language ?? "en",
       userId: session.user.id,
     })
+    if ("error" in script) {
+      return NextResponse.json({ error: "generation_failed" }, { status: 502 })
+    }
     return NextResponse.json({ script })
   } catch (error) {
     const err = error as Error

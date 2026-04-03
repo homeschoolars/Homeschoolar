@@ -20,19 +20,21 @@ interface SurpriseQuizModalProps {
   onClose: () => void
 }
 
+type QuizGradeSuccess = {
+  score: number
+  max_score: number
+  graded_answers: { question_id: string; is_correct: boolean; feedback: string }[]
+  overall_feedback: string
+  encouragement: string
+}
+
 export function SurpriseQuizModal({ quiz, ageGroup, onComplete, onClose }: SurpriseQuizModalProps) {
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState<Answer[]>([])
   const [selectedAnswer, setSelectedAnswer] = useState<string>("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [results, setResults] = useState<{
-    score: number
-    max_score: number
-    graded_answers: { question_id: string; is_correct: boolean; feedback: string }[]
-    overall_feedback: string
-    encouragement: string
-  } | null>(null)
+  const [results, setResults] = useState<QuizGradeSuccess | null>(null)
   const [timeLeft, setTimeLeft] = useState(120) // 2 minutes
 
   const questions = quiz.questions as QuizQuestion[]
@@ -78,24 +80,17 @@ export function SurpriseQuizModal({ quiz, ageGroup, onComplete, onClose }: Surpr
         }),
       })
 
-      const data = (await response.json()) as
-        | {
-            score: number
-            max_score: number
-            graded_answers: { question_id: string; is_correct: boolean; feedback: string }[]
-            overall_feedback: string
-            encouragement: string
-          }
-        | { error?: string }
+      const data = (await response.json()) as QuizGradeSuccess | { error?: string }
 
       if (!response.ok) {
         throw new Error("error" in data && data.error ? data.error : "Could not submit quiz. Please try again.")
       }
 
-      setResults(data)
+      const successData = data as QuizGradeSuccess
+      setResults(successData)
 
       // Trigger confetti for good scores
-      if (data.score >= data.max_score * 0.7) {
+      if (successData.score >= successData.max_score * 0.7) {
         confetti({
           particleCount: 100,
           spread: 70,
@@ -103,7 +98,7 @@ export function SurpriseQuizModal({ quiz, ageGroup, onComplete, onClose }: Surpr
         })
       }
 
-      onComplete(data.score)
+      onComplete(successData.score)
     } catch (error) {
       console.error("Error submitting quiz:", error)
       setSubmitError(error instanceof Error ? error.message : "Could not submit quiz. Please try again.")
