@@ -125,6 +125,7 @@ export async function generateParentControlledContent({
         }
 
   const content = JSON.stringify(mergedJson, null, 2)
+  const normalizedContentJson = JSON.parse(content)
 
   const generated = await prisma.curriculumGeneratedContent.create({
     data: {
@@ -136,7 +137,7 @@ export async function generateParentControlledContent({
       visibility: "shared",
       generatedBy: "parent",
       content,
-      contentJson: mergedJson,
+      contentJson: normalizedContentJson,
       promptSnapshot: `Parent generated ${contentType} for unit ${unit.title}`,
       model: "gpt-4o-mini",
     },
@@ -341,7 +342,7 @@ Requirements:
     data: {
       studentId,
       subjectId,
-      examJson,
+      examJson: JSON.parse(JSON.stringify(examJson)),
     },
   })
   return { cached: false, exam }
