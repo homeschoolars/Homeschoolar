@@ -38,6 +38,7 @@ export async function PATCH(
     const body = (await req.json()) as Partial<{
       title: string
       slug: string
+      orderIndex: number
       displayOrder: number
       content: {
         storyText?: string

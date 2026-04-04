@@ -13,6 +13,8 @@ type CurriculumLesson = {
   id: string
   title: string
   slug: string
+  orderIndex?: number
+  displayOrder?: number
 }
 
 type CurriculumUnit = {
@@ -47,6 +49,7 @@ type LessonDetailResponse = {
 type GeneratedState = {
   value: string
   cached: boolean
+  json?: unknown
 }
 
 type GenerationType = "story" | "worksheet" | "quiz" | "project" | "debate" | "research" | "reflection"
@@ -72,13 +75,18 @@ function getAgeStart(ageGroup: string) {
 export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
   const [ageGroup, setAgeGroup] = useState("4-5")
   const [availableAgeGroups, setAvailableAgeGroups] = useState<Array<{ name: string; label: string }>>([])
-  const [sessionKey, setSessionKey] = useState("global")
   const [subject, setSubject] = useState<CurriculumSubjectResponse["subject"] | null>(null)
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null)
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null)
   const [lesson, setLesson] = useState<LessonDetailResponse["lesson"] | null>(null)
   const [loading, setLoading] = useState(true)
   const [lessonLoading, setLessonLoading] = useState(false)
+  const [progressLoading, setProgressLoading] = useState(false)
+  const [lessonProgress, setLessonProgress] = useState<{
+    status: "locked" | "unlocked" | "completed"
+    canAccess: boolean
+    lessons: Array<{ lessonId: string; title: string; orderIndex?: number; status: "locked" | "unlocked" | "completed" }>
+  } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [generatingType, setGeneratingType] = useState<GenerationType | null>(null)
   const [generatedContent, setGeneratedContent] = useState<Record<GenerationType, GeneratedState | null>>({
@@ -89,6 +97,33 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
     debate: null,
     research: null,
     reflection: null,
+  })
+  const [sharedContent, setSharedContent] = useState<
+    Array<{
+      id: string
+      unitId: string | null
+      subjectName: string
+      unitTitle: string
+      contentType: "quiz" | "worksheet"
+      content: string
+      contentJson?: unknown
+      createdAt: string
+    }>
+  >([])
+  const [examState, setExamState] = useState<{
+    exam: {
+      id: string
+      examJson: { mcqs?: Array<{ question: string; options: string[]; correctAnswer: string }>; shortQuestions?: Array<{ question: string; sampleAnswer: string }> }
+      score: number | null
+      completedAt: string | null
+    } | null
+    answers: {
+      mcqs: Array<{ index: number; answer: string }>
+      shortQuestions: Array<{ index: number; answer: string }>
+    }
+  }>({
+    exam: null,
+    answers: { mcqs: [], shortQuestions: [] },
   })
 
   useEffect(() => {
@@ -118,9 +153,6 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
     try {
       const parsed = JSON.parse(raw) as { id?: string; age_group?: string }
       if (parsed?.age_group) setAgeGroup(parsed.age_group)
-      if (parsed?.id) {
-        setSessionKey(`child:${parsed.id}`)
-      }
     } catch {
       // Ignore malformed session storage and keep default age group.
     }
@@ -176,6 +208,47 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
     void fetchLesson()
   }, [selectedLessonId])
 
+  useEffect(() => {
+    if (!selectedLessonId) return
+    const raw = sessionStorage.getItem("student_child")
+    if (!raw) return
+    let childId = ""
+    try {
+      const parsed = JSON.parse(raw) as { id?: string }
+      childId = parsed?.id ?? ""
+    } catch {
+      return
+    }
+    if (!childId) return
+
+    const fetchProgress = async () => {
+      setProgressLoading(true)
+      try {
+        const res = await apiFetch(
+          `/api/lessons/progress?childId=${encodeURIComponent(childId)}&lessonId=${encodeURIComponent(selectedLessonId)}`,
+        )
+        const payload = (await res.json()) as {
+          success?: boolean
+          data?: {
+            status: "locked" | "unlocked" | "completed"
+            canAccess: boolean
+            lessons: Array<{ lessonId: string; title: string; orderIndex?: number; status: "locked" | "unlocked" | "completed" }>
+          }
+          error?: string
+        }
+        if (!res.ok || !payload?.data) {
+          throw new Error(payload?.error ?? "Unable to load lesson progress")
+        }
+        setLessonProgress(payload.data)
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load lesson progress")
+      } finally {
+        setProgressLoading(false)
+      }
+    }
+    void fetchProgress()
+  }, [selectedLessonId])
+
   const selectedUnit = useMemo(
     () => subject?.units.find((unit) => unit.id === selectedUnitId) ?? null,
     [subject, selectedUnitId]
@@ -186,28 +259,147 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
   const supportsResearch = ageStart >= 10
   const supportsDebate = ageStart >= 11
   const supportsReflection = ageStart >= 10
+  const allLessonsCompleted = lessonProgress ? lessonProgress.lessons.length > 0 && lessonProgress.lessons.every((l) => l.status === "completed") : false
 
   const handleGenerate = async (type: GenerationType) => {
     if (!selectedLessonId) return
+    if (lessonProgress && !lessonProgress.canAccess) return
     setGeneratingType(type)
     try {
-      const res = await apiFetch(`/api/curriculum/lessons/${encodeURIComponent(selectedLessonId)}/generate`, {
+      const raw = sessionStorage.getItem("student_child")
+      const childId = raw ? ((JSON.parse(raw) as { id?: string }).id ?? "") : ""
+      const res = await apiFetch(`/api/ai/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, sessionKey }),
+        body: JSON.stringify({ lessonId: selectedLessonId, contentType: type, childId }),
       })
-      const payload = (await res.json()) as { error?: string; content?: string; cached?: boolean }
-      if (!res.ok || !payload.content) {
+      const payload = (await res.json()) as {
+        success?: boolean
+        data?: { content?: string; cached?: boolean; contentJson?: unknown }
+        error?: string
+      }
+      if (!res.ok || !payload.data?.content) {
         throw new Error(payload.error ?? "Generation failed")
       }
       setGeneratedContent((prev) => ({
         ...prev,
-        [type]: { value: payload.content!, cached: Boolean(payload.cached) },
+        [type]: { value: payload.data!.content!, cached: Boolean(payload.data?.cached), json: payload.data?.contentJson },
       }))
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to generate content")
     } finally {
       setGeneratingType(null)
+    }
+  }
+
+  const completeCurrentLesson = async () => {
+    if (!selectedLessonId) return
+    const raw = sessionStorage.getItem("student_child")
+    const childId = raw ? ((JSON.parse(raw) as { id?: string }).id ?? "") : ""
+    if (!childId) return
+
+    try {
+      const res = await apiFetch("/api/lesson/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ childId, lessonId: selectedLessonId }),
+      })
+      const payload = (await res.json()) as { success?: boolean; error?: string }
+      if (!res.ok || payload.success !== true) {
+        throw new Error(payload.error ?? "Failed to complete lesson")
+      }
+      const progressRes = await apiFetch(
+        `/api/lessons/progress?childId=${encodeURIComponent(childId)}&lessonId=${encodeURIComponent(selectedLessonId)}`,
+      )
+      const progressPayload = (await progressRes.json()) as {
+        success?: boolean
+        data?: {
+          status: "locked" | "unlocked" | "completed"
+          canAccess: boolean
+          lessons: Array<{ lessonId: string; title: string; orderIndex?: number; status: "locked" | "unlocked" | "completed" }>
+        }
+      }
+      if (progressRes.ok && progressPayload.data) {
+        setLessonProgress(progressPayload.data)
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to complete lesson")
+    }
+  }
+
+  const loadSharedContent = async () => {
+    const raw = sessionStorage.getItem("student_child")
+    const childId = raw ? ((JSON.parse(raw) as { id?: string }).id ?? "") : ""
+    if (!childId) return
+    try {
+      const res = await apiFetch(`/api/student/generated-content?childId=${encodeURIComponent(childId)}`)
+      const payload = (await res.json()) as { success?: boolean; data?: { items: typeof sharedContent } }
+      if (res.ok && payload.data?.items) {
+        setSharedContent(payload.data.items)
+      }
+    } catch {
+      // Ignore silent load errors for shared content panel.
+    }
+  }
+
+  const loadLatestExam = async () => {
+    const raw = sessionStorage.getItem("student_child")
+    const childId = raw ? ((JSON.parse(raw) as { id?: string }).id ?? "") : ""
+    if (!childId) return
+    try {
+      const res = await apiFetch(
+        `/api/exam/latest?studentId=${encodeURIComponent(childId)}&subjectId=${encodeURIComponent(subjectId)}`,
+      )
+      const payload = (await res.json()) as {
+        success?: boolean
+        data?: {
+          exam: {
+            id: string
+            examJson: {
+              mcqs?: Array<{ question: string; options: string[]; correctAnswer: string }>
+              shortQuestions?: Array<{ question: string; sampleAnswer: string }>
+            }
+            score: number | null
+            completedAt: string | null
+          } | null
+        }
+      }
+      if (res.ok && payload.data) {
+        setExamState((prev) => ({ ...prev, exam: payload.data?.exam ?? null }))
+      }
+    } catch {
+      // Ignore.
+    }
+  }
+
+  useEffect(() => {
+    void loadSharedContent()
+    void loadLatestExam()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subjectId])
+
+  const submitExam = async () => {
+    if (!examState.exam) return
+    const raw = sessionStorage.getItem("student_child")
+    const childId = raw ? ((JSON.parse(raw) as { id?: string }).id ?? "") : ""
+    if (!childId) return
+    try {
+      const res = await apiFetch("/api/exam/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: childId,
+          examId: examState.exam.id,
+          answers: examState.answers,
+        }),
+      })
+      const payload = (await res.json()) as { success?: boolean; error?: string }
+      if (!res.ok || payload.success !== true) {
+        throw new Error(payload.error ?? "Failed to submit exam")
+      }
+      await loadLatestExam()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to submit exam")
     }
   }
 
@@ -296,7 +488,12 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                           setSelectedLessonId(item.id)
                         }}
                       >
-                        {item.title}
+                        <span className="inline-flex items-center gap-2">
+                          {lessonProgress?.lessons.find((l) => l.lessonId === item.id)?.status === "completed" ? "✔" : null}
+                          {lessonProgress?.lessons.find((l) => l.lessonId === item.id)?.status === "unlocked" ? "▶" : null}
+                          {lessonProgress?.lessons.find((l) => l.lessonId === item.id)?.status === "locked" ? "🔒" : null}
+                          {item.title}
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -318,6 +515,18 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Loading lesson details...
                 </div>
+              )}
+              {progressLoading && (
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading progression state...
+                </div>
+              )}
+
+              {lessonProgress && !lessonProgress.canAccess && (
+                <section className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                  This lesson is locked. Complete the current unlocked lesson first.
+                </section>
               )}
 
               {!lessonLoading && lesson?.content && (
@@ -350,21 +559,36 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
               )}
 
               <div className="flex flex-wrap gap-2 pt-2">
-                <Button onClick={() => handleGenerate("story")} disabled={generatingType !== null || !selectedLessonId}>
+                <Button
+                  onClick={() => handleGenerate("story")}
+                  disabled={generatingType !== null || !selectedLessonId || (lessonProgress ? !lessonProgress.canAccess : false)}
+                >
                   {generatingType === "story" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Generate Story
                 </Button>
-                <Button onClick={() => handleGenerate("worksheet")} disabled={generatingType !== null || !selectedLessonId} variant="secondary">
+                <Button
+                  onClick={() => handleGenerate("worksheet")}
+                  disabled={generatingType !== null || !selectedLessonId || (lessonProgress ? !lessonProgress.canAccess : false)}
+                  variant="secondary"
+                >
                   {generatingType === "worksheet" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Generate Worksheet
                 </Button>
-                <Button onClick={() => handleGenerate("quiz")} disabled={generatingType !== null || !selectedLessonId} variant="outline">
+                <Button
+                  onClick={() => handleGenerate("quiz")}
+                  disabled={generatingType !== null || !selectedLessonId || (lessonProgress ? !lessonProgress.canAccess : false)}
+                  variant="outline"
+                >
                   {generatingType === "quiz" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Generate Quiz
                 </Button>
                 {supportsProject && (
                   <>
-                    <Button onClick={() => handleGenerate("project")} disabled={generatingType !== null || !selectedLessonId} variant="secondary">
+                    <Button
+                      onClick={() => handleGenerate("project")}
+                      disabled={generatingType !== null || !selectedLessonId || (lessonProgress ? !lessonProgress.canAccess : false)}
+                      variant="secondary"
+                    >
                       {generatingType === "project" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                       Generate Project
                     </Button>
@@ -372,26 +596,47 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                 )}
                 {supportsReflection && (
                   <>
-                    <Button onClick={() => handleGenerate("reflection")} disabled={generatingType !== null || !selectedLessonId} variant="outline">
+                    <Button
+                      onClick={() => handleGenerate("reflection")}
+                      disabled={generatingType !== null || !selectedLessonId || (lessonProgress ? !lessonProgress.canAccess : false)}
+                      variant="outline"
+                    >
                       {generatingType === "reflection" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                       Reflection Questions
                     </Button>
                   </>
                 )}
                 {supportsResearch && (
-                  <Button onClick={() => handleGenerate("research")} disabled={generatingType !== null || !selectedLessonId} variant="secondary">
+                  <Button
+                    onClick={() => handleGenerate("research")}
+                    disabled={generatingType !== null || !selectedLessonId || (lessonProgress ? !lessonProgress.canAccess : false)}
+                    variant="secondary"
+                  >
                     {generatingType === "research" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Research Task
                   </Button>
                 )}
                 {supportsDebate && (
                   <>
-                    <Button onClick={() => handleGenerate("debate")} disabled={generatingType !== null || !selectedLessonId} variant="outline">
+                    <Button
+                      onClick={() => handleGenerate("debate")}
+                      disabled={generatingType !== null || !selectedLessonId || (lessonProgress ? !lessonProgress.canAccess : false)}
+                      variant="outline"
+                    >
                       {generatingType === "debate" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                       Debate Mode
                     </Button>
                   </>
                 )}
+              </div>
+              <div className="pt-1">
+                <Button
+                  onClick={completeCurrentLesson}
+                  disabled={!selectedLessonId || (lessonProgress ? !lessonProgress.canAccess : false)}
+                  className="bg-[#7F77DD] hover:bg-[#6C63D5]"
+                >
+                  Mark Lesson Complete
+                </Button>
               </div>
 
               {(generatedContent.story ||
@@ -421,6 +666,104 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Generated Worksheets & Quizzes</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {sharedContent.filter((item) => item.subjectName.toLowerCase() === (subject?.name ?? "").toLowerCase()).length === 0 ? (
+              <p className="text-sm text-slate-500">No parent-generated shared content yet.</p>
+            ) : (
+              sharedContent
+                .filter((item) => item.subjectName.toLowerCase() === (subject?.name ?? "").toLowerCase())
+                .map((item) => (
+                  <div key={item.id} className="rounded-md border bg-slate-50 p-3">
+                    <p className="text-sm font-semibold capitalize">
+                      {item.contentType} • {item.unitTitle}
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap text-xs text-slate-600">{item.content}</p>
+                  </div>
+                ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Final Subject Exam</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {!allLessonsCompleted ? (
+              <p className="text-sm text-amber-700">Complete all lessons in this subject to unlock the final exam.</p>
+            ) : !examState.exam ? (
+              <p className="text-sm text-slate-600">Exam will appear once parent generates it.</p>
+            ) : (
+              <div className="space-y-3">
+                {examState.exam.score != null ? (
+                  <p className="text-sm font-medium text-green-700">Submitted. Score: {examState.exam.score.toFixed(2)}%</p>
+                ) : (
+                  <>
+                    {(examState.exam.examJson.mcqs ?? []).map((q, index) => (
+                      <div key={`mcq-${index}`} className="rounded border p-3">
+                        <p className="text-sm font-medium">{q.question}</p>
+                        <Select
+                          value={examState.answers.mcqs.find((a) => a.index === index)?.answer ?? ""}
+                          onValueChange={(value) =>
+                            setExamState((prev) => ({
+                              ...prev,
+                              answers: {
+                                ...prev.answers,
+                                mcqs: [
+                                  ...prev.answers.mcqs.filter((a) => a.index !== index),
+                                  { index, answer: value },
+                                ],
+                              },
+                            }))
+                          }
+                        >
+                          <SelectTrigger className="mt-2">
+                            <SelectValue placeholder="Select answer" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {q.options.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                    {(examState.exam.examJson.shortQuestions ?? []).map((q, index) => (
+                      <div key={`short-${index}`} className="rounded border p-3">
+                        <p className="text-sm font-medium">{q.question}</p>
+                        <textarea
+                          className="mt-2 w-full rounded border p-2 text-sm"
+                          rows={3}
+                          value={examState.answers.shortQuestions.find((a) => a.index === index)?.answer ?? ""}
+                          onChange={(e) =>
+                            setExamState((prev) => ({
+                              ...prev,
+                              answers: {
+                                ...prev.answers,
+                                shortQuestions: [
+                                  ...prev.answers.shortQuestions.filter((a) => a.index !== index),
+                                  { index, answer: e.target.value },
+                                ],
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                    ))}
+                    <Button onClick={submitExam}>Submit Final Exam</Button>
+                  </>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
         </div>
       )}
     </div>

@@ -32,6 +32,7 @@ export async function POST(req: Request) {
       title: string
       slug: string
       difficultyLevel?: string
+      orderIndex?: number
       displayOrder?: number
       content: {
         storyText: string

@@ -34,6 +34,8 @@ export async function POST(req: Request) {
       ageGroup: string
       name: string
       slug: string
+      category?: "CORE" | "FUTURE" | "CREATIVE" | "LIFE"
+      orderIndex?: number
       displayOrder?: number
       baseSubjectId?: string | null
     }

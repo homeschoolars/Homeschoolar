@@ -1,0 +1,38 @@
+import { auth } from "@/auth"
+import { enforceParentOrStudentChildAccess } from "@/lib/auth-helpers"
+import { fail, ok, statusFromErrorMessage } from "@/lib/api-response"
+import { submitLessonQuiz } from "@/services/progression"
+
+export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
+
+export async function POST(request: Request) {
+  try {
+    const body = (await request.json()) as {
+      childId?: string
+      lessonId?: string
+      score?: number
+      maxScore?: number
+    }
+    if (!body.childId || !body.lessonId) {
+      return fail("childId and lessonId are required", 400)
+    }
+    if (!Number.isFinite(body.score) || !Number.isFinite(body.maxScore)) {
+      return fail("score and maxScore are required", 400)
+    }
+
+    const session = await auth()
+    await enforceParentOrStudentChildAccess({ childId: body.childId, session, request })
+
+    const result = await submitLessonQuiz({
+      studentId: body.childId,
+      lessonId: body.lessonId,
+      score: Number(body.score),
+      maxScore: Number(body.maxScore),
+    })
+    return ok(result)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to submit quiz"
+    return fail(message, statusFromErrorMessage(message, 500))
+  }
+}

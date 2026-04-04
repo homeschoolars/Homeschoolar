@@ -130,6 +130,9 @@ model Child {
   quizzes             SurpriseQuiz[]
   assignments         WorksheetAssignment[]
   submissions         WorksheetSubmission[]
+  lessonProgress      StudentLessonProgress[]
+  generatedContents   CurriculumGeneratedContent[]
+  subjectExams        SubjectExam[]
 
   @@index([parentId])
   @@index([ageGroup])
@@ -220,6 +223,7 @@ model Subject {
   progress           Progress[]
   quizzes            SurpriseQuiz[]
   worksheets         Worksheet[]
+  subjectExams       SubjectExam[]
 
   @@map("subjects")
 }
@@ -227,6 +231,9 @@ model Subject {
 model CurriculumAgeGroup {
   id        String              @id @default(uuid())
   name      String              @unique
+  ageMin    Int                 @default(4) @map("age_min")
+  ageMax    Int                 @default(5) @map("age_max")
+  orderIndex Int                @default(0) @map("order_index")
   stageName String              @default("Foundation") @map("stage_name")
   createdAt DateTime            @default(now()) @map("created_at")
   updatedAt DateTime            @updatedAt @map("updated_at")
@@ -239,8 +246,10 @@ model CurriculumSubject {
   id          String              @id @default(uuid())
   name        String
   slug        String
+  category    CurriculumSubjectCategory @default(CORE)
   ageGroupId  String              @map("age_group_id")
   baseSubjectId String?           @map("base_subject_id")
+  orderIndex  Int                 @default(0) @map("order_index")
   displayOrder Int                @default(0) @map("display_order")
   createdAt   DateTime            @default(now()) @map("created_at")
   updatedAt   DateTime            @updatedAt @map("updated_at")
@@ -258,11 +267,13 @@ model CurriculumUnit {
   title       String
   slug        String
   subjectId   String             @map("subject_id")
+  orderIndex  Int                @default(0) @map("order_index")
   displayOrder Int               @default(0) @map("display_order")
   createdAt   DateTime           @default(now()) @map("created_at")
   updatedAt   DateTime           @updatedAt @map("updated_at")
   subject     CurriculumSubject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   lessons     CurriculumLesson[]
+  generatedContents CurriculumGeneratedContent[]
 
   @@unique([subjectId, slug])
   @@map("curriculum_units")
@@ -274,6 +285,7 @@ model CurriculumLesson {
   slug        String
   unitId      String                     @map("unit_id")
   difficultyLevel String                 @default("foundation") @map("difficulty_level")
+  orderIndex  Int                        @default(0) @map("order_index")
   displayOrder Int                       @default(0) @map("display_order")
   createdAt   DateTime                   @default(now()) @map("created_at")
   updatedAt   DateTime                   @updatedAt @map("updated_at")
@@ -281,6 +293,7 @@ model CurriculumLesson {
   content     CurriculumContent?
   aiPrompts   CurriculumAIPrompt[]
   generations CurriculumGeneratedContent[]
+  studentProgress StudentLessonProgress[]
 
   @@unique([unitId, slug])
   @@map("curriculum_lessons")
@@ -317,17 +330,59 @@ model CurriculumAIPrompt {
 model CurriculumGeneratedContent {
   id             String               @id @default(uuid())
   lessonId       String               @map("lesson_id")
+  unitId         String?              @map("unit_id")
+  studentId      String?              @map("student_id")
   type           CurriculumPromptType
   sessionKey     String               @default("global") @map("session_key")
+  visibility     GeneratedContentVisibility @default(private)
+  generatedBy    GeneratedContentSource @default(system) @map("generated_by")
   content        String
+  contentJson    Json?                @map("content_json")
   promptSnapshot String               @map("prompt_snapshot")
   model          String               @default("gpt-4o-mini")
   createdAt      DateTime             @default(now()) @map("created_at")
   updatedAt      DateTime             @updatedAt @map("updated_at")
   lesson         CurriculumLesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  unit           CurriculumUnit?      @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  student        Child?               @relation(fields: [studentId], references: [id], onDelete: SetNull)
 
+  @@unique([lessonId, type])
   @@unique([lessonId, type, sessionKey])
   @@map("curriculum_generated_contents")
+}
+
+model SubjectExam {
+  id             String   @id @default(cuid())
+  studentId      String   @map("student_id")
+  subjectId      String   @map("subject_id")
+  examJson       Json     @map("exam_json")
+  score          Decimal? @db.Decimal(5, 2)
+  completedAt    DateTime? @map("completed_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  student        Child    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject        Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, subjectId])
+  @@map("subject_exams")
+}
+
+model StudentLessonProgress {
+  id             String           @id @default(cuid())
+  studentId      String           @map("student_id")
+  lessonId       String           @map("lesson_id")
+  status         LessonStatus     @default(locked)
+  quizPassed     Boolean          @default(false) @map("quiz_passed")
+  completedAt    DateTime?        @map("completed_at")
+  lastAccessedAt DateTime?        @map("last_accessed_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  student        Child            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lesson         CurriculumLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, lessonId])
+  @@index([studentId, status])
+  @@map("student_lesson_progress")
 }
 
 model Worksheet {
@@ -1105,4 +1160,27 @@ enum CurriculumPromptType {
   debate
   research
   reflection
+}
+
+enum CurriculumSubjectCategory {
+  CORE
+  FUTURE
+  CREATIVE
+  LIFE
+}
+
+enum LessonStatus {
+  locked
+  unlocked
+  completed
+}
+
+enum GeneratedContentVisibility {
+  private
+  shared
+}
+
+enum GeneratedContentSource {
+  parent
+  system
 }

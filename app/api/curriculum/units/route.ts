@@ -28,6 +28,7 @@ export async function POST(req: Request) {
       subjectId: string
       title: string
       slug: string
+      orderIndex?: number
       displayOrder?: number
     }
     if (!body.subjectId || !body.title || !body.slug) {

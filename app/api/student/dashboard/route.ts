@@ -33,6 +33,7 @@ export async function POST(request: Request) {
       progress: (progress || []).map(serializeProgress),
       child: child ? serializeChild(child) : null,
       pendingQuiz: pendingQuiz ? serializeSurpriseQuiz(pendingQuiz) : null,
+      generatedContent: [],
     }
 
     return ok(response)

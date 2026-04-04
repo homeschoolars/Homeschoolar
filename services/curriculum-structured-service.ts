@@ -4,8 +4,28 @@ import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { openai, isOpenAIConfigured } from "@/lib/openai"
 
-const generatedContentSchema = z.object({
+const quizJsonSchema = z.object({
+  questions: z
+    .array(
+      z.object({
+        question: z.string().min(1),
+        options: z.array(z.string().min(1)).min(2),
+        correctAnswer: z.string().min(1),
+      }),
+    )
+    .min(1),
+})
+
+const worksheetJsonSchema = z.object({
+  title: z.string().min(1),
+  activities: z.array(z.string().min(1)).min(1),
+  instructions: z.string().min(1),
+})
+
+const genericContentJsonSchema = z.object({
+  title: z.string().min(1),
   content: z.string().min(1),
+  points: z.array(z.string().min(1)).default([]),
 })
 
 export type CurriculumPromptKind =
@@ -379,6 +399,8 @@ export async function createCurriculumSubject(input: {
   stageName?: string
   name: string
   slug: string
+  category?: "CORE" | "FUTURE" | "CREATIVE" | "LIFE"
+  orderIndex?: number
   displayOrder?: number
   baseSubjectId?: string | null
 }) {
@@ -392,6 +414,8 @@ export async function createCurriculumSubject(input: {
       ageGroupId: age.id,
       name: input.name,
       slug: input.slug,
+      category: input.category ?? "CORE",
+      orderIndex: input.orderIndex ?? input.displayOrder ?? 0,
       displayOrder: input.displayOrder ?? 0,
       baseSubjectId: input.baseSubjectId ?? null,
     },
@@ -403,6 +427,8 @@ export async function updateCurriculumSubject(
   data: Partial<{
     name: string
     slug: string
+    category: "CORE" | "FUTURE" | "CREATIVE" | "LIFE"
+    orderIndex: number
     displayOrder: number
     baseSubjectId: string | null
   }>
@@ -421,6 +447,7 @@ export async function createCurriculumUnit(input: {
   subjectId: string
   title: string
   slug: string
+  orderIndex?: number
   displayOrder?: number
 }) {
   return prisma.curriculumUnit.create({
@@ -428,6 +455,7 @@ export async function createCurriculumUnit(input: {
       subjectId: input.subjectId,
       title: input.title,
       slug: input.slug,
+      orderIndex: input.orderIndex ?? input.displayOrder ?? 0,
       displayOrder: input.displayOrder ?? 0,
     },
   })
@@ -435,7 +463,7 @@ export async function createCurriculumUnit(input: {
 
 export async function updateCurriculumUnit(
   unitId: string,
-  data: Partial<{ title: string; slug: string; displayOrder: number }>
+  data: Partial<{ title: string; slug: string; orderIndex: number; displayOrder: number }>
 ) {
   return prisma.curriculumUnit.update({
     where: { id: unitId },
@@ -452,6 +480,7 @@ export async function createCurriculumLesson(input: {
   title: string
   slug: string
   difficultyLevel?: string
+  orderIndex?: number
   displayOrder?: number
   content: CurriculumContentInput
 }) {
@@ -461,6 +490,7 @@ export async function createCurriculumLesson(input: {
       title: input.title,
       slug: input.slug,
       difficultyLevel: input.difficultyLevel ?? "foundation",
+      orderIndex: input.orderIndex ?? input.displayOrder ?? 0,
       displayOrder: input.displayOrder ?? 0,
       content: {
         create: input.content,
@@ -477,6 +507,7 @@ export async function updateCurriculumLesson(
     title: string
     slug: string
     difficultyLevel: string
+    orderIndex: number
     displayOrder: number
     content: Partial<CurriculumContentInput>
   }>
@@ -563,6 +594,165 @@ function getFallbackGeneratedContent(
   return `Quiz concept for "${lessonTitle}":\n\n${staticContent.quizConcept}`
 }
 
+function getSchemaForType(type: CurriculumPromptKind) {
+  if (type === "quiz") return quizJsonSchema
+  if (type === "worksheet") return worksheetJsonSchema
+  return genericContentJsonSchema
+}
+
+function fallbackStructuredJson(
+  type: CurriculumPromptKind,
+  lessonTitle: string,
+  staticContent: {
+    storyText: string
+    worksheetExample: string
+    quizConcept: string
+    activityInstructions: string
+    parentTip: string
+  },
+) {
+  if (type === "quiz") {
+    return {
+      questions: [
+        {
+          question: `What is one key idea from "${lessonTitle}"?`,
+          options: ["Option A", "Option B", "Option C", "Option D"],
+          correctAnswer: "Option A",
+        },
+      ],
+    }
+  }
+  if (type === "worksheet") {
+    return {
+      title: `${lessonTitle} Worksheet`,
+      instructions: staticContent.activityInstructions || `Complete the worksheet for ${lessonTitle}.`,
+      activities: [staticContent.worksheetExample || `Practice activity for ${lessonTitle}`],
+    }
+  }
+  return {
+    title: `${lessonTitle} ${type}`,
+    content: getFallbackGeneratedContent(type, lessonTitle, staticContent),
+    points: [staticContent.parentTip || "Review and discuss with your parent/teacher."],
+  }
+}
+
+function stringifyContentJson(type: CurriculumPromptKind, contentJson: unknown) {
+  if (type === "quiz") {
+    const parsed = quizJsonSchema.safeParse(contentJson)
+    if (!parsed.success) return JSON.stringify(contentJson, null, 2)
+    return parsed.data.questions
+      .map(
+        (q, index) =>
+          `Q${index + 1}. ${q.question}\n${q.options.map((option, optionIndex) => `  ${String.fromCharCode(65 + optionIndex)}. ${option}`).join("\n")}\nAnswer: ${q.correctAnswer}`,
+      )
+      .join("\n\n")
+  }
+  return JSON.stringify(contentJson, null, 2)
+}
+
+export async function generateStructuredLessonAsset({
+  lessonId,
+  contentType,
+  forceRegenerate = false,
+}: {
+  lessonId: string
+  contentType: CurriculumPromptKind
+  forceRegenerate?: boolean
+}) {
+  const existing = await prisma.curriculumGeneratedContent.findFirst({
+    where: { lessonId, type: contentType },
+    select: { id: true, content: true, contentJson: true, createdAt: true, updatedAt: true },
+  })
+  if (existing && !forceRegenerate) {
+    return { cached: true, content: existing.content, contentJson: existing.contentJson }
+  }
+
+  const lesson = await prisma.curriculumLesson.findUnique({
+    where: { id: lessonId },
+    include: {
+      content: true,
+      aiPrompts: {
+        where: { type: contentType },
+        take: 1,
+      },
+      unit: {
+        include: {
+          subject: {
+            include: {
+              ageGroup: true,
+            },
+          },
+        },
+      },
+    },
+  })
+
+  if (!lesson || !lesson.content) {
+    throw new Error("Lesson not found")
+  }
+
+  const promptTemplate = lesson.aiPrompts[0]?.promptTemplate
+  if (!promptTemplate) {
+    throw new Error("Prompt template not found for lesson")
+  }
+
+  const hydratedPrompt = promptTemplate
+    .replace(/\{\{lessonTitle\}\}/g, lesson.title)
+    .replace(/\[Lesson Title\]/g, lesson.title)
+    .replace(/\{\{age\}\}/g, lesson.unit.subject.ageGroup.name)
+    .replace(/\{\{subject\}\}/g, lesson.unit.subject.name)
+    .replace(/\{\{topic\}\}/g, lesson.unit.title)
+    .replace(/\{\{lesson\}\}/g, lesson.title)
+
+  const schema = getSchemaForType(contentType)
+  let contentJson: unknown
+  let model = "fallback"
+
+  if (!isOpenAIConfigured()) {
+    contentJson = fallbackStructuredJson(contentType, lesson.title, {
+      storyText: lesson.content.storyText,
+      worksheetExample: lesson.content.worksheetExample,
+      quizConcept: lesson.content.quizConcept,
+      activityInstructions: lesson.content.activityInstructions,
+      parentTip: lesson.content.parentTip,
+    })
+  } else {
+    const result = await generateObject({
+      model: openai("gpt-4o-mini"),
+      schema,
+      prompt: `${hydratedPrompt}
+
+Return strict JSON only. Do not include markdown or extra text.`,
+    })
+    contentJson = result.object
+    model = "gpt-4o-mini"
+  }
+
+  const content = stringifyContentJson(contentType, contentJson)
+
+  await prisma.curriculumGeneratedContent.upsert({
+    where: { lessonId_type_sessionKey: { lessonId, type: contentType, sessionKey: "global" } },
+    update: {
+      content,
+      contentJson: contentJson as object,
+      promptSnapshot: hydratedPrompt,
+      model,
+      sessionKey: "global",
+    },
+    create: {
+      lessonId,
+      type: contentType,
+      sessionKey: "global",
+      content,
+      contentJson: contentJson as object,
+      promptSnapshot: hydratedPrompt,
+      model,
+    },
+  })
+
+  return { cached: false, content, contentJson }
+}
+
 export async function generateLessonAsset({
   lessonId,
   type,
@@ -572,71 +762,11 @@ export async function generateLessonAsset({
   type: CurriculumPromptKind
   sessionKey?: string
 }) {
-  const normalizedSessionKey = sessionKey?.trim() || "global"
-
-  const existing = await prisma.curriculumGeneratedContent.findUnique({
-    where: { lessonId_type_sessionKey: { lessonId, type, sessionKey: normalizedSessionKey } },
+  void sessionKey // kept for backward compatibility
+  const generated = await generateStructuredLessonAsset({
+    lessonId,
+    contentType: type,
+    forceRegenerate: false,
   })
-  if (existing) {
-    return { content: existing.content, cached: true }
-  }
-
-  const lesson = await prisma.curriculumLesson.findUnique({
-    where: { id: lessonId },
-    include: {
-      content: true,
-      aiPrompts: {
-        where: { type },
-        take: 1,
-      },
-    },
-  })
-
-  if (!lesson || !lesson.content) {
-    throw new Error("Lesson not found")
-  }
-
-  const prompt = lesson.aiPrompts[0]?.promptTemplate
-  if (!prompt) {
-    throw new Error("Prompt template not found for lesson")
-  }
-
-  const hydratedPrompt = prompt
-    .replace(/\{\{lessonTitle\}\}/g, lesson.title)
-    .replace(/\[Lesson Title\]/g, lesson.title)
-
-  let content: string
-  let model = "fallback"
-
-  if (!isOpenAIConfigured()) {
-    content = getFallbackGeneratedContent(type, lesson.title, lesson.content)
-  } else {
-    const result = await generateObject({
-      model: openai("gpt-4o-mini"),
-      schema: generatedContentSchema,
-      prompt: `${hydratedPrompt}\n\nReturn plain instructional text only.`,
-    })
-    content = result.object.content
-    model = "gpt-4o-mini"
-  }
-
-  await prisma.curriculumGeneratedContent.upsert({
-    where: { lessonId_type_sessionKey: { lessonId, type, sessionKey: normalizedSessionKey } },
-    update: {
-      content,
-      promptSnapshot: hydratedPrompt,
-      model,
-      sessionKey: normalizedSessionKey,
-    },
-    create: {
-      lessonId,
-      type,
-      sessionKey: normalizedSessionKey,
-      content,
-      promptSnapshot: hydratedPrompt,
-      model,
-    },
-  })
-
-  return { content, cached: false }
+  return { content: generated.content, cached: generated.cached }
 }

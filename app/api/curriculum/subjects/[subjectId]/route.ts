@@ -49,6 +49,8 @@ export async function PATCH(
     const body = (await req.json()) as Partial<{
       name: string
       slug: string
+      category: "CORE" | "FUTURE" | "CREATIVE" | "LIFE"
+      orderIndex: number
       displayOrder: number
       baseSubjectId: string | null
     }>

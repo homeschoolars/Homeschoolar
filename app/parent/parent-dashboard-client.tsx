@@ -919,6 +919,7 @@ export default function ParentDashboardClient({
                     <QuickContentActions
                       childId={selectedChildId}
                       subjects={selectedChildSubjects}
+                      childAgeGroup={selectedChild?.age_group}
                       onWorksheetCreated={() => {
                         // Optional future enhancement: refresh parent-side assignment counters.
                       }}

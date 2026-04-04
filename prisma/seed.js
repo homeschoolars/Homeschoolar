@@ -249,6 +249,26 @@ const AGE_STAGE_MAP = {
   "12-13": "O Level Readiness",
 };
 
+const AGE_GROUP_META = {
+  "4-5": { ageMin: 4, ageMax: 5, orderIndex: 1, stageName: "Little Explorers" },
+  "5-6": { ageMin: 5, ageMax: 6, orderIndex: 2, stageName: "Mini Adventurers" },
+  "6-7": { ageMin: 6, ageMax: 7, orderIndex: 3, stageName: "Curious Minds" },
+  "7-8": { ageMin: 7, ageMax: 8, orderIndex: 4, stageName: "Young Investigators" },
+  "8-9": { ageMin: 8, ageMax: 9, orderIndex: 5, stageName: "Growing Learners" },
+  "9-10": { ageMin: 9, ageMax: 10, orderIndex: 6, stageName: "Knowledge Explorers" },
+  "10-11": { ageMin: 10, ageMax: 11, orderIndex: 7, stageName: "Knowledge Builders" },
+  "11-12": { ageMin: 11, ageMax: 12, orderIndex: 8, stageName: "Skill Sharpeners" },
+  "12-13": { ageMin: 12, ageMax: 13, orderIndex: 9, stageName: "Future Leaders" },
+};
+
+function getSubjectCategory(name) {
+  const normalized = String(name || "").toLowerCase();
+  if (["english", "mathematics", "math", "science", "social studies"].some((s) => normalized.includes(s))) return "CORE";
+  if (["coding", "ai", "digital", "computer", "technology"].some((s) => normalized.includes(s))) return "FUTURE";
+  if (["art", "music"].some((s) => normalized.includes(s))) return "CREATIVE";
+  return "LIFE";
+}
+
 const REQUIRED_SUBJECTS = [
   { name: "English", slug: "english" },
   { name: "Mathematics", slug: "mathematics" },
@@ -307,6 +327,7 @@ async function seedStructuredCurriculumFile(fileName) {
   const prompts = CURRICULUM_PROMPTS[data.ageGroup] || CURRICULUM_PROMPTS["4-5"];
   const stageName = data.stageName || AGE_STAGE_MAP[data.ageGroup] || "Foundation";
   const ageStart = getAgeStart(data.ageGroup);
+  const ageMeta = AGE_GROUP_META[data.ageGroup] || { ageMin: ageStart, ageMax: ageStart + 1, orderIndex: 0, stageName };
 
   const existingBySlug = new Set(data.subjects.map((s) => String(s.slug)));
   for (const required of REQUIRED_SUBJECTS) {
@@ -320,8 +341,19 @@ async function seedStructuredCurriculumFile(fileName) {
 
   const ageGroup = await prisma.curriculumAgeGroup.upsert({
     where: { name: data.ageGroup },
-    update: { stageName },
-    create: { name: data.ageGroup, stageName },
+    update: {
+      stageName: ageMeta.stageName || stageName,
+      ageMin: ageMeta.ageMin,
+      ageMax: ageMeta.ageMax,
+      orderIndex: ageMeta.orderIndex,
+    },
+    create: {
+      name: data.ageGroup,
+      stageName: ageMeta.stageName || stageName,
+      ageMin: ageMeta.ageMin,
+      ageMax: ageMeta.ageMax,
+      orderIndex: ageMeta.orderIndex,
+    },
   });
 
   for (const [subjectIndex, subjectData] of data.subjects.entries()) {
@@ -349,6 +381,8 @@ async function seedStructuredCurriculumFile(fileName) {
       },
       update: {
         name: subjectData.name,
+        category: getSubjectCategory(subjectData.name),
+        orderIndex: subjectData.displayOrder ?? subjectIndex + 1,
         displayOrder: subjectData.displayOrder ?? subjectIndex + 1,
         baseSubjectId: baseSubject?.id ?? null,
       },
@@ -356,6 +390,8 @@ async function seedStructuredCurriculumFile(fileName) {
         name: subjectData.name,
         slug: subjectData.slug,
         ageGroupId: ageGroup.id,
+        category: getSubjectCategory(subjectData.name),
+        orderIndex: subjectData.displayOrder ?? subjectIndex + 1,
         displayOrder: subjectData.displayOrder ?? subjectIndex + 1,
         baseSubjectId: baseSubject?.id ?? null,
       },
@@ -371,12 +407,14 @@ async function seedStructuredCurriculumFile(fileName) {
         },
         update: {
           title: unitData.title,
+          orderIndex: unitData.displayOrder ?? unitIndex + 1,
           displayOrder: unitData.displayOrder ?? unitIndex + 1,
         },
         create: {
           title: unitData.title,
           slug: unitData.slug,
           subjectId: curriculumSubject.id,
+          orderIndex: unitData.displayOrder ?? unitIndex + 1,
           displayOrder: unitData.displayOrder ?? unitIndex + 1,
         },
       });
@@ -392,6 +430,7 @@ async function seedStructuredCurriculumFile(fileName) {
           update: {
             title: lessonData.title,
             difficultyLevel: lessonData.difficultyIndicator || stageName,
+            orderIndex: lessonData.displayOrder ?? lessonIndex + 1,
             displayOrder: lessonData.displayOrder ?? lessonIndex + 1,
           },
           create: {
@@ -399,6 +438,7 @@ async function seedStructuredCurriculumFile(fileName) {
             slug: lessonData.slug,
             unitId: curriculumUnit.id,
             difficultyLevel: lessonData.difficultyIndicator || stageName,
+            orderIndex: lessonData.displayOrder ?? lessonIndex + 1,
             displayOrder: lessonData.displayOrder ?? lessonIndex + 1,
           },
         });

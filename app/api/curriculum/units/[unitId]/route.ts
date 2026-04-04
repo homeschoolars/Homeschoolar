@@ -37,6 +37,7 @@ export async function PATCH(
     const body = (await req.json()) as Partial<{
       title: string
       slug: string
+      orderIndex: number
       displayOrder: number
     }>
     const unit = await updateCurriculumUnit(decodeURIComponent(unitId), body)
