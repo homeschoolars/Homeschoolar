@@ -32,6 +32,8 @@ export async function POST(request: Request) {
     if (!isContentType(body.contentType)) {
       return fail("Invalid contentType", 400)
     }
+    const lessonId = body.lessonId
+    const contentType: ContentType = body.contentType
 
     if (body.childId) {
       const session = await auth()
@@ -39,7 +41,7 @@ export async function POST(request: Request) {
     }
 
     const lesson = await prisma.curriculumLesson.findUnique({
-      where: { id: body.lessonId },
+      where: { id: lessonId },
       select: {
         id: true,
         title: true,
@@ -55,11 +57,11 @@ export async function POST(request: Request) {
       return fail("Lesson not found", 404)
     }
 
-    const cacheKey = `${body.lessonId}:${body.contentType}`
+    const cacheKey = `${lessonId}:${contentType}`
     const generator = async () =>
       generateStructuredLessonAsset({
-        lessonId: body.lessonId!,
-        contentType: body.contentType,
+        lessonId,
+        contentType,
         forceRegenerate: Boolean(body.forceRegenerate),
       })
 
@@ -71,7 +73,7 @@ export async function POST(request: Request) {
 
     return ok({
       lessonId: body.lessonId,
-      contentType: body.contentType,
+      contentType,
       cached: generated.cached,
       lessonContext: {
         age: lesson.unit.subject.ageGroup.name,
