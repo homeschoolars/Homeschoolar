@@ -271,6 +271,8 @@ export default function StudentDashboard() {
   const streak = g?.streak ?? 0
   const completedToday = g?.completedToday ?? 0
   const quests = g?.quests ?? []
+  const hasFirstLessonCompleted =
+    (g?.worksheetsCompleted ?? 0) > 0 || progress.some((entry) => (entry.completed_worksheets ?? 0) > 0)
 
   // Determine age band for UI styling and news
   const ageGroup = child.age_group
@@ -342,6 +344,10 @@ export default function StudentDashboard() {
           dailyGoal={g?.dailyGoal}
           dailyGoalProgress={g?.dailyGoalProgress}
           streak={streak}
+          coins={coins}
+          level={level}
+          xpInLevel={g?.xpInLevel}
+          xpToNextLevel={g?.xpToNextLevel}
         />
 
         <DailyQuests
@@ -378,6 +384,9 @@ export default function StudentDashboard() {
               <div className="text-5xl mb-4">🌟</div>
               <h3 className="text-xl font-bold text-violet-700 mb-2">No worksheets assigned yet!</h3>
               <p className="text-violet-600">Ask your parent to assign some fun activities, or explore subjects below.</p>
+              <Button asChild className="mt-4 bg-[#7F77DD] hover:bg-[#6C63D5]">
+                <Link href="/student/subjects">Explore subjects</Link>
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -392,6 +401,7 @@ export default function StudentDashboard() {
           worksheetsCompleted={g?.worksheetsCompleted ?? 0}
           streak={g?.streak ?? 0}
           quizCount={g?.quizCount}
+          hasFirstLessonCompleted={hasFirstLessonCompleted}
         />
       </main>
 

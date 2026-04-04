@@ -20,6 +20,7 @@ interface AchievementsGridProps {
   streak: number
   quizCount?: number
   perfectScores?: number
+  hasFirstLessonCompleted?: boolean
 }
 
 export function AchievementsGrid({
@@ -27,6 +28,7 @@ export function AchievementsGrid({
   streak,
   quizCount = 0,
   perfectScores = 0,
+  hasFirstLessonCompleted = false,
 }: AchievementsGridProps) {
   const triggerCelebration = () => {
     confetti({
@@ -52,10 +54,11 @@ export function AchievementsGrid({
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
         {BADGES.map((b) => {
           const unlocked =
-            (b.minWorksheets != null && worksheetsCompleted >= b.minWorksheets) ||
-            (b.minStreak != null && streak >= b.minStreak) ||
-            (b.minQuizzes != null && quizCount >= b.minQuizzes) ||
-            (b.minPerfect != null && perfectScores >= b.minPerfect)
+            hasFirstLessonCompleted &&
+            ((b.minWorksheets != null && worksheetsCompleted >= b.minWorksheets) ||
+              (b.minStreak != null && streak >= b.minStreak) ||
+              (b.minQuizzes != null && quizCount >= b.minQuizzes) ||
+              (b.minPerfect != null && perfectScores >= b.minPerfect))
 
           return (
             <Card
@@ -92,6 +95,9 @@ export function AchievementsGrid({
           )
         })}
       </div>
+      {!hasFirstLessonCompleted && (
+        <p className="mt-3 text-sm text-violet-600">Complete your first lesson to unlock badge rewards.</p>
+      )}
     </section>
   )
 }

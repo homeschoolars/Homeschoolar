@@ -28,7 +28,6 @@ import {
   Users,
   LogOut,
   Star,
-  Copy,
   Check,
   CreditCard,
   TrendingUp,
@@ -123,7 +122,6 @@ export default function ParentDashboardClient({
   const [newChildLearnsBetterWith, setNewChildLearnsBetterWith] = useState<LearningMode[]>([])
   const [newChildStrengths, setNewChildStrengths] = useState("")
   const [newChildChallenges, setNewChildChallenges] = useState("")
-  const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [selectedChildId, setSelectedChildId] = useState<string | null>(
     initialChildren.length > 0 ? initialChildren[0].id : null,
@@ -241,12 +239,6 @@ export default function ParentDashboardClient({
     setter: (next: T[]) => void,
   ) => {
     setter(list.includes(value) ? list.filter((item) => item !== value) : [...list, value])
-  }
-
-  const copyLoginCode = (code: string) => {
-    navigator.clipboard.writeText(code)
-    setCopiedCode(code)
-    setTimeout(() => setCopiedCode(null), 2000)
   }
 
   const handleLogout = async () => {
@@ -381,13 +373,13 @@ export default function ParentDashboardClient({
             </CardContent>
           </Card>
         ) : (
-          <Card className="mb-8 bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0">
+          <Card className="mb-8 bg-gradient-to-r from-[#7F77DD] to-[#6C63D5] text-white border-0">
             <CardContent className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Star className="w-6 h-6" />
                 <div>
                   <p className="font-semibold">Start Your Free Trial</p>
-                  <p className="text-sm text-amber-100">14 days of full access - no card required</p>
+                  <p className="text-sm text-violet-100">14 days of full access - no card required</p>
                 </div>
               </div>
               <Button variant="secondary" size="sm" asChild>
@@ -770,49 +762,20 @@ export default function ParentDashboardClient({
                     <CardContent>
                       <div className="space-y-3">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-500">Login Code:</span>
-                          <div className="flex items-center gap-2">
-                            <code className="bg-gray-100 px-2 py-1 rounded font-mono font-bold">
-                              {child.login_code}
-                            </code>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                copyLoginCode(child.login_code)
-                              }}
-                            >
-                              {copiedCode === child.login_code ? (
-                                <Check className="w-4 h-4 text-green-500" />
-                              ) : (
-                                <Copy className="w-4 h-4" />
-                              )}
-                            </Button>
-                          </div>
+                          <span className="text-gray-500">Login Code</span>
+                          <code className="rounded-md bg-violet-100 px-2.5 py-1 font-mono text-xs font-semibold text-violet-800">
+                            {child.login_code}
+                          </code>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-500">Assessment:</span>
-                          <span
-                            className={`font-medium ${child.assessment_completed ? "text-green-600" : "text-amber-600"}`}
-                          >
-                            {child.assessment_completed ? "Completed" : "Pending"}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-500">Orphan Status:</span>
-                          <span
-                            className={`font-medium ${
-                              child.orphan_status === "verified"
-                                ? "text-green-600"
-                                : child.orphan_status === "pending"
-                                  ? "text-amber-600"
-                                  : "text-gray-500"
-                            }`}
-                          >
-                            {child.orphan_status}
-                          </span>
+                          <span className="text-gray-500">Assessment</span>
+                          {child.assessment_completed ? (
+                            <span className="inline-flex items-center gap-1 font-medium text-green-600">
+                              <Check className="h-4 w-4" /> Completed
+                            </span>
+                          ) : (
+                            <span className="font-medium text-amber-600">Pending</span>
+                          )}
                         </div>
                         <div className="space-y-1">
                           <div className="flex justify-between text-sm">
