@@ -39,6 +39,12 @@ export async function POST(request: Request) {
     if (message === "Forbidden") {
       return fail("Forbidden", 403)
     }
+    if (message === "LecturesIncomplete") {
+      return fail("LecturesIncomplete", 409)
+    }
+    if (message === "WorksheetsIncomplete") {
+      return fail("WorksheetsIncomplete", 409)
+    }
     return fail(message, statusFromErrorMessage(message, 500))
   }
 }

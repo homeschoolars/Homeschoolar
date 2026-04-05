@@ -22,6 +22,8 @@ type LessonDetail = {
   title: string
   slug: string
   displayOrder: number
+  requiredWorksheetCount?: number
+  lectures?: Array<{ id: string; title: string; orderIndex: number }>
   content: {
     storyText: string
     activityInstructions: string
@@ -36,6 +38,7 @@ type LessonEditorState = {
   title: string
   slug: string
   displayOrder: number
+  requiredWorksheetCount: number
   storyText: string
   activityInstructions: string
   quizConcept: string
@@ -104,6 +107,9 @@ export function CurriculumManagement() {
     parentTip: "",
   })
   const [lessonEditor, setLessonEditor] = useState<LessonEditorState | null>(null)
+  const [lectureList, setLectureList] = useState<Array<{ id: string; title: string }>>([])
+  const [newLectureTitle, setNewLectureTitle] = useState("")
+  const [lectureBusy, setLectureBusy] = useState(false)
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [htmlUploadFile, setHtmlUploadFile] = useState<File | null>(null)
 
@@ -177,6 +183,7 @@ export function CurriculumManagement() {
       title: payload.lesson.title,
       slug: payload.lesson.slug,
       displayOrder: payload.lesson.displayOrder,
+      requiredWorksheetCount: payload.lesson.requiredWorksheetCount ?? 2,
       storyText: payload.lesson.content?.storyText ?? "",
       activityInstructions: payload.lesson.content?.activityInstructions ?? "",
       quizConcept: payload.lesson.content?.quizConcept ?? "",
@@ -190,6 +197,7 @@ export function CurriculumManagement() {
       researchPrompt,
       reflectionPrompt,
     })
+    setLectureList((payload.lesson.lectures ?? []).map((l) => ({ id: l.id, title: l.title })))
   }
 
   useEffect(() => {
@@ -344,6 +352,47 @@ export function CurriculumManagement() {
     }
   }
 
+  const addLecture = async () => {
+    if (!selectedLessonId || !newLectureTitle.trim()) return
+    setLectureBusy(true)
+    setError(null)
+    try {
+      const res = await apiFetch(`/api/curriculum/lessons/${encodeURIComponent(selectedLessonId)}/lectures`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newLectureTitle.trim() }),
+      })
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(payload.error ?? "Failed to add lecture")
+      }
+      setNewLectureTitle("")
+      await loadLessonDetail(selectedLessonId)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to add lecture")
+    } finally {
+      setLectureBusy(false)
+    }
+  }
+
+  const deleteLecture = async (lectureId: string) => {
+    if (!window.confirm("Delete this lecture? Student progress for it will reset on re-import only.")) return
+    setLectureBusy(true)
+    setError(null)
+    try {
+      const res = await apiFetch(`/api/curriculum/lectures/${encodeURIComponent(lectureId)}`, { method: "DELETE" })
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(payload.error ?? "Failed to delete lecture")
+      }
+      if (selectedLessonId) await loadLessonDetail(selectedLessonId)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to delete lecture")
+    } finally {
+      setLectureBusy(false)
+    }
+  }
+
   const saveLesson = async () => {
     if (!selectedLessonId || !lessonEditor) return
     setSaving(true)
@@ -356,6 +405,7 @@ export function CurriculumManagement() {
           title: lessonEditor.title,
           slug: lessonEditor.slug,
           displayOrder: lessonEditor.displayOrder,
+          requiredWorksheetCount: lessonEditor.requiredWorksheetCount,
           content: {
             storyText: lessonEditor.storyText,
             activityInstructions: lessonEditor.activityInstructions,
@@ -822,7 +872,7 @@ export function CurriculumManagement() {
             <p className="text-sm text-slate-500">Select a lesson to edit.</p>
           ) : (
             <>
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 <div>
                   <Label>Title</Label>
                   <Input
@@ -848,6 +898,65 @@ export function CurriculumManagement() {
                       )
                     }
                   />
+                </div>
+                <div>
+                  <Label>Required worksheets (0 = skip)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={10}
+                    value={lessonEditor.requiredWorksheetCount}
+                    onChange={(e) =>
+                      setLessonEditor((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              requiredWorksheetCount: Math.min(
+                                10,
+                                Math.max(0, Number.parseInt(e.target.value || "0", 10) || 0),
+                              ),
+                            }
+                          : prev
+                      )
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 space-y-2">
+                <Label className="text-slate-800">Lectures (student marks each complete before worksheets/quiz)</Label>
+                {lectureList.length === 0 ? (
+                  <p className="text-xs text-slate-500">No lectures — quiz gating skips the lecture step.</p>
+                ) : (
+                  <ul className="space-y-1 text-sm">
+                    {lectureList.map((lec) => (
+                      <li key={lec.id} className="flex items-center justify-between gap-2 rounded border bg-white px-2 py-1">
+                        <span>{lec.title}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600"
+                          disabled={lectureBusy}
+                          onClick={() => void deleteLecture(lec.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <Input
+                    placeholder="New lecture title"
+                    value={newLectureTitle}
+                    onChange={(e) => setNewLectureTitle(e.target.value)}
+                    className="max-w-md"
+                  />
+                  <Button type="button" variant="secondary" disabled={lectureBusy || !newLectureTitle.trim()} onClick={() => void addLecture()}>
+                    {lectureBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    Add lecture
+                  </Button>
                 </div>
               </div>
 

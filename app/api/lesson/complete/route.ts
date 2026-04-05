@@ -19,11 +19,16 @@ export async function POST(request: Request) {
     const result = await completeLesson({
       studentId: body.childId,
       lessonId: body.lessonId,
-      skipQuizRequirement: false,
     })
     return ok(result)
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to complete lesson"
+    if (message === "LecturesIncomplete") {
+      return fail("LecturesIncomplete", 409)
+    }
+    if (message === "WorksheetsIncomplete") {
+      return fail("WorksheetsIncomplete", 409)
+    }
     if (message === "QuizRequired") {
       return fail("QuizRequired", 409)
     }

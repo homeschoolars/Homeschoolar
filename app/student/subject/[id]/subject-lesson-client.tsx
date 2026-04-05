@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { ChevronLeft, Loader2, Sparkles } from "lucide-react"
+import { CheckCircle2, ChevronLeft, Circle, ListVideo, Loader2, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -35,7 +35,9 @@ type LessonDetailResponse = {
   lesson: {
     id: string
     title: string
+    slug?: string
     difficultyLevel?: string
+    locked?: boolean
     content: {
       storyText: string
       activityInstructions: string
@@ -143,6 +145,21 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
     answers: { mcqs: [], shortQuestions: [] },
   })
 
+  type LessonFlowState = {
+    lectures: Array<{ id: string; title: string; orderIndex: number; completed: boolean }>
+    requiredWorksheetCount: number
+    worksheetsCompleted: number
+    worksheetsComplete: boolean
+    quizPassed: boolean
+    hasQuizPrompt: boolean
+    lecturesComplete: boolean
+    assignments: Array<{ id: string; status: string; worksheetId: string; worksheetTitle: string }>
+  }
+
+  const [lessonFlow, setLessonFlow] = useState<LessonFlowState | null>(null)
+  const [flowLoading, setFlowLoading] = useState(false)
+  const [completingLectureId, setCompletingLectureId] = useState<string | null>(null)
+
   useEffect(() => {
     const loadAgeGroups = async () => {
       try {
@@ -208,7 +225,14 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
     const fetchLesson = async () => {
       setLessonLoading(true)
       try {
-        const res = await apiFetch(`/api/curriculum/lessons/${encodeURIComponent(selectedLessonId)}`)
+        const raw = sessionStorage.getItem("student_child")
+        const childId = raw ? ((JSON.parse(raw) as { id?: string }).id ?? "") : ""
+        if (!childId) {
+          throw new Error("Student session missing")
+        }
+        const res = await apiFetch(
+          `/api/curriculum/lessons/${encodeURIComponent(selectedLessonId)}?childId=${encodeURIComponent(childId)}`,
+        )
         if (!res.ok) {
           const payload = (await res.json().catch(() => ({}))) as { error?: string }
           throw new Error(payload.error ?? "Unable to load lesson")
@@ -266,21 +290,112 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
     void fetchProgress()
   }, [selectedLessonId])
 
+  useEffect(() => {
+    if (!selectedLessonId || lessonLoading || !lesson || lesson.locked || !lessonProgress?.canAccess) {
+      setLessonFlow(null)
+      setFlowLoading(false)
+      return
+    }
+    const raw = sessionStorage.getItem("student_child")
+    const childId = raw ? ((JSON.parse(raw) as { id?: string }).id ?? "") : ""
+    if (!childId) return
+
+    const loadFlow = async () => {
+      setFlowLoading(true)
+      try {
+        const res = await apiFetch(
+          `/api/student/lesson-flow?childId=${encodeURIComponent(childId)}&lessonId=${encodeURIComponent(selectedLessonId)}`,
+        )
+        const payload = (await res.json()) as { success?: boolean; data?: LessonFlowState; error?: string }
+        if (!res.ok || !payload.success || !payload.data) {
+          throw new Error(payload.error ?? "Failed to load lesson flow")
+        }
+        setLessonFlow(payload.data)
+      } catch {
+        setLessonFlow(null)
+      } finally {
+        setFlowLoading(false)
+      }
+    }
+    void loadFlow()
+  }, [selectedLessonId, lesson, lessonLoading, lessonProgress?.canAccess])
+
   const selectedUnit = useMemo(
     () => subject?.units.find((unit) => unit.id === selectedUnitId) ?? null,
     [subject, selectedUnitId]
   )
 
   const ageStart = getAgeStart(ageGroup)
+  /** AI self-serve buttons: age > 7 (aligned with API). */
+  const supportsStudentAiGeneration = ageStart >= 8
   const supportsProject = ageStart >= 8
   const supportsResearch = ageStart >= 10
   const supportsDebate = ageStart >= 11
   const supportsReflection = ageStart >= 10
   const allLessonsCompleted = lessonProgress ? lessonProgress.lessons.length > 0 && lessonProgress.lessons.every((l) => l.status === "completed") : false
 
+  const disableStudentAi =
+    generatingType !== null ||
+    !selectedLessonId ||
+    (lessonProgress ? !lessonProgress.canAccess : false) ||
+    Boolean(lesson?.locked) ||
+    !supportsStudentAiGeneration
+
+  const refreshProgress = async () => {
+    const raw = sessionStorage.getItem("student_child")
+    const childId = raw ? ((JSON.parse(raw) as { id?: string }).id ?? "") : ""
+    if (!childId || !selectedLessonId) return
+    const res = await apiFetch(
+      `/api/lessons/progress?childId=${encodeURIComponent(childId)}&lessonId=${encodeURIComponent(selectedLessonId)}`,
+    )
+    const payload = (await res.json()) as {
+      success?: boolean
+      data?: {
+        status: "locked" | "unlocked" | "completed"
+        canAccess: boolean
+        lessons: Array<{ lessonId: string; title: string; orderIndex?: number; status: "locked" | "unlocked" | "completed" }>
+      }
+    }
+    if (res.ok && payload.data) {
+      setLessonProgress(payload.data)
+    }
+  }
+
+  const completeLecture = async (lectureId: string) => {
+    const raw = sessionStorage.getItem("student_child")
+    const childId = raw ? ((JSON.parse(raw) as { id?: string }).id ?? "") : ""
+    if (!childId || !selectedLessonId) return
+    setCompletingLectureId(lectureId)
+    try {
+      const res = await apiFetch(`/api/curriculum/lectures/${encodeURIComponent(lectureId)}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ childId }),
+      })
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(payload.error ?? "Could not mark lecture complete")
+      }
+      const flowRes = await apiFetch(
+        `/api/student/lesson-flow?childId=${encodeURIComponent(childId)}&lessonId=${encodeURIComponent(selectedLessonId)}`,
+      )
+      const flowPayload = (await flowRes.json()) as { success?: boolean; data?: LessonFlowState }
+      if (flowRes.ok && flowPayload.success && flowPayload.data) {
+        setLessonFlow(flowPayload.data)
+      }
+      await refreshProgress()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Lecture update failed")
+    } finally {
+      setCompletingLectureId(null)
+    }
+  }
+
   const handleGenerate = async (type: GenerationType) => {
     if (!selectedLessonId) return
     if (lessonProgress && !lessonProgress.canAccess) return
+    if (lesson?.locked) return
+    if (!supportsStudentAiGeneration) return
     setGeneratingType(type)
     try {
       const raw = sessionStorage.getItem("student_child")
@@ -568,7 +683,112 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                 </section>
               )}
 
-              {!lessonLoading && lesson?.content && (
+              {!lessonLoading && lesson?.locked && (
+                <section className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                  <p className="font-semibold text-slate-800">{lesson.title}</p>
+                  <p className="mt-2">Content is locked until you reach this lesson in order.</p>
+                </section>
+              )}
+
+              {!lessonLoading && lessonProgress?.canAccess && !lesson?.locked && (flowLoading || lessonFlow) && (
+                <section className="rounded-lg border border-violet-200 bg-violet-50/90 p-4 space-y-3">
+                  <h3 className="font-semibold text-violet-900 flex items-center gap-2 text-base">
+                    <ListVideo className="h-4 w-4 shrink-0" />
+                    Lesson path
+                  </h3>
+                  {flowLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-violet-800">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading steps…
+                    </div>
+                  ) : lessonFlow ? (
+                    <div className="space-y-4 text-sm">
+                      {lessonFlow.lectures.length > 0 ? (
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-violet-800 mb-2">1. Lectures</p>
+                          <ul className="space-y-2">
+                            {lessonFlow.lectures.map((lec) => (
+                              <li
+                                key={lec.id}
+                                className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-white/95 px-3 py-2 border border-violet-100"
+                              >
+                                <span className="flex items-center gap-2 text-slate-800">
+                                  {lec.completed ? (
+                                    <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" aria-hidden />
+                                  ) : (
+                                    <Circle className="h-4 w-4 text-slate-400 shrink-0" aria-hidden />
+                                  )}
+                                  {lec.title}
+                                </span>
+                                {!lec.completed ? (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="secondary"
+                                    disabled={completingLectureId === lec.id}
+                                    onClick={() => void completeLecture(lec.id)}
+                                  >
+                                    {completingLectureId === lec.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      "Mark done"
+                                    )}
+                                  </Button>
+                                ) : null}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-600">No lectures for this lesson — you can skip to worksheets.</p>
+                      )}
+
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-violet-800 mb-1">2. Worksheets</p>
+                        <p className="text-slate-700">
+                          Progress: {lessonFlow.worksheetsCompleted} / {lessonFlow.requiredWorksheetCount}
+                          {lessonFlow.requiredWorksheetCount === 0 ? " (none required for this lesson)" : ""}
+                        </p>
+                        {lessonFlow.assignments.length > 0 ? (
+                          <ul className="mt-2 space-y-1">
+                            {lessonFlow.assignments.map((a) => (
+                              <li key={a.id}>
+                                <Link
+                                  href={`/student/worksheet/${a.id}`}
+                                  className="text-violet-700 font-medium underline-offset-2 hover:underline"
+                                >
+                                  {a.worksheetTitle}
+                                </Link>
+                                <span className="text-slate-500"> — {a.status.replace("_", " ")}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : lessonFlow.requiredWorksheetCount > 0 ? (
+                          <p className="mt-2 text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+                            Your parent needs to assign worksheets linked to this lesson. They can generate one from the
+                            parent dashboard using this lesson.
+                          </p>
+                        ) : null}
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-violet-800 mb-1">3. Quiz</p>
+                        <p className="text-slate-700">
+                          {lessonFlow.hasQuizPrompt
+                            ? lessonFlow.quizPassed
+                              ? "Quiz passed ✓"
+                              : "Pass the lesson quiz (submit via your quiz activity) after steps 1–2."
+                            : "This lesson has no quiz prompt — use “Mark lesson complete” when steps above are satisfied."}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-600">Could not load lesson steps.</p>
+                  )}
+                </section>
+              )}
+
+              {!lessonLoading && lesson?.content && !lesson.locked && (
                 <>
                   <section>
                     <h3 className="font-semibold text-violet-800">Difficulty</h3>
@@ -600,14 +820,14 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
               <div className="flex flex-wrap gap-2 pt-2">
                 <Button
                   onClick={() => handleGenerate("story")}
-                  disabled={generatingType !== null || !selectedLessonId || (lessonProgress ? !lessonProgress.canAccess : false)}
+                  disabled={disableStudentAi}
                 >
                   {generatingType === "story" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Generate Story
                 </Button>
                 <Button
                   onClick={() => handleGenerate("worksheet")}
-                  disabled={generatingType !== null || !selectedLessonId || (lessonProgress ? !lessonProgress.canAccess : false)}
+                  disabled={disableStudentAi}
                   variant="secondary"
                 >
                   {generatingType === "worksheet" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -615,7 +835,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                 </Button>
                 <Button
                   onClick={() => handleGenerate("quiz")}
-                  disabled={generatingType !== null || !selectedLessonId || (lessonProgress ? !lessonProgress.canAccess : false)}
+                  disabled={disableStudentAi}
                   variant="outline"
                 >
                   {generatingType === "quiz" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -625,7 +845,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                   <>
                     <Button
                       onClick={() => handleGenerate("project")}
-                      disabled={generatingType !== null || !selectedLessonId || (lessonProgress ? !lessonProgress.canAccess : false)}
+                      disabled={disableStudentAi}
                       variant="secondary"
                     >
                       {generatingType === "project" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -637,7 +857,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                   <>
                     <Button
                       onClick={() => handleGenerate("reflection")}
-                      disabled={generatingType !== null || !selectedLessonId || (lessonProgress ? !lessonProgress.canAccess : false)}
+                      disabled={disableStudentAi}
                       variant="outline"
                     >
                       {generatingType === "reflection" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -648,7 +868,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                 {supportsResearch && (
                   <Button
                     onClick={() => handleGenerate("research")}
-                    disabled={generatingType !== null || !selectedLessonId || (lessonProgress ? !lessonProgress.canAccess : false)}
+                    disabled={disableStudentAi}
                     variant="secondary"
                   >
                     {generatingType === "research" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -659,7 +879,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                   <>
                     <Button
                       onClick={() => handleGenerate("debate")}
-                      disabled={generatingType !== null || !selectedLessonId || (lessonProgress ? !lessonProgress.canAccess : false)}
+                      disabled={disableStudentAi}
                       variant="outline"
                     >
                       {generatingType === "debate" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -668,14 +888,26 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                   </>
                 )}
               </div>
-              <div className="pt-1">
+              <div className="pt-1 space-y-1">
                 <Button
                   onClick={completeCurrentLesson}
-                  disabled={!selectedLessonId || (lessonProgress ? !lessonProgress.canAccess : false)}
+                  disabled={
+                    !selectedLessonId ||
+                    (lessonProgress ? !lessonProgress.canAccess : false) ||
+                    lessonFlow?.hasQuizPrompt === true
+                  }
                   className="bg-[#7F77DD] hover:bg-[#6C63D5]"
+                  title={
+                    lessonFlow?.hasQuizPrompt
+                      ? "Lessons with a quiz are completed when you pass the quiz."
+                      : undefined
+                  }
                 >
                   Mark Lesson Complete
                 </Button>
+                {lessonFlow?.hasQuizPrompt ? (
+                  <p className="text-xs text-slate-500">When a quiz is configured, finishing the quiz completes the lesson.</p>
+                ) : null}
               </div>
 
               {(generatedContent.story ||

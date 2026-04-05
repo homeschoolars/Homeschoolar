@@ -106,6 +106,7 @@ export async function generateParentControlledContent({
         lessonId: lesson.id,
         contentType,
         forceRegenerate: false,
+        studentId,
       }),
     ),
   )

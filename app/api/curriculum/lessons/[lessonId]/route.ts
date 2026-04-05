@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server"
+import { auth } from "@/auth"
+import { enforceParentOrStudentChildAccess } from "@/lib/auth-helpers"
 import { requireRole } from "@/lib/auth-helpers"
 import {
   deleteCurriculumLesson,
@@ -6,20 +8,54 @@ import {
   updateCurriculumLesson,
   updateCurriculumLessonPrompts,
 } from "@/services/curriculum-structured-service"
+import { getStudentLessonState } from "@/services/progression"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ lessonId: string }> }
 ) {
   try {
     const { lessonId } = await params
-    const lesson = await getCurriculumLesson(decodeURIComponent(lessonId))
+    const decoded = decodeURIComponent(lessonId)
+    const lesson = await getCurriculumLesson(decoded)
     if (!lesson) {
       return NextResponse.json({ error: "Lesson not found" }, { status: 404 })
     }
+
+    const session = await auth()
+    if (session?.user?.role === "admin") {
+      return NextResponse.json({ lesson })
+    }
+
+    const { searchParams } = new URL(req.url)
+    const childId = searchParams.get("childId")
+
+    if (!childId) {
+      return NextResponse.json({ error: "Unauthorized: childId is required for lesson detail" }, { status: 401 })
+    }
+
+    await enforceParentOrStudentChildAccess({ childId, session, request: req })
+
+    if (session?.user?.role === "parent") {
+      return NextResponse.json({ lesson })
+    }
+
+    const state = await getStudentLessonState(childId, decoded)
+    if (!state.canAccess) {
+      return NextResponse.json({
+        lesson: {
+          id: lesson.id,
+          title: lesson.title,
+          slug: lesson.slug,
+          difficultyLevel: lesson.difficultyLevel,
+          locked: true,
+        },
+      })
+    }
+
     return NextResponse.json({ lesson })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to fetch lesson"
@@ -40,6 +76,7 @@ export async function PATCH(
       slug: string
       orderIndex: number
       displayOrder: number
+      requiredWorksheetCount: number
       content: {
         storyText?: string
         activityInstructions?: string

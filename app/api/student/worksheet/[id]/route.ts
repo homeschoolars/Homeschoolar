@@ -3,6 +3,8 @@ import { auth } from "@/auth"
 import { enforceParentOrStudentChildAccess } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 import { serializeWorksheet } from "@/lib/serializers"
+import { recordLessonWorksheetCompletion } from "@/services/lesson-gate"
+import { recordAdaptivePerformance } from "@/services/adaptive-outcome"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -104,6 +106,24 @@ export async function POST(
       where: { id: assignment.id },
       data: { status: "completed" },
     })
+
+    const linkedLessonId = assignment.worksheet.lessonId
+    if (linkedLessonId) {
+      await recordLessonWorksheetCompletion({
+        studentId: assignment.childId,
+        lessonId: linkedLessonId,
+        worksheetId: assignment.worksheet.id,
+        submissionId: submission.id,
+        score,
+        maxScore: totalPoints,
+      })
+      await recordAdaptivePerformance({
+        studentId: assignment.childId,
+        score,
+        maxScore: totalPoints,
+        source: "worksheet",
+      })
+    }
 
     return NextResponse.json({
       submissionId: submission.id,

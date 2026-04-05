@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build",
+    "db:migrate": "DOTENV_CONFIG_PATH=.env node -r dotenv/config ./node_modules/prisma/build/index.js migrate deploy",
     "dev": "next dev",
     "lint": "eslint .",
     "postinstall": "node scripts/prisma-generate.js",

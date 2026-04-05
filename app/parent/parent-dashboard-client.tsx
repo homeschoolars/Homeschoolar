@@ -53,6 +53,8 @@ import { RoadmapViewer } from "@/components/dashboards/parent/roadmap-viewer"
 import { WeeklyAIInsights } from "@/components/dashboards/parent/weekly-ai-insights"
 import { QuickContentActions } from "@/components/parent/quick-content-actions"
 import { FullLessonGenerator } from "@/components/parent/full-lesson-generator"
+import { ParentCurriculumImport } from "@/components/parent/parent-curriculum-import"
+import { LessonWorksheetAssigner } from "@/components/parent/lesson-worksheet-assigner"
 import { apiFetch } from "@/lib/api-client"
 import { ParentAppHeader } from "@/components/layout/parent-app-header"
 import {
@@ -904,6 +906,19 @@ export default function ParentDashboardClient({
                     )}
                   </CardContent>
                 </Card>
+
+                <div className="lg:col-span-2">
+                  <ParentCurriculumImport defaultAgeGroup={curriculumAgeGroup} />
+                </div>
+
+                {selectedChildId ? (
+                  <div className="lg:col-span-2">
+                    <LessonWorksheetAssigner
+                      childId={selectedChildId}
+                      ageGroup={selectedChild?.age_group ?? curriculumAgeGroup}
+                    />
+                  </div>
+                ) : null}
 
                 {selectedChildId ? (
                   <div className="lg:col-span-2">

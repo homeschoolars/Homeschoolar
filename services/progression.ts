@@ -1,5 +1,10 @@
 import "server-only"
 import { prisma } from "@/lib/prisma"
+import {
+  assertCanTakeLessonQuiz,
+  assertLessonCompletionGates,
+  lessonHasQuizPrompt,
+} from "@/services/lesson-gate"
 
 export type LessonProgressStatus = "locked" | "unlocked" | "completed"
 
@@ -8,83 +13,115 @@ function isPassScore(score: number, maxScore: number) {
   return score / maxScore >= 0.6
 }
 
-async function getOrderedLessonsForUnit(unitId: string) {
-  return prisma.curriculumLesson.findMany({
-    where: { unitId },
-    orderBy: [{ orderIndex: "asc" }, { displayOrder: "asc" }, { createdAt: "asc" }],
-    select: { id: true, title: true, orderIndex: true, displayOrder: true, unitId: true },
+export async function getCurriculumSubjectIdForLesson(lessonId: string): Promise<string | null> {
+  const row = await prisma.curriculumLesson.findUnique({
+    where: { id: lessonId },
+    select: { unit: { select: { subjectId: true } } },
   })
+  return row?.unit.subjectId ?? null
 }
 
-export async function initializeStudentProgress(studentId: string, lessonId: string) {
-  const lesson = await prisma.curriculumLesson.findUnique({
-    where: { id: lessonId },
-    select: { id: true, unitId: true },
+/** All lessons in a curriculum subject in global order (units → lessons). */
+export async function getOrderedLessonsForSubject(curriculumSubjectId: string) {
+  const units = await prisma.curriculumUnit.findMany({
+    where: { subjectId: curriculumSubjectId },
+    orderBy: [{ orderIndex: "asc" }, { displayOrder: "asc" }, { createdAt: "asc" }],
+    include: {
+      lessons: {
+        orderBy: [{ orderIndex: "asc" }, { displayOrder: "asc" }, { createdAt: "asc" }],
+        select: { id: true, title: true, orderIndex: true, displayOrder: true, unitId: true },
+      },
+    },
   })
-  if (!lesson) throw new Error("Lesson not found")
+  return units.flatMap((u) => u.lessons)
+}
 
-  const lessons = await getOrderedLessonsForUnit(lesson.unitId)
-  if (lessons.length === 0) throw new Error("NotFound")
-  const firstLessonId = lessons[0].id
+async function repairSingleUnlockedSubject(
+  studentId: string,
+  curriculumSubjectId: string,
+  lessons: Array<{ id: string }>,
+) {
   const lessonIds = lessons.map((l) => l.id)
-
-  const existingRows = await prisma.studentLessonProgress.findMany({
-    where: { studentId, lessonId: { in: lessonIds } },
-    select: { lessonId: true, status: true, updatedAt: true },
-    orderBy: { updatedAt: "asc" },
-  })
-
-  if (existingRows.length < lessons.length) {
-    const existingIds = new Set(existingRows.map((row) => row.lessonId))
-    const missingIds = lessonIds.filter((id) => !existingIds.has(id))
-
-    if (missingIds.length > 0) {
-      await prisma.studentLessonProgress.createMany({
-        data: missingIds.map((id) => ({
-          studentId,
-          lessonId: id,
-          // If this is first-time initialization, unlock the first lesson only.
-          status: existingRows.length === 0 && id === firstLessonId ? "unlocked" : "locked",
-        })),
-        skipDuplicates: true,
-      })
-    }
-  }
-
-  // Ensure exactly one unlocked lesson in the unit to prevent skip/parallel access.
   const progressRows = await prisma.studentLessonProgress.findMany({
     where: { studentId, lessonId: { in: lessonIds } },
     select: { lessonId: true, status: true, updatedAt: true },
-    orderBy: { updatedAt: "asc" },
   })
-
-  const unlockedRows = progressRows.filter((row) => row.status === "unlocked")
+  const byLesson = new Map(progressRows.map((r) => [r.lessonId, r]))
+  const unlockedRows = progressRows.filter((r) => r.status === "unlocked")
 
   if (unlockedRows.length === 0) {
-    const firstLockedLesson = lessons.find((l) =>
-      progressRows.some((row) => row.lessonId === l.id && row.status === "locked"),
-    )
-    if (!firstLockedLesson) {
-      // All lessons are completed in this unit; nothing to unlock.
-      return getStudentLessonState(studentId, lessonId)
-    }
-    await prisma.studentLessonProgress.update({
-      where: { studentId_lessonId: { studentId, lessonId: firstLockedLesson.id } },
-      data: { status: "unlocked", lastAccessedAt: new Date() },
+    const firstNonCompleted = lessons.find((l) => {
+      const p = byLesson.get(l.id)
+      return !p || p.status !== "completed"
     })
-  } else if (unlockedRows.length > 1) {
-    const sortedUnlocked = unlockedRows.sort((a, b) => a.updatedAt.getTime() - b.updatedAt.getTime())
-    const keepUnlocked = sortedUnlocked[0].lessonId
-    const toLock = sortedUnlocked.filter((row) => row.lessonId !== keepUnlocked).map((row) => row.lessonId)
-    if (toLock.length > 0) {
-      await prisma.studentLessonProgress.updateMany({
-        where: { studentId, lessonId: { in: toLock }, status: "unlocked" },
-        data: { status: "locked" },
-      })
-    }
+    if (!firstNonCompleted) return
+    await prisma.studentLessonProgress.upsert({
+      where: { studentId_lessonId: { studentId, lessonId: firstNonCompleted.id } },
+      update: { status: "unlocked", lastAccessedAt: new Date() },
+      create: {
+        studentId,
+        lessonId: firstNonCompleted.id,
+        status: "unlocked",
+        lastAccessedAt: new Date(),
+      },
+    })
+    return
   }
 
+  if (unlockedRows.length === 1) return
+
+  const sortedUnlocked = unlockedRows.sort((a, b) => a.updatedAt.getTime() - b.updatedAt.getTime())
+  const keepId = sortedUnlocked[0]!.lessonId
+  const toLock = unlockedRows.filter((r) => r.lessonId !== keepId).map((r) => r.lessonId)
+  if (toLock.length > 0) {
+    await prisma.studentLessonProgress.updateMany({
+      where: { studentId, lessonId: { in: toLock }, status: "unlocked" },
+      data: { status: "locked" },
+    })
+  }
+}
+
+export async function initializeStudentProgress(studentId: string, lessonId: string) {
+  const subjectId = await getCurriculumSubjectIdForLesson(lessonId)
+  if (!subjectId) throw new Error("Lesson not found")
+
+  const lessons = await getOrderedLessonsForSubject(subjectId)
+  if (lessons.length === 0) throw new Error("NotFound")
+
+  const lessonIds = lessons.map((l) => l.id)
+  const firstLessonId = lessonIds[0]!
+
+  const existingRows = await prisma.studentLessonProgress.findMany({
+    where: { studentId, lessonId: { in: lessonIds } },
+    select: { lessonId: true },
+  })
+  const existingIds = new Set(existingRows.map((r) => r.lessonId))
+  const missingIds = lessonIds.filter((id) => !existingIds.has(id))
+
+  if (missingIds.length > 0) {
+    const isFirstBatch = existingRows.length === 0
+    await prisma.studentLessonProgress.createMany({
+      data: missingIds.map((id) => ({
+        studentId,
+        lessonId: id,
+        status: isFirstBatch && id === firstLessonId ? "unlocked" : "locked",
+      })),
+      skipDuplicates: true,
+    })
+  }
+
+  await repairSingleUnlockedSubject(studentId, subjectId, lessons)
+
   return getStudentLessonState(studentId, lessonId)
+}
+
+/** Student must not fetch AI or full lesson content unless unlocked or completed. Parents may access for the same child. */
+export async function assertStudentLessonContentAccess(studentId: string, lessonId: string) {
+  await initializeStudentProgress(studentId, lessonId)
+  const state = await getStudentLessonState(studentId, lessonId)
+  if (!state.canAccess) {
+    throw new Error("Forbidden")
+  }
 }
 
 export async function getStudentLessonState(studentId: string, lessonId: string) {
@@ -94,14 +131,17 @@ export async function getStudentLessonState(studentId: string, lessonId: string)
   })
   if (!lesson) throw new Error("Lesson not found")
 
+  const subjectId = await getCurriculumSubjectIdForLesson(lessonId)
+  if (!subjectId) throw new Error("Lesson not found")
+
   const existingCount = await prisma.studentLessonProgress.count({
-    where: { studentId, lesson: { unitId: lesson.unitId } },
+    where: { studentId, lesson: { unit: { subjectId } } },
   })
   if (existingCount === 0) {
     await initializeStudentProgress(studentId, lessonId)
   }
 
-  const lessons = await getOrderedLessonsForUnit(lesson.unitId)
+  const lessons = await getOrderedLessonsForSubject(subjectId)
   const progressRows = await prisma.studentLessonProgress.findMany({
     where: { studentId, lessonId: { in: lessons.map((l) => l.id) } },
     select: {
@@ -134,22 +174,20 @@ export async function getStudentLessonState(studentId: string, lessonId: string)
 }
 
 export async function unlockNextLesson(studentId: string, lessonId: string) {
-  const lesson = await prisma.curriculumLesson.findUnique({
-    where: { id: lessonId },
-    select: { id: true, unitId: true },
-  })
-  if (!lesson) throw new Error("Lesson not found")
+  const subjectId = await getCurriculumSubjectIdForLesson(lessonId)
+  if (!subjectId) throw new Error("Lesson not found")
 
-  const lessons = await getOrderedLessonsForUnit(lesson.unitId)
+  const lessons = await getOrderedLessonsForSubject(subjectId)
+  const lessonIds = lessons.map((l) => l.id)
   const currentIndex = lessons.findIndex((l) => l.id === lessonId)
-  if (currentIndex < 0) throw new Error("Lesson not found in unit")
+  if (currentIndex < 0) throw new Error("Lesson not found in subject")
 
   const nextLesson = lessons[currentIndex + 1]
   if (!nextLesson) return { unlocked: null }
 
   await prisma.$transaction(async (tx) => {
     await tx.studentLessonProgress.updateMany({
-      where: { studentId, lessonId: { in: lessons.map((l) => l.id) }, status: "unlocked" },
+      where: { studentId, lessonId: { in: lessonIds }, status: "unlocked" },
       data: { status: "locked" },
     })
 
@@ -174,18 +212,12 @@ export async function unlockNextLesson(studentId: string, lessonId: string) {
 export async function completeLesson({
   studentId,
   lessonId,
-  skipQuizRequirement,
+  skipGateChecks,
 }: {
   studentId: string
   lessonId: string
-  skipQuizRequirement?: boolean
+  skipGateChecks?: boolean
 }) {
-  const lesson = await prisma.curriculumLesson.findUnique({
-    where: { id: lessonId },
-    select: { id: true, aiPrompts: { where: { type: "quiz" }, select: { id: true }, take: 1 } },
-  })
-  if (!lesson) throw new Error("Lesson not found")
-
   await initializeStudentProgress(studentId, lessonId)
 
   const current = await prisma.studentLessonProgress.findUnique({
@@ -194,9 +226,8 @@ export async function completeLesson({
   if (!current) throw new Error("NotFound")
   if (current.status === "locked") throw new Error("Forbidden")
 
-  const requiresQuiz = lesson.aiPrompts.length > 0
-  if (requiresQuiz && !skipQuizRequirement && !current.quizPassed) {
-    throw new Error("QuizRequired")
+  if (!skipGateChecks) {
+    await assertLessonCompletionGates(studentId, lessonId, { quizPassed: current.quizPassed })
   }
 
   const alreadyCompleted = current.status === "completed"
@@ -238,6 +269,9 @@ export async function submitLessonQuiz({
   if (!progress) throw new Error("NotFound")
   if (progress.status === "locked") throw new Error("Forbidden")
 
+  const hasQuiz = await lessonHasQuizPrompt(lessonId)
+  await assertCanTakeLessonQuiz(studentId, lessonId)
+
   const passed = isPassScore(score, maxScore)
   if (!passed) {
     await prisma.studentLessonProgress.update({
@@ -251,7 +285,21 @@ export async function submitLessonQuiz({
     where: { studentId_lessonId: { studentId, lessonId } },
     data: { quizPassed: true, lastAccessedAt: new Date() },
   })
-  await completeLesson({ studentId, lessonId, skipQuizRequirement: true })
+
+  const { recordAdaptivePerformance } = await import("@/services/adaptive-outcome")
+  await recordAdaptivePerformance({
+    studentId,
+    score,
+    maxScore,
+    source: "lesson_quiz",
+  })
+
+  if (hasQuiz) {
+    await completeLesson({ studentId, lessonId, skipGateChecks: true })
+  } else {
+    await assertLessonCompletionGates(studentId, lessonId, { quizPassed: true })
+    await completeLesson({ studentId, lessonId, skipGateChecks: true })
+  }
 
   const stateAfterCompletion = await getStudentLessonState(studentId, lessonId)
   const unlockedLesson = stateAfterCompletion.lessons.find((l) => l.status === "unlocked")

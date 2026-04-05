@@ -34,6 +34,7 @@ export async function POST(req: Request) {
       difficultyLevel?: string
       orderIndex?: number
       displayOrder?: number
+      requiredWorksheetCount?: number
       content: {
         storyText: string
         activityInstructions: string
@@ -50,7 +51,10 @@ export async function POST(req: Request) {
       )
     }
 
-    const lesson = await createCurriculumLesson(body)
+    const lesson = await createCurriculumLesson({
+      ...body,
+      requiredWorksheetCount: body.requiredWorksheetCount,
+    })
     return NextResponse.json({ lesson }, { status: 201 })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create lesson"

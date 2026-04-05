@@ -20,29 +20,61 @@ export async function POST(
 
     const body = (await req.json()) as {
       subjectId?: string
+      curriculumLessonId?: string
       topic?: string
       difficulty?: Difficulty
       numQuestions?: number
     }
 
-    if (!body.subjectId) {
-      return NextResponse.json({ error: "subjectId is required" }, { status: 400 })
-    }
-
-    const [child, subject] = await Promise.all([
+    const [child] = await Promise.all([
       prisma.child.findUnique({
         where: { id },
         select: { id: true, ageGroup: true, currentLevel: true },
-      }),
-      prisma.subject.findUnique({
-        where: { id: body.subjectId },
-        select: { id: true, name: true },
       }),
     ])
 
     if (!child) {
       return NextResponse.json({ error: "Child not found" }, { status: 404 })
     }
+
+    let subjectId = body.subjectId ?? ""
+    let topic = body.topic
+    let curriculumLessonId: string | null = body.curriculumLessonId?.trim() || null
+
+    if (curriculumLessonId) {
+      const cl = await prisma.curriculumLesson.findUnique({
+        where: { id: curriculumLessonId },
+        include: {
+          unit: {
+            include: {
+              subject: { select: { name: true, baseSubjectId: true } },
+            },
+          },
+        },
+      })
+      if (!cl) {
+        return NextResponse.json({ error: "Curriculum lesson not found" }, { status: 404 })
+      }
+      if (cl.unit.subject.baseSubjectId) {
+        subjectId = cl.unit.subject.baseSubjectId
+      } else {
+        const byName = await prisma.subject.findFirst({
+          where: { name: { equals: cl.unit.subject.name, mode: "insensitive" } },
+          select: { id: true },
+        })
+        subjectId = byName?.id ?? ""
+      }
+      topic = topic ?? cl.title
+    }
+
+    if (!subjectId) {
+      return NextResponse.json({ error: "subjectId or curriculumLessonId is required" }, { status: 400 })
+    }
+
+    const subject = await prisma.subject.findUnique({
+      where: { id: subjectId },
+      select: { id: true, name: true },
+    })
     if (!subject) {
       return NextResponse.json({ error: "Subject not found" }, { status: 404 })
     }
@@ -53,7 +85,7 @@ export async function POST(
         subject_name: subject.name,
         age_group: toApiAgeGroup(child.ageGroup),
         difficulty: body.difficulty ?? "medium",
-        topic: body.topic,
+        topic,
         num_questions: body.numQuestions ?? 5,
         child_level: child.currentLevel,
       },
@@ -64,6 +96,13 @@ export async function POST(
         autoApprove: true,
       }
     )
+
+    if (curriculumLessonId) {
+      await prisma.worksheet.update({
+        where: { id: worksheet.id },
+        data: { lessonId: curriculumLessonId },
+      })
+    }
 
     const assignment = await prisma.worksheetAssignment.create({
       data: {
@@ -77,8 +116,13 @@ export async function POST(
       },
     })
 
+    const worksheetRow =
+      curriculumLessonId != null
+        ? await prisma.worksheet.findUnique({ where: { id: worksheet.id } })
+        : worksheet
+
     return NextResponse.json({
-      worksheet: serializeWorksheet(worksheet),
+      worksheet: serializeWorksheet(worksheetRow ?? worksheet),
       assignment: serializeAssignment(assignment),
     })
   } catch (error) {

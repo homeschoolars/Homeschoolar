@@ -133,6 +133,8 @@ model Child {
   lessonProgress      StudentLessonProgress[]
   generatedContents   CurriculumGeneratedContent[]
   subjectExams        SubjectExam[]
+  lectureProgress     StudentLectureProgress[]
+  lessonWorksheetDones StudentLessonWorksheetDone[]
 
   @@index([parentId])
   @@index([ageGroup])
@@ -287,6 +289,7 @@ model CurriculumLesson {
   difficultyLevel String                 @default("foundation") @map("difficulty_level")
   orderIndex  Int                        @default(0) @map("order_index")
   displayOrder Int                       @default(0) @map("display_order")
+  requiredWorksheetCount Int             @default(2) @map("required_worksheet_count")
   createdAt   DateTime                   @default(now()) @map("created_at")
   updatedAt   DateTime                   @updatedAt @map("updated_at")
   unit        CurriculumUnit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
@@ -294,9 +297,58 @@ model CurriculumLesson {
   aiPrompts   CurriculumAIPrompt[]
   generations CurriculumGeneratedContent[]
   studentProgress StudentLessonProgress[]
+  lectures    CurriculumLecture[]
+  worksheets  Worksheet[]
+  worksheetCompletions StudentLessonWorksheetDone[]
 
   @@unique([unitId, slug])
   @@map("curriculum_lessons")
+}
+
+model CurriculumLecture {
+  id          String   @id @default(uuid())
+  lessonId    String   @map("lesson_id")
+  orderIndex  Int      @default(0) @map("order_index")
+  title       String
+  contentJson Json     @default("{}") @map("content_json")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  lesson      CurriculumLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  progress    StudentLectureProgress[]
+
+  @@index([lessonId, orderIndex])
+  @@map("curriculum_lectures")
+}
+
+model StudentLectureProgress {
+  id          String   @id @default(cuid())
+  studentId   String   @map("student_id")
+  lectureId   String   @map("lecture_id")
+  completedAt DateTime @default(now()) @map("completed_at")
+  student     Child    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lecture     CurriculumLecture @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, lectureId])
+  @@index([studentId])
+  @@map("student_lecture_progress")
+}
+
+model StudentLessonWorksheetDone {
+  id           String   @id @default(cuid())
+  studentId    String   @map("student_id")
+  lessonId     String   @map("lesson_id")
+  worksheetId  String   @map("worksheet_id")
+  submissionId String?  @map("submission_id")
+  score        Decimal  @map("score") @db.Decimal(5, 2)
+  maxScore     Decimal  @map("max_score") @db.Decimal(5, 2)
+  createdAt    DateTime @default(now()) @map("created_at")
+  student      Child    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lesson       CurriculumLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  worksheet    Worksheet @relation(fields: [worksheetId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, worksheetId])
+  @@index([studentId, lessonId])
+  @@map("student_lesson_worksheet_done")
 }
 
 model CurriculumContent {
@@ -346,7 +398,6 @@ model CurriculumGeneratedContent {
   unit           CurriculumUnit?      @relation(fields: [unitId], references: [id], onDelete: SetNull)
   student        Child?               @relation(fields: [studentId], references: [id], onDelete: SetNull)
 
-  @@unique([lessonId, type])
   @@unique([lessonId, type, sessionKey])
   @@map("curriculum_generated_contents")
 }
@@ -399,13 +450,17 @@ model Worksheet {
   isAiGenerated Boolean               @default(false) @map("is_ai_generated")
   isApproved    Boolean               @default(false) @map("is_approved")
   createdBy     String?               @map("created_by")
+  lessonId      String?               @map("lesson_id")
   createdAt     DateTime              @default(now()) @map("created_at")
   updatedAt     DateTime              @default(now()) @map("updated_at")
   analytics     AnalyticsEvent[]
   assignments   WorksheetAssignment[]
   creator       User?                 @relation("WorksheetCreator", fields: [createdBy], references: [id])
   subject       Subject               @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  lesson        CurriculumLesson?     @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  lessonCompletions StudentLessonWorksheetDone[]
 
+  @@index([lessonId])
   @@map("worksheets")
 }
 

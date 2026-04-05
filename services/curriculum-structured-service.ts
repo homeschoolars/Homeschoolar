@@ -1,6 +1,7 @@
 import "server-only"
 import { generateObject } from "ai"
 import { z } from "zod"
+import type { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { openai, isOpenAIConfigured } from "@/lib/openai"
 
@@ -13,12 +14,12 @@ const quizJsonSchema = z.object({
         correctAnswer: z.string().min(1),
       }),
     )
-    .min(1),
+    .length(10),
 })
 
 const worksheetJsonSchema = z.object({
   title: z.string().min(1),
-  activities: z.array(z.string().min(1)).min(1),
+  activities: z.array(z.string().min(1)).min(2).max(3),
   instructions: z.string().min(1),
 })
 
@@ -49,11 +50,19 @@ type CurriculumContentInput = {
 
 type CurriculumImportPromptMap = Partial<Record<CurriculumPromptKind, string>>
 
+type CurriculumImportLecture = {
+  title: string
+  orderIndex?: number
+  contentJson?: Record<string, unknown>
+}
+
 type CurriculumImportLesson = {
   title: string
   slug?: string
   displayOrder?: number
   difficultyIndicator?: string
+  requiredWorksheetCount?: number
+  lectures?: CurriculumImportLecture[]
   content?: Partial<CurriculumContentInput>
   prompts?: CurriculumImportPromptMap
 }
@@ -242,6 +251,9 @@ export async function importCurriculumForAgeGroup(params: {
             title: lessonTitle,
             displayOrder: lesson.displayOrder ?? lessonIndex + 1,
             difficultyLevel: lesson.difficultyIndicator ?? "foundation",
+            ...(lesson.requiredWorksheetCount != null
+              ? { requiredWorksheetCount: lesson.requiredWorksheetCount }
+              : {}),
           },
           create: {
             unitId: createdUnit.id,
@@ -249,6 +261,7 @@ export async function importCurriculumForAgeGroup(params: {
             slug: lessonSlug,
             displayOrder: lesson.displayOrder ?? lessonIndex + 1,
             difficultyLevel: lesson.difficultyIndicator ?? "foundation",
+            requiredWorksheetCount: lesson.requiredWorksheetCount ?? 2,
           },
           select: { id: true, title: true },
         })
@@ -282,6 +295,21 @@ export async function importCurriculumForAgeGroup(params: {
             where: { lessonId_type: { lessonId: createdLesson.id, type: type as CurriculumPromptKind } },
             update: { promptTemplate },
             create: { lessonId: createdLesson.id, type: type as CurriculumPromptKind, promptTemplate },
+          })
+        }
+
+        await prisma.curriculumLecture.deleteMany({ where: { lessonId: createdLesson.id } })
+        const lectureList = lesson.lectures ?? []
+        for (const [lecIndex, lec] of lectureList.entries()) {
+          const lecTitle = lec.title?.trim()
+          if (!lecTitle) continue
+          await prisma.curriculumLecture.create({
+            data: {
+              lessonId: createdLesson.id,
+              orderIndex: lec.orderIndex ?? lecIndex,
+              title: lecTitle,
+              contentJson: (lec.contentJson ?? {}) as Prisma.InputJsonValue,
+            },
           })
         }
       }
@@ -454,6 +482,9 @@ export async function getCurriculumLesson(lessonId: string) {
     include: {
       content: true,
       aiPrompts: true,
+      lectures: {
+        orderBy: [{ orderIndex: "asc" }, { createdAt: "asc" }],
+      },
       unit: {
         include: {
           subject: {
@@ -563,6 +594,7 @@ export async function createCurriculumLesson(input: {
   difficultyLevel?: string
   orderIndex?: number
   displayOrder?: number
+  requiredWorksheetCount?: number
   content: CurriculumContentInput
 }) {
   const lesson = await prisma.curriculumLesson.create({
@@ -573,6 +605,7 @@ export async function createCurriculumLesson(input: {
       difficultyLevel: input.difficultyLevel ?? "foundation",
       orderIndex: input.orderIndex ?? input.displayOrder ?? 0,
       displayOrder: input.displayOrder ?? 0,
+      requiredWorksheetCount: input.requiredWorksheetCount ?? 2,
       content: {
         create: input.content,
       },
@@ -590,6 +623,7 @@ export async function updateCurriculumLesson(
     difficultyLevel: string
     orderIndex: number
     displayOrder: number
+    requiredWorksheetCount: number
     content: Partial<CurriculumContentInput>
   }>
 ) {
@@ -693,21 +727,22 @@ function fallbackStructuredJson(
   },
 ) {
   if (type === "quiz") {
+    const q = (n: number) => ({
+      question: `(${n}/10) What is one key idea from "${lessonTitle}"?`,
+      options: ["Option A", "Option B", "Option C", "Option D"],
+      correctAnswer: "Option A",
+    })
     return {
-      questions: [
-        {
-          question: `What is one key idea from "${lessonTitle}"?`,
-          options: ["Option A", "Option B", "Option C", "Option D"],
-          correctAnswer: "Option A",
-        },
-      ],
+      questions: Array.from({ length: 10 }, (_, i) => q(i + 1)),
     }
   }
   if (type === "worksheet") {
+    const a1 = staticContent.worksheetExample || `Practice activity 1 for ${lessonTitle}`
+    const a2 = staticContent.activityInstructions || `Practice activity 2 for ${lessonTitle}`
     return {
       title: `${lessonTitle} Worksheet`,
       instructions: staticContent.activityInstructions || `Complete the worksheet for ${lessonTitle}.`,
-      activities: [staticContent.worksheetExample || `Practice activity for ${lessonTitle}`],
+      activities: [a1, a2],
     }
   }
   return {
@@ -731,17 +766,46 @@ function stringifyContentJson(type: CurriculumPromptKind, contentJson: unknown) 
   return JSON.stringify(contentJson, null, 2)
 }
 
+async function buildStudentPromptSuffix(studentId: string | undefined) {
+  if (!studentId) return ""
+  const child = await prisma.child.findUnique({
+    where: { id: studentId },
+    select: {
+      name: true,
+      currentLevel: true,
+      ageGroup: true,
+      interests: true,
+      profile: { select: { ageYears: true } },
+    },
+  })
+  if (!child) return ""
+  return `
+
+Student personalization (use for difficulty and examples):
+- Name: ${child.name}
+- Learning level: ${child.currentLevel}
+- Age group: ${child.ageGroup}
+- Age (years): ${child.profile?.ageYears ?? "unknown"}
+- Interests: ${child.interests.length ? child.interests.join(", ") : "none"}
+`
+}
+
 export async function generateStructuredLessonAsset({
   lessonId,
   contentType,
   forceRegenerate = false,
+  studentId,
 }: {
   lessonId: string
   contentType: CurriculumPromptKind
   forceRegenerate?: boolean
+  /** When set, cache and prompts are scoped to this student. */
+  studentId?: string | null
 }) {
-  const existing = await prisma.curriculumGeneratedContent.findFirst({
-    where: { lessonId, type: contentType },
+  const sessionKey = studentId ? `student:${studentId}` : "global"
+
+  const existing = await prisma.curriculumGeneratedContent.findUnique({
+    where: { lessonId_type_sessionKey: { lessonId, type: contentType, sessionKey } },
     select: { id: true, content: true, contentJson: true, createdAt: true, updatedAt: true },
   })
   if (existing && !forceRegenerate) {
@@ -777,6 +841,8 @@ export async function generateStructuredLessonAsset({
     throw new Error("Prompt template not found for lesson")
   }
 
+  const studentSuffix = await buildStudentPromptSuffix(studentId ?? undefined)
+
   const hydratedPrompt = promptTemplate
     .replace(/\{\{lessonTitle\}\}/g, lesson.title)
     .replace(/\[Lesson Title\]/g, lesson.title)
@@ -788,6 +854,13 @@ export async function generateStructuredLessonAsset({
   const schema = getSchemaForType(contentType)
   let contentJson: unknown
   let model = "fallback"
+
+  const quizHint =
+    contentType === "quiz"
+      ? "\n\nYou must output exactly 10 multiple-choice questions with 4 options each."
+      : contentType === "worksheet"
+        ? "\n\nYou must output exactly 2 or 3 distinct activities in the activities array."
+        : ""
 
   if (!isOpenAIConfigured()) {
     contentJson = fallbackStructuredJson(contentType, lesson.title, {
@@ -801,7 +874,7 @@ export async function generateStructuredLessonAsset({
     const result = await generateObject({
       model: openai("gpt-4o-mini"),
       schema,
-      prompt: `${hydratedPrompt}
+      prompt: `${hydratedPrompt}${quizHint}${studentSuffix}
 
 Return strict JSON only. Do not include markdown or extra text.`,
     })
@@ -810,23 +883,26 @@ Return strict JSON only. Do not include markdown or extra text.`,
   }
 
   const content = stringifyContentJson(contentType, contentJson)
+  const snapshot = `${hydratedPrompt}${quizHint}${studentSuffix}`
 
   await prisma.curriculumGeneratedContent.upsert({
-    where: { lessonId_type_sessionKey: { lessonId, type: contentType, sessionKey: "global" } },
+    where: { lessonId_type_sessionKey: { lessonId, type: contentType, sessionKey } },
     update: {
       content,
       contentJson: contentJson as object,
-      promptSnapshot: hydratedPrompt,
+      promptSnapshot: snapshot,
       model,
-      sessionKey: "global",
+      sessionKey,
+      studentId: studentId ?? null,
     },
     create: {
       lessonId,
       type: contentType,
-      sessionKey: "global",
+      sessionKey,
+      studentId: studentId ?? null,
       content,
       contentJson: contentJson as object,
-      promptSnapshot: hydratedPrompt,
+      promptSnapshot: snapshot,
       model,
     },
   })
@@ -838,16 +914,19 @@ export async function generateLessonAsset({
   lessonId,
   type,
   sessionKey,
+  studentId,
 }: {
   lessonId: string
   type: CurriculumPromptKind
   sessionKey?: string
+  studentId?: string | null
 }) {
-  void sessionKey // kept for backward compatibility
+  void sessionKey
   const generated = await generateStructuredLessonAsset({
     lessonId,
     contentType: type,
     forceRegenerate: false,
+    studentId: studentId ?? undefined,
   })
   return { content: generated.content, cached: generated.cached }
 }
