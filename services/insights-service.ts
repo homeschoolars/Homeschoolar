@@ -24,6 +24,26 @@ const insightsSchema = z.object({
   }),
 })
 
+type InsightPayload = z.infer<typeof insightsSchema>
+
+const EMPTY_INSIGHTS: InsightPayload = {
+  timeline: [],
+  strengths: [],
+  weaknesses: [],
+  recommendations: [],
+  learning_style_summary: "",
+  weekly_summary: {
+    mastered: [],
+    improving: [],
+    needs_attention: [],
+  },
+}
+
+function isInsightPayload(value: unknown): value is InsightPayload {
+  const parsed = insightsSchema.safeParse(value)
+  return parsed.success
+}
+
 /** Parent Insight Dashboard template: no jargon, positive framing, 3–5 bullet points, actionable. */
 const PARENT_INSIGHT_PROMPT = `You generate WEEKLY SUMMARY reports for parents. Rules:
 - No educational jargon. Use simple, parent-friendly language.
@@ -42,11 +62,24 @@ Sections to fill:
 
 Also return: timeline (recent dates + short summary), strengths, weaknesses, recommendations (title + reason), learning_style_summary.`
 
-export async function getChildInsights(childId: string) {
+export async function getChildInsights(childId: string, options?: { refresh?: boolean }) {
   const child = await prisma.child.findUnique({ where: { id: childId }, select: { parentId: true } })
   if (child?.parentId) {
     await enforceSubscriptionAccess({ userId: child.parentId, feature: "ai" })
   }
+
+  const shouldRefresh = options?.refresh === true
+  if (!shouldRefresh) {
+    const cachedEvent = await prisma.analyticsEvent.findFirst({
+      where: { childId, eventType: "insights.generated" },
+      orderBy: { createdAt: "desc" },
+      select: { eventData: true },
+    })
+    if (isInsightPayload(cachedEvent?.eventData)) {
+      return cachedEvent.eventData
+    }
+  }
+
   const assessments = await prisma.assessment.findMany({
     where: { childId },
     include: { assessmentResult: true, subject: true },
@@ -55,6 +88,11 @@ export async function getChildInsights(childId: string) {
   })
   const memories = await prisma.learningMemory.findMany({ where: { childId } })
   const recommendations = await prisma.aIRecommendation.findMany({ where: { childId }, take: 5 })
+
+  // Return a fast fallback when there's no meaningful data yet.
+  if (assessments.length === 0 && memories.length === 0 && recommendations.length === 0) {
+    return EMPTY_INSIGHTS
+  }
 
   // Build segmented prompt: static (cacheable) + dynamic (non-cached)
   const dynamicContent = `Assessments: ${JSON.stringify(assessments)}
@@ -93,27 +131,16 @@ Return timeline, strengths, weaknesses, recommendations with reasons, learning_s
       isRateLimit: isRateLimitError(error),
     })
     
-    if (isSchemaValidationError(error)) {
-      throw new Error(
-        `Invalid JSON schema for insights generation (400 Bad Request). ` +
-        `This indicates a schema validation issue. ` +
-        `Error: ${hint}. ` +
-        `Please check server logs for details.`
-      )
-    }
-    
-    if (isRateLimitError(error)) {
-      throw new Error(
-        `OpenAI rate limit exceeded (429 Too Many Requests). ` +
-        `Please wait a moment and try again. ` +
-        `If this persists, check your OpenAI quota and billing.`
-      )
-    }
-    
-    throw new Error(
-      `Failed to generate insights: ${hint}. ` +
-      "Please check your OpenAI API key, quota, billing, and key restrictions."
-    )
+    // Do not fail the parent dashboard when AI times out or returns schema errors.
+    // We fallback to the most recent cached payload if available, then to an empty shape.
+    const fallback = await prisma.analyticsEvent.findFirst({
+      where: { childId, eventType: "insights.generated" },
+      orderBy: { createdAt: "desc" },
+      select: { eventData: true },
+    })
+    if (isInsightPayload(fallback?.eventData)) return fallback.eventData
+    if (isSchemaValidationError(error) || isRateLimitError(error)) return EMPTY_INSIGHTS
+    return EMPTY_INSIGHTS
   }
 
   await prisma.analyticsEvent.create({

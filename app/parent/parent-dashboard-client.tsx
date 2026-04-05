@@ -832,12 +832,26 @@ export default function ParentDashboardClient({
               </Card>
             )}
 
-            {selectedChild && selectedChild.assessment_completed && (
+            {selectedChild && selectedChild.assessment_completed && hasActiveSubscription && (
               <div className="mt-6 space-y-6">
                 <RoadmapViewer studentId={selectedChild.id} studentName={selectedChild.name} />
                 <WeeklyAIInsights studentId={selectedChild.id} studentName={selectedChild.name} />
                 <CurriculumPlanCard childId={selectedChild.id} childName={selectedChild.name} />
               </div>
+            )}
+            {selectedChild && selectedChild.assessment_completed && !hasActiveSubscription && (
+              <Card className="mt-6 border-dashed border-2">
+                <CardContent className="p-6 text-center">
+                  <Sparkles className="mx-auto mb-3 h-8 w-8 text-gray-400" />
+                  <h3 className="mb-2 text-base font-semibold text-gray-700">AI roadmap and insights are locked</h3>
+                  <p className="mb-4 text-sm text-gray-500">
+                    Activate your subscription to view personalized roadmap, weekly AI insights, and curriculum plan.
+                  </p>
+                  <Button asChild className="bg-teal-600 hover:bg-teal-700">
+                    <Link href="/parent/subscription">View Plans</Link>
+                  </Button>
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
 

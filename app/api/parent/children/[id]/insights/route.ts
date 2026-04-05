@@ -6,12 +6,14 @@ import { getChildInsights } from "@/services/insights-service"
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireRole(["parent", "admin"])
     const { id } = await params
     await enforceParentChildAccess(id, session)
-    const insights = await getChildInsights(id)
+    const url = new URL(request.url)
+    const refresh = url.searchParams.get("refresh") === "1"
+    const insights = await getChildInsights(id, { refresh })
     return NextResponse.json({ insights })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to fetch insights"

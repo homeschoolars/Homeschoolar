@@ -57,6 +57,34 @@ type InsightsData = {
   learning_style_summary?: string
 }
 
+function normalizeInsightsPayload(payload: unknown): InsightsData | null {
+  if (!payload || typeof payload !== "object") return null
+  const source = payload as Record<string, unknown>
+  const raw = source.insights
+  if (!raw || typeof raw !== "object") return null
+
+  const i = raw as Record<string, unknown>
+  const readStringArray = (value: unknown) => (Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [])
+  const weeklyRaw = (i.weekly_summary ?? {}) as Record<string, unknown>
+
+  return {
+    strengths: readStringArray(i.strengths),
+    weaknesses: readStringArray(i.weaknesses),
+    weekly_summary: {
+      mastered: readStringArray(weeklyRaw.mastered),
+      improving: readStringArray(weeklyRaw.improving),
+      needs_attention: readStringArray(weeklyRaw.needs_attention),
+      try_this_activity:
+        typeof weeklyRaw.try_this_activity === "string" ? weeklyRaw.try_this_activity : undefined,
+      review_concept: typeof weeklyRaw.review_concept === "string" ? weeklyRaw.review_concept : undefined,
+      celebrate: typeof weeklyRaw.celebrate === "string" ? weeklyRaw.celebrate : undefined,
+      next_week_preview: typeof weeklyRaw.next_week_preview === "string" ? weeklyRaw.next_week_preview : undefined,
+    },
+    learning_style_summary:
+      typeof i.learning_style_summary === "string" ? i.learning_style_summary : undefined,
+  }
+}
+
 export function ParentOverview({ children, subjects }: ParentOverviewProps) {
   const [selectedChildId, setSelectedChildId] = useState<string | null>(children[0]?.id ?? null)
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
@@ -103,7 +131,7 @@ export function ParentOverview({ children, subjects }: ParentOverviewProps) {
               }
             : (normalizedAnalytics as AnalyticsData),
         )
-        setInsights((insightsRes as { insights?: InsightsData })?.insights ?? null)
+        setInsights(normalizeInsightsPayload(insightsRes))
         setActivities((activityRes as { activities?: ActivityItem[] })?.activities ?? [])
       })
       .catch(() => {})

@@ -18,6 +18,60 @@ type Insight = {
   suggested_action?: string
 }
 
+type ParentInsightsResponse = {
+  insights?: {
+    strengths?: string[]
+    weaknesses?: string[]
+    weekly_summary?: {
+      mastered?: string[]
+      improving?: string[]
+      needs_attention?: string[]
+      try_this_activity?: string
+      review_concept?: string
+    }
+  } | Insight[]
+}
+
+function normalizeInsights(payload: ParentInsightsResponse): Insight[] {
+  if (Array.isArray(payload.insights)) {
+    return payload.insights
+  }
+
+  const structured = payload.insights
+  if (!structured || typeof structured !== "object") return []
+
+  const normalized: Insight[] = []
+
+  for (const item of structured.strengths ?? []) {
+    normalized.push({ type: "strength", summary: item })
+  }
+  for (const item of structured.weaknesses ?? []) {
+    normalized.push({ type: "weakness", summary: item })
+  }
+  for (const item of structured.weekly_summary?.improving ?? []) {
+    normalized.push({ type: "improvement", summary: item })
+  }
+  for (const item of structured.weekly_summary?.needs_attention ?? []) {
+    normalized.push({ type: "recommendation", summary: item })
+  }
+  if (structured.weekly_summary?.try_this_activity) {
+    normalized.push({
+      type: "recommendation",
+      summary: "Try this activity this week",
+      suggested_action: structured.weekly_summary.try_this_activity,
+    })
+  }
+  if (structured.weekly_summary?.review_concept) {
+    normalized.push({
+      type: "recommendation",
+      summary: "Review concept",
+      suggested_action: structured.weekly_summary.review_concept,
+    })
+  }
+
+  return normalized
+}
+
 export function WeeklyAIInsights({ studentId, studentName }: WeeklyAIInsightsProps) {
   const [insights, setInsights] = useState<Insight[]>([])
   const [loading, setLoading] = useState(true)
@@ -35,31 +89,19 @@ export function WeeklyAIInsights({ studentId, studentName }: WeeklyAIInsightsPro
       try {
         setLoading(true)
         setError(null)
-        // Prefer stable endpoint first to avoid expected 404 noise in console.
-        let response = await apiFetch(`/api/parent/children/${studentId}/insights`)
+        const response = await apiFetch(`/api/parent/children/${encodeURIComponent(studentId)}/insights`)
         if (response.ok) {
-          const directData = (await response.json()) as { insights?: Insight[] }
-          setInsights(directData.insights || [])
+          const directData = (await response.json()) as ParentInsightsResponse
+          setInsights(normalizeInsights(directData))
           return
         }
 
-        // Backward-compatible fallback for deployments that only expose assessment-signals.
-        response = await apiFetch(`/api/parent/children/${studentId}/assessment-signals`)
-        if (response.ok) {
-          const legacyData = (await response.json()) as { signals?: Insight[] }
-          setInsights(legacyData.signals || [])
+        // Quietly degrade for expected non-critical statuses.
+        if (response.status === 400 || response.status === 404 || response.status === 408) {
+          setInsights([])
           return
         }
-
-        if (!response.ok) {
-          if (response.status === 400 || response.status === 404) {
-            setInsights([])
-            return
-          }
-          throw new Error("Failed to load insights")
-        }
-        const data = await response.json()
-        setInsights(data.signals || [])
+        throw new Error("Failed to load insights")
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load insights")
       } finally {
