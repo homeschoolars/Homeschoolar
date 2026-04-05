@@ -95,6 +95,9 @@ export default function AdminDashboardClient({
   const [tierSummary, setTierSummary] = useState<TierSummary>({})
   const [orphanQueue, setOrphanQueue] = useState<OrphanQueueItem[]>([])
   const [orphanMetrics, setOrphanMetrics] = useState<OrphanMetrics | null>(null)
+  const [subscriptionMessage, setSubscriptionMessage] = useState<string | null>(null)
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null)
+  const [subscriptionBusyId, setSubscriptionBusyId] = useState<string | null>(null)
   const router = useRouter()
   const handleApproveWorksheet = async (worksheetId: string) => {
     const response = await apiFetch(`/api/admin/worksheets/${worksheetId}`, {
@@ -147,12 +150,25 @@ export default function AdminDashboardClient({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     })
-    if (!response.ok) return
+    const data = (await response.json().catch(() => ({}))) as { error?: string }
+    if (!response.ok) {
+      throw new Error(data.error || `Failed to update subscription (${response.status})`)
+    }
     await loadSubscriptions()
   }
 
   const handleCancelSubscription = async (id: string) => {
-    await updateSubscription(id, { status: "cancelled" })
+    setSubscriptionMessage(null)
+    setSubscriptionError(null)
+    setSubscriptionBusyId(id)
+    try {
+      await updateSubscription(id, { status: "cancelled" })
+      setSubscriptionMessage("Subscription cancelled.")
+    } catch (error) {
+      setSubscriptionError(error instanceof Error ? error.message : "Failed to cancel subscription")
+    } finally {
+      setSubscriptionBusyId(null)
+    }
   }
 
   const handleOverrideSubscription = async (id: string, currency: string) => {
@@ -162,16 +178,40 @@ export default function AdminDashboardClient({
     if (!amountInput) return
     const amount = Number(amountInput)
     if (!Number.isFinite(amount) || amount <= 0) return
-    await updateSubscription(id, { final_amount: Math.round(amount) })
+    setSubscriptionMessage(null)
+    setSubscriptionError(null)
+    setSubscriptionBusyId(id)
+    try {
+      await updateSubscription(id, { final_amount: Math.round(amount) })
+      setSubscriptionMessage(`Subscription amount updated in ${currency}.`)
+    } catch (error) {
+      setSubscriptionError(error instanceof Error ? error.message : "Failed to override subscription")
+    } finally {
+      setSubscriptionBusyId(null)
+    }
   }
 
   const handleRefundSubscription = async (id: string) => {
-    await apiFetch(`/api/admin/subscriptions/${id}/refund`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reason: "Admin initiated refund" }),
-    })
-    await loadSubscriptions()
+    setSubscriptionMessage(null)
+    setSubscriptionError(null)
+    setSubscriptionBusyId(id)
+    try {
+      const response = await apiFetch(`/api/admin/subscriptions/${id}/refund`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: "Admin initiated refund" }),
+      })
+      const data = (await response.json().catch(() => ({}))) as { error?: string }
+      if (!response.ok) {
+        throw new Error(data.error || `Failed to refund subscription (${response.status})`)
+      }
+      await loadSubscriptions()
+      setSubscriptionMessage("Refund recorded and subscription updated.")
+    } catch (error) {
+      setSubscriptionError(error instanceof Error ? error.message : "Failed to refund subscription")
+    } finally {
+      setSubscriptionBusyId(null)
+    }
   }
 
   const handleReviewOrphan = async (verificationId: string, status: "approved" | "rejected") => {
@@ -441,6 +481,16 @@ export default function AdminDashboardClient({
                   <CardDescription>Manage subscriptions and overrides.</CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {subscriptionMessage ? (
+                    <p className="mb-3 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                      {subscriptionMessage}
+                    </p>
+                  ) : null}
+                  {subscriptionError ? (
+                    <p className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                      {subscriptionError}
+                    </p>
+                  ) : null}
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -475,6 +525,7 @@ export default function AdminDashboardClient({
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleOverrideSubscription(sub.id, sub.currency)}
+                                disabled={subscriptionBusyId === sub.id}
                               >
                                 Override
                               </Button>
@@ -482,10 +533,16 @@ export default function AdminDashboardClient({
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleCancelSubscription(sub.id)}
+                                disabled={subscriptionBusyId === sub.id || sub.status === "cancelled" || sub.status === "expired"}
                               >
                                 Cancel
                               </Button>
-                              <Button variant="outline" size="sm" onClick={() => handleRefundSubscription(sub.id)}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRefundSubscription(sub.id)}
+                                disabled={subscriptionBusyId === sub.id}
+                              >
                                 Refund
                               </Button>
                             </div>
