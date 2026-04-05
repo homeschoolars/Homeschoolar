@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { Resend } from "resend"
 import { prisma } from "@/lib/prisma"
 import { requireSession } from "@/lib/auth-helpers"
+import { getPublicAppUrl } from "@/lib/site-url"
 import { z } from "zod"
 
 // Force dynamic rendering - this route makes database calls
@@ -60,7 +61,7 @@ export async function POST(req: Request) {
               <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
               <p style="color: #9ca3af; font-size: 12px;">
                 You're receiving this because you have email notifications enabled.
-                <a href="${process.env.NEXT_PUBLIC_APP_URL}/settings/notifications" style="color: #0d9488;">
+                <a href="${getPublicAppUrl()}/settings/notifications" style="color: #0d9488;">
                   Manage preferences
                 </a>
               </p>

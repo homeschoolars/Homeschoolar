@@ -802,6 +802,17 @@ export async function generateStructuredLessonAsset({
   /** When set, cache and prompts are scoped to this student. */
   studentId?: string | null
 }) {
+  const adaptiveKinds: CurriculumPromptKind[] = ["quiz", "worksheet", "story"]
+  if (studentId && adaptiveKinds.includes(contentType)) {
+    const { generateAIContent } = await import("@/services/adaptive-ai-generation")
+    return generateAIContent({
+      studentId,
+      lessonId,
+      contentType: contentType as "quiz" | "worksheet" | "story",
+      forceRegenerate,
+    })
+  }
+
   const sessionKey = studentId ? `student:${studentId}` : "global"
 
   const existing = await prisma.curriculumGeneratedContent.findUnique({

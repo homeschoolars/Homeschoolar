@@ -5,6 +5,8 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { buildPricing } from "@/services/pricing.service"
 import { getParentChildCount } from "@/services/subscription-service"
+import { getSiteBranding } from "@/lib/site-branding"
+import { getPublicAppUrl } from "@/lib/site-url"
 
 export async function startCheckoutSession(planType: "monthly" | "yearly") {
   const stripe = requireStripe()
@@ -22,6 +24,7 @@ export async function startCheckoutSession(planType: "monthly" | "yearly") {
 
   const childCount = await getParentChildCount(user.id)
   const pricing = buildPricing({ childCount, planType, currency: "USD" })
+  const { appName } = getSiteBranding()
 
   const checkoutSession = await stripe.checkout.sessions.create({
     ui_mode: "embedded",
@@ -32,7 +35,7 @@ export async function startCheckoutSession(planType: "monthly" | "yearly") {
         price_data: {
           currency: "usd",
           product_data: {
-            name: `HomeSchoolar ${planType === "yearly" ? "Yearly" : "Monthly"} Plan`,
+            name: `${appName} ${planType === "yearly" ? "Yearly" : "Monthly"} Plan`,
             description: `${childCount} ${childCount === 1 ? "child" : "children"} on plan`,
           },
           unit_amount: pricing.finalAmount,
@@ -74,7 +77,7 @@ export async function createPortalSession() {
 
   const portalSession = await stripe.billingPortal.sessions.create({
     customer: subscription.stripeCustomerId,
-    return_url: `${process.env.NEXT_PUBLIC_APP_URL || ""}/parent`,
+    return_url: `${getPublicAppUrl()}/parent`,
   })
 
   return portalSession.url

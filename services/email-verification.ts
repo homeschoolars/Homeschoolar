@@ -2,10 +2,11 @@ import "server-only"
 import { randomBytes } from "crypto"
 import { Resend } from "resend"
 import { prisma } from "@/lib/prisma"
+import { getPublicAppUrl } from "@/lib/site-url"
 
 const TOKEN_EXPIRY_HOURS = 24
 const FROM_EMAIL = process.env.VERIFICATION_EMAIL_FROM ?? "HomeSchoolar <onboarding@homeschoolars.com>"
-const APP_URL = (process.env.AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://homeschoolars.com").replace(/\/$/, "")
+const APP_URL = getPublicAppUrl()
 
 /** Create a verification token and send email. Replaces any existing token for this email. */
 export async function createAndSendVerificationEmail(email: string): Promise<void> {

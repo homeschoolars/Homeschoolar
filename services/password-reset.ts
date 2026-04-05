@@ -2,10 +2,11 @@ import "server-only"
 import { randomBytes } from "crypto"
 import { Resend } from "resend"
 import { prisma } from "@/lib/prisma"
+import { getPublicAppUrl } from "@/lib/site-url"
 
 const TOKEN_EXPIRY_MINUTES = 60
 const FROM_EMAIL = process.env.PASSWORD_RESET_EMAIL_FROM ?? "HomeSchoolar <onboarding@homeschoolars.com>"
-const APP_URL = (process.env.AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://homeschoolars.com").replace(/\/$/, "")
+const APP_URL = getPublicAppUrl()
 const PASSWORD_RESET_PREFIX = "password-reset:"
 
 function resetIdentifier(email: string) {

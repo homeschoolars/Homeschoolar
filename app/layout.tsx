@@ -4,22 +4,25 @@ import { Inter, Nunito, Fredoka } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
+import { getDefaultPageTitle, getSiteBranding, getSiteDescription } from "@/lib/site-branding"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
 const nunito = Nunito({ subsets: ["latin"], variable: "--font-sans" })
 const fredoka = Fredoka({ subsets: ["latin"], variable: "--font-heading" })
 
-export const metadata: Metadata = {
-  title: "HomeSchoolar - Raising Thinkers, Not Just Students",
-  description:
-    "Personalized worksheets, progress tracking, and curriculum management for homeschooled children ages 4-13. Powered by AI.",
-  keywords: ["homeschool", "education", "AI learning", "worksheets", "curriculum", "children education"],
-  icons: {
-    icon: [{ url: "/favicon.png?v=2", type: "image/png" }],
-    apple: "/favicon.png?v=2",
-    shortcut: "/favicon.png?v=2",
-  },
+export function generateMetadata(): Metadata {
+  const { appName } = getSiteBranding()
+  return {
+    title: getDefaultPageTitle(),
+    description: getSiteDescription(),
+    keywords: ["homeschool", "education", "AI learning", "worksheets", "curriculum", "children education", appName],
+    icons: {
+      icon: [{ url: "/favicon.png?v=2", type: "image/png" }],
+      apple: "/favicon.png?v=2",
+      shortcut: "/favicon.png?v=2",
+    },
+  }
 }
 
 export const viewport = {

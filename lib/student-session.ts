@@ -9,10 +9,15 @@ type StudentSessionPayload = {
 }
 
 function getSessionSecret() {
-  const secret = process.env.STUDENT_SESSION_SECRET || process.env.NEXTAUTH_SECRET
+  const secret =
+    process.env.STUDENT_SESSION_SECRET ||
+    process.env.NEXTAUTH_SECRET ||
+    process.env.AUTH_SECRET
   if (secret) return secret
   if (process.env.NODE_ENV === "production") {
-    throw new Error("Missing STUDENT_SESSION_SECRET (or NEXTAUTH_SECRET) for student session signing")
+    throw new Error(
+      "Missing STUDENT_SESSION_SECRET, NEXTAUTH_SECRET, or AUTH_SECRET for student session signing",
+    )
   }
   // Keep local development functional even if env vars are missing.
   return "dev-student-session-secret"

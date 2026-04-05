@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { verifyTokenAndMarkVerified } from "@/services/email-verification"
+import { getPublicAppUrl } from "@/lib/site-url"
 
-const APP_URL = (process.env.AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://homeschoolars.com").replace(/\/$/, "")
+const APP_URL = getPublicAppUrl()
 const LOGIN = "/login"
 
 export async function GET(request: Request) {

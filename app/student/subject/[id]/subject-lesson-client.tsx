@@ -8,6 +8,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { apiFetch } from "@/lib/api-client"
+import { getSiteBranding } from "@/lib/site-branding"
+import { AdaptiveQuizPlayer, type AdaptiveQuizQuestion } from "@/components/learning/adaptive-quiz-player"
+import { AdaptiveStoryReader } from "@/components/learning/adaptive-story-reader"
+import { AdaptiveWorksheetViewer, type WorksheetViewModel } from "@/components/learning/adaptive-worksheet-viewer"
 
 type CurriculumLesson = {
   id: string
@@ -56,10 +60,21 @@ type GeneratedState = {
 
 type GenerationType = "story" | "worksheet" | "quiz" | "project" | "debate" | "research" | "reflection"
 
+type WorksheetActivityStructured =
+  | { type: "mcq"; question: string; options: string[]; correctAnswer: string }
+  | { type: "short_answer"; question: string; hint?: string }
+  | { type: "fill_in_blank"; prompt: string; answers: string[] }
+  | {
+      type: "match"
+      leftColumn: string[]
+      rightColumn: string[]
+      correctPairs: { left: string; right: string }[]
+    }
+
 type WorksheetContent = {
   title: string
   instructions: string
-  activities: string[]
+  activities: string[] | WorksheetActivityStructured[]
 }
 
 const AGE_GROUP_LABELS: Record<string, string> = {
@@ -80,14 +95,109 @@ function getAgeStart(ageGroup: string) {
   return Number.isFinite(parsed) ? parsed : 4
 }
 
+function isStructuredWorksheetActivity(item: unknown): item is WorksheetActivityStructured {
+  if (!item || typeof item !== "object") return false
+  const o = item as Record<string, unknown>
+  if (o.type === "mcq") {
+    return (
+      typeof o.question === "string" &&
+      Array.isArray(o.options) &&
+      o.options.length === 4 &&
+      o.options.every((x) => typeof x === "string") &&
+      typeof o.correctAnswer === "string"
+    )
+  }
+  if (o.type === "short_answer") {
+    return typeof o.question === "string"
+  }
+  if (o.type === "fill_in_blank") {
+    return typeof o.prompt === "string" && Array.isArray(o.answers) && o.answers.length > 0 && o.answers.every((x) => typeof x === "string")
+  }
+  if (o.type === "match") {
+    return (
+      Array.isArray(o.leftColumn) &&
+      Array.isArray(o.rightColumn) &&
+      o.leftColumn.every((x) => typeof x === "string") &&
+      o.rightColumn.every((x) => typeof x === "string") &&
+      Array.isArray(o.correctPairs) &&
+      o.correctPairs.every(
+        (p) =>
+          p &&
+          typeof p === "object" &&
+          typeof (p as { left?: unknown }).left === "string" &&
+          typeof (p as { right?: unknown }).right === "string",
+      )
+    )
+  }
+  return false
+}
+
 function isWorksheetContent(value: unknown): value is WorksheetContent {
   if (!value || typeof value !== "object") return false
   const payload = value as Record<string, unknown>
+  if (typeof payload.title !== "string" || typeof payload.instructions !== "string" || !Array.isArray(payload.activities)) {
+    return false
+  }
+  if (payload.activities.length === 0) return false
+  const first = payload.activities[0]
+  if (typeof first === "string") {
+    return payload.activities.every((item) => typeof item === "string")
+  }
+  return payload.activities.every((item) => isStructuredWorksheetActivity(item))
+}
+
+function getStudentChildId(): string | null {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = sessionStorage.getItem("student_child")
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { id?: string }
+    return parsed.id ?? null
+  } catch {
+    return null
+  }
+}
+
+function isAdaptiveQuizJson(json: unknown): json is { questions: AdaptiveQuizQuestion[] } {
+  if (!json || typeof json !== "object") return false
+  const qs = (json as { questions?: unknown }).questions
+  if (!Array.isArray(qs) || qs.length === 0) return false
+  return qs.every((item) => {
+    if (!item || typeof item !== "object") return false
+    const q = item as Record<string, unknown>
+    return (
+      typeof q.question === "string" &&
+      Array.isArray(q.options) &&
+      q.options.length === 4 &&
+      q.options.every((o) => typeof o === "string") &&
+      typeof q.correctAnswer === "string"
+    )
+  })
+}
+
+function LessonPdfLinks(props: {
+  lessonId: string | null
+  childId: string | null
+  contentType: "quiz" | "worksheet" | "story"
+}) {
+  const { lessonId, childId, contentType } = props
+  if (!lessonId || !childId) return null
+  const base = `/api/pdf/download?lessonId=${encodeURIComponent(lessonId)}&childId=${encodeURIComponent(childId)}&contentType=${encodeURIComponent(contentType)}`
   return (
-    typeof payload.title === "string" &&
-    typeof payload.instructions === "string" &&
-    Array.isArray(payload.activities) &&
-    payload.activities.every((item) => typeof item === "string")
+    <div className="mt-3 flex flex-wrap gap-2">
+      <Button variant="outline" size="sm" asChild>
+        <a href={base} target="_blank" rel="noopener noreferrer">
+          Download PDF
+        </a>
+      </Button>
+      {contentType === "quiz" ? (
+        <Button variant="secondary" size="sm" asChild>
+          <a href={`${base}&answerKey=1`} target="_blank" rel="noopener noreferrer">
+            PDF + answer key
+          </a>
+        </Button>
+      ) : null}
+    </div>
   )
 }
 
@@ -159,6 +269,8 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
   const [lessonFlow, setLessonFlow] = useState<LessonFlowState | null>(null)
   const [flowLoading, setFlowLoading] = useState(false)
   const [completingLectureId, setCompletingLectureId] = useState<string | null>(null)
+
+  const siteBrand = useMemo(() => getSiteBranding(), [])
 
   useEffect(() => {
     const loadAgeGroups = async () => {
@@ -536,22 +648,47 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
   }
 
   const renderGeneratedContent = (type: GenerationType, generated: GeneratedState) => {
-    if (type === "worksheet" && isWorksheetContent(generated.json)) {
-      const worksheet = generated.json
-      return (
-        <div className="mt-2 rounded-md bg-white p-3">
-          <p className="text-base font-semibold text-slate-800">{worksheet.title}</p>
-          <p className="mt-2 text-sm text-slate-700">{worksheet.instructions}</p>
-          <div className="mt-3 space-y-2">
-            {worksheet.activities.map((activity, index) => (
-              <div key={`${activity}-${index}`} className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
-                <p className="text-sm font-medium text-amber-900">Activity {index + 1}</p>
-                <p className="mt-1 text-sm text-slate-700">{activity}</p>
-              </div>
-            ))}
+    const childId = getStudentChildId()
+    const lessonId = selectedLessonId
+
+    if (type === "story" && generated.json && typeof generated.json === "object" && "story" in generated.json) {
+      const story = (generated.json as { story?: string }).story
+      if (typeof story === "string" && story.trim()) {
+        return (
+          <div className="mt-2 space-y-2">
+            <AdaptiveStoryReader story={story} />
+            <LessonPdfLinks lessonId={lessonId} childId={childId} contentType="story" />
           </div>
+        )
+      }
+    }
+
+    if (type === "worksheet" && isWorksheetContent(generated.json)) {
+      const w = generated.json as WorksheetViewModel
+      return (
+        <div className="mt-2 space-y-2">
+          <AdaptiveWorksheetViewer worksheet={w} />
+          <LessonPdfLinks lessonId={lessonId} childId={childId} contentType="worksheet" />
         </div>
       )
+    }
+
+    if (type === "quiz" && isAdaptiveQuizJson(generated.json) && childId && lessonId) {
+      return (
+        <div className="mt-2 space-y-2">
+          <AdaptiveQuizPlayer
+            lessonId={lessonId}
+            childId={childId}
+            questions={generated.json.questions}
+            onSubmitted={() => void refreshProgress()}
+          />
+          <LessonPdfLinks lessonId={lessonId} childId={childId} contentType="quiz" />
+        </div>
+      )
+    }
+
+    if (type === "quiz" && isAdaptiveQuizJson(generated.json) && (!childId || !lessonId)) {
+      return <p className="mt-2 text-sm text-amber-800">Sign in as a student to take this quiz interactively.</p>
     }
 
     return <p className="mt-2 whitespace-pre-wrap text-slate-700">{generated.value}</p>
@@ -577,8 +714,10 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
         </Link>
       </Button>
 
-      <div className="mb-4 flex items-center justify-end">
-        <Image src="/homeschoolars-logo-v2.png" alt="HomeSchoolar logo" width={120} height={40} className="h-10 w-auto" />
+      <div className="mb-4 flex flex-col items-end gap-0.5">
+        <Image src={siteBrand.logoSrc} alt={`${siteBrand.appName} logo`} width={120} height={40} className="h-10 w-auto" />
+        <p className="text-right text-xs font-semibold text-violet-900">{siteBrand.appName}</p>
+        <p className="max-w-xs text-right text-[11px] text-slate-600">{siteBrand.tagline}</p>
       </div>
 
       {error && (

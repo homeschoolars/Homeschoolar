@@ -2,6 +2,7 @@ import { auth } from "@/auth"
 import { enforceParentOrStudentChildAccess } from "@/lib/auth-helpers"
 import { fail, ok, statusFromErrorMessage } from "@/lib/api-response"
 import { submitLessonQuiz } from "@/services/progression"
+import { inferWeakAreaFromLesson, mergeWeakAreas } from "@/services/adaptive-outcome"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -13,6 +14,7 @@ export async function POST(request: Request) {
       lessonId?: string
       score?: number
       maxScore?: number
+      weakAreaHints?: string[]
     }
     if (!body.childId || !body.lessonId) {
       return fail("childId and lessonId are required", 400)
@@ -30,6 +32,16 @@ export async function POST(request: Request) {
       score: Number(body.score),
       maxScore: Number(body.maxScore),
     })
+
+    const maxScore = Number(body.maxScore)
+    const score = Number(body.score)
+    const pct = maxScore > 0 ? (score / maxScore) * 100 : 0
+    if (Array.isArray(body.weakAreaHints) && body.weakAreaHints.length > 0) {
+      await mergeWeakAreas(body.childId, body.weakAreaHints)
+    } else if (pct < 50) {
+      await inferWeakAreaFromLesson(body.childId, body.lessonId)
+    }
+
     return ok(result)
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to submit quiz"

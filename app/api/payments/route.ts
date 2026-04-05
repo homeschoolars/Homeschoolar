@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireRole } from "@/lib/auth-helpers"
 import { createPayment } from "@/services/payments.service"
+import { getPublicAppUrl } from "@/lib/site-url"
 import { PaymentGateway } from "@prisma/client"
 
 // Force dynamic rendering - this route makes database calls
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
       currency: body.currency,
       gateway: body.gateway ? (body.gateway as PaymentGateway) : undefined,
       returnUrl: body.returnUrl,
-      webhookBaseUrl: process.env.NEXT_PUBLIC_APP_URL || "",
+      webhookBaseUrl: getPublicAppUrl(),
       customerEmail: body.customerEmail ?? session.user.email ?? null,
       customerPhone: body.customerPhone ?? null,
       metadata: body.metadata ?? {},
