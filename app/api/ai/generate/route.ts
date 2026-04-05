@@ -8,7 +8,7 @@ import { generateStructuredLessonAsset } from "@/services/curriculum-structured-
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
-const CONTENT_TYPES = ["quiz", "worksheet", "project", "reflection", "research", "debate"] as const
+const CONTENT_TYPES = ["story", "quiz", "worksheet", "project", "reflection", "research", "debate"] as const
 type ContentType = (typeof CONTENT_TYPES)[number]
 
 const inFlight = new Map<string, Promise<{ cached: boolean; content: string; contentJson: unknown }>>()

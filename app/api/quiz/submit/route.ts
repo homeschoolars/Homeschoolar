@@ -33,6 +33,12 @@ export async function POST(request: Request) {
     return ok(result)
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to submit quiz"
+    if (message === "Lesson not found" || message === "NotFound") {
+      return fail("Lesson not found", 404)
+    }
+    if (message === "Forbidden") {
+      return fail("Forbidden", 403)
+    }
     return fail(message, statusFromErrorMessage(message, 500))
   }
 }

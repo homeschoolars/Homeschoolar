@@ -27,6 +27,12 @@ export async function POST(request: Request) {
     if (message === "QuizRequired") {
       return fail("QuizRequired", 409)
     }
+    if (message === "Lesson not found" || message === "NotFound") {
+      return fail("Lesson not found", 404)
+    }
+    if (message === "Forbidden") {
+      return fail("Forbidden", 403)
+    }
     return fail(message, statusFromErrorMessage(message, 500))
   }
 }

@@ -86,6 +86,61 @@ function slugifyValue(value: string) {
     .replace(/(^-|-$)/g, "")
 }
 
+function normalizeName(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9\s]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+function tokenizeName(value: string) {
+  return normalizeName(value)
+    .split(" ")
+    .filter(Boolean)
+}
+
+const SUBJECT_ALIASES: Record<string, string[]> = {
+  mathematics: ["math", "mathematics", "numeracy", "numbers", "algebra", "geometry"],
+  "art creativity": ["art", "creative", "creativity", "craft", "drawing", "music"],
+  "physical education": ["physical", "education", "sports", "fitness", "movement", "pe", "health"],
+  "financial literacy": ["financial", "finance", "money", "budget", "entrepreneurship", "business"],
+  "life skills": ["life", "skills", "self", "development", "manners", "etiquettes", "communication"],
+  english: ["english", "language", "reading", "writing", "literacy"],
+  science: ["science", "environment", "nature", "biology", "chemistry", "physics"],
+  "social studies": ["social", "studies", "history", "geography", "civics", "culture"],
+}
+
+function scoreSubjectNameMatch(baseName: string, candidateName: string) {
+  const normalizedBase = normalizeName(baseName)
+  const normalizedCandidate = normalizeName(candidateName)
+  if (!normalizedBase || !normalizedCandidate) return 0
+  if (normalizedBase === normalizedCandidate) return 100
+  if (normalizedCandidate.includes(normalizedBase) || normalizedBase.includes(normalizedCandidate)) return 80
+
+  const baseTokens = new Set(tokenizeName(baseName))
+  const candidateTokens = new Set(tokenizeName(candidateName))
+
+  let overlapScore = 0
+  for (const token of baseTokens) {
+    if (candidateTokens.has(token)) overlapScore += 15
+  }
+
+  const aliasTokens = SUBJECT_ALIASES[normalizedBase]?.map((item) => normalizeName(item)) ?? []
+  let aliasScore = 0
+  for (const alias of aliasTokens) {
+    if (!alias) continue
+    if (normalizedCandidate.includes(alias)) aliasScore += 12
+    const aliasTokenSet = new Set(tokenizeName(alias))
+    for (const token of aliasTokenSet) {
+      if (candidateTokens.has(token)) aliasScore += 6
+    }
+  }
+
+  return overlapScore + aliasScore
+}
+
 export async function importCurriculumForAgeGroup(params: {
   ageGroup: string
   stageName?: string
@@ -316,7 +371,7 @@ export async function getCurriculumSubject({
   if (!baseSubject?.name) return null
 
   const baseSlug = slugifyValue(baseSubject.name)
-  return prisma.curriculumSubject.findFirst({
+  const directByName = await prisma.curriculumSubject.findFirst({
     where: {
       ageGroupId: age.id,
       OR: [{ slug: baseSlug }, { name: { equals: baseSubject.name, mode: "insensitive" } }],
@@ -332,6 +387,32 @@ export async function getCurriculumSubject({
       },
     },
   })
+  if (directByName) return directByName
+
+  // Secondary fallback: fuzzy/alias matching for cases where canonical base subject names
+  // differ from curriculum labels (e.g., "Physical Education" vs "Health & Movement").
+  const ageSubjects = await prisma.curriculumSubject.findMany({
+    where: { ageGroupId: age.id },
+    include: {
+      units: {
+        orderBy: { displayOrder: "asc" },
+        include: {
+          lessons: {
+            orderBy: { displayOrder: "asc" },
+          },
+        },
+      },
+    },
+  })
+  if (ageSubjects.length === 0) return null
+
+  const ranked = ageSubjects
+    .map((subject) => ({ subject, score: scoreSubjectNameMatch(baseSubject.name, subject.name) }))
+    .sort((a, b) => b.score - a.score)
+
+  // Require a minimum confidence to avoid routing to unrelated subjects.
+  if ((ranked[0]?.score ?? 0) < 18) return null
+  return ranked[0].subject
 }
 
 export async function getCurriculumUnit(unitId: string) {

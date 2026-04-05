@@ -54,6 +54,12 @@ type GeneratedState = {
 
 type GenerationType = "story" | "worksheet" | "quiz" | "project" | "debate" | "research" | "reflection"
 
+type WorksheetContent = {
+  title: string
+  instructions: string
+  activities: string[]
+}
+
 const AGE_GROUP_LABELS: Record<string, string> = {
   "4-5": "Little Explorers 🌱",
   "5-6": "Mini Adventurers 🐾",
@@ -70,6 +76,17 @@ function getAgeStart(ageGroup: string) {
   const first = ageGroup.split("-")[0]
   const parsed = Number.parseInt(first, 10)
   return Number.isFinite(parsed) ? parsed : 4
+}
+
+function isWorksheetContent(value: unknown): value is WorksheetContent {
+  if (!value || typeof value !== "object") return false
+  const payload = value as Record<string, unknown>
+  return (
+    typeof payload.title === "string" &&
+    typeof payload.instructions === "string" &&
+    Array.isArray(payload.activities) &&
+    payload.activities.every((item) => typeof item === "string")
+  )
 }
 
 export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
@@ -403,6 +420,28 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
     }
   }
 
+  const renderGeneratedContent = (type: GenerationType, generated: GeneratedState) => {
+    if (type === "worksheet" && isWorksheetContent(generated.json)) {
+      const worksheet = generated.json
+      return (
+        <div className="mt-2 rounded-md bg-white p-3">
+          <p className="text-base font-semibold text-slate-800">{worksheet.title}</p>
+          <p className="mt-2 text-sm text-slate-700">{worksheet.instructions}</p>
+          <div className="mt-3 space-y-2">
+            {worksheet.activities.map((activity, index) => (
+              <div key={`${activity}-${index}`} className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+                <p className="text-sm font-medium text-amber-900">Activity {index + 1}</p>
+                <p className="mt-1 text-sm text-slate-700">{activity}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    return <p className="mt-2 whitespace-pre-wrap text-slate-700">{generated.value}</p>
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-cyan-100 p-6 flex items-center justify-center">
@@ -657,7 +696,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                             <span className="text-xs font-normal text-amber-700">(cached)</span>
                           ) : null}
                         </h4>
-                        <p className="mt-2 whitespace-pre-wrap text-slate-700">{generatedContent[type]!.value}</p>
+                        {renderGeneratedContent(type, generatedContent[type]!)}
                       </section>
                     ) : null
                   )}

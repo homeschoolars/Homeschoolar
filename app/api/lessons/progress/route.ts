@@ -24,6 +24,12 @@ export async function GET(request: Request) {
     return ok(state)
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load lesson progress"
+    if (message === "Lesson not found" || message === "NotFound") {
+      return fail("Lesson not found", 404)
+    }
+    if (message === "Forbidden") {
+      return fail("Forbidden", 403)
+    }
     return fail(message, statusFromErrorMessage(message, 500))
   }
 }
