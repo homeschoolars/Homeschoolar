@@ -25,7 +25,7 @@ export function QuickContentActions({
   const [subjectId, setSubjectId] = useState("")
   const [units, setUnits] = useState<Array<{ unitId: string; title: string; isCompleted: boolean; totalLessons: number; completedLessons: number }>>([])
   const [unitId, setUnitId] = useState("")
-  const [busy, setBusy] = useState<"worksheet" | "quiz" | null>(null)
+  const [busy, setBusy] = useState<"worksheet" | "quiz" | "story" | null>(null)
   const [examBusy, setExamBusy] = useState(false)
   const [latestExam, setLatestExam] = useState<{
     id: string
@@ -108,6 +108,31 @@ export function QuickContentActions({
       onWorksheetCreated?.()
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Failed to generate worksheet")
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const generateStory = async () => {
+    if (!subjectId || !unitId || !canGenerateForUnit) return
+    setBusy("story")
+    setMessage(null)
+    try {
+      const res = await apiFetch(`/api/parent/generate-content`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: childId,
+          subjectId,
+          unitId,
+          contentType: "story",
+        }),
+      })
+      const payload = (await res.json()) as { error?: string }
+      if (!res.ok) throw new Error(payload.error ?? "Failed to generate story")
+      setMessage("Story generated and shared to student dashboard.")
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Failed to generate story")
     } finally {
       setBusy(null)
     }
@@ -218,6 +243,10 @@ export function QuickContentActions({
           <Button variant="secondary" onClick={generateQuiz} disabled={!subjectId || !unitId || !canGenerateForUnit || busy !== null}>
             {busy === "quiz" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Generate Quiz
+          </Button>
+          <Button variant="outline" onClick={generateStory} disabled={!subjectId || !unitId || !canGenerateForUnit || busy !== null}>
+            {busy === "story" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Generate Story
           </Button>
         </div>
         <div className="rounded-md border bg-slate-50 p-3">

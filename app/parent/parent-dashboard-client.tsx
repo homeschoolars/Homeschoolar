@@ -139,7 +139,6 @@ export default function ParentDashboardClient({
 
   const selectedChild = children.find((c) => c.id === selectedChildId)
   const curriculumAgeGroup = selectedChild?.age_group ?? "6-7"
-  const selectedChildSubjects = selectedChild ? (subjectsByAgeGroup[selectedChild.age_group] ?? []) : []
   const allDashboardSubjects = useMemo(() => {
     const map = new Map<string, Subject>()
     Object.values(subjectsByAgeGroup)
@@ -149,6 +148,11 @@ export default function ParentDashboardClient({
       })
     return Array.from(map.values())
   }, [subjectsByAgeGroup])
+  const selectedChildSubjects = selectedChild
+    ? (subjectsByAgeGroup[selectedChild.age_group] ?? []).length > 0
+      ? (subjectsByAgeGroup[selectedChild.age_group] ?? [])
+      : allDashboardSubjects
+    : []
 
   useEffect(() => {
     if (!selectedChild?.age_group) {
@@ -853,6 +857,29 @@ export default function ParentDashboardClient({
                 </CardContent>
               </Card>
             )}
+
+            {selectedChild ? (
+              <div className="mt-6">
+                {hasActiveSubscription ? (
+                  <QuickContentActions
+                    childId={selectedChild.id}
+                    subjects={selectedChildSubjects}
+                    childAgeGroup={selectedChild.age_group}
+                  />
+                ) : (
+                  <Card className="border-dashed border-2">
+                    <CardContent className="p-5 text-center">
+                      <p className="text-sm text-gray-600">
+                        Worksheet, quiz, and story generation for this child is available after subscription activation.
+                      </p>
+                      <Button asChild className="mt-3 bg-teal-600 hover:bg-teal-700">
+                        <Link href="/parent/subscription">Unlock Parent AI Generation</Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            ) : null}
           </TabsContent>
 
           <TabsContent value="ai-tools" className="space-y-6">

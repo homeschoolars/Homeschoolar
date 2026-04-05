@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { openai, isOpenAIConfigured } from "@/lib/openai"
 import { generateStructuredLessonAsset } from "@/services/curriculum-structured-service"
 
-type ParentContentType = "quiz" | "worksheet"
+type ParentContentType = "quiz" | "worksheet" | "story"
 
 const generatedExamSchema = z.object({
   mcqs: z
@@ -118,10 +118,16 @@ export async function generateParentControlledContent({
             return Array.isArray(json?.questions) ? json.questions : []
           }),
         }
-      : {
+      : contentType === "worksheet"
+        ? {
           title: `${unit.title} Worksheet`,
           activities: lessonOutputs.map((out) => out.content).filter(Boolean),
           instructions: `Complete all activities for ${unit.title}.`,
+        }
+        : {
+          title: `${unit.title} Story`,
+          stories: lessonOutputs.map((out) => out.content).filter(Boolean),
+          narrationTip: `Read each story aloud and discuss key ideas from ${unit.title}.`,
         }
 
   const content = JSON.stringify(mergedJson, null, 2)
@@ -151,7 +157,7 @@ export async function listSharedGeneratedContentForStudent(studentId: string) {
     where: {
       studentId,
       visibility: "shared",
-      type: { in: ["quiz", "worksheet"] },
+      type: { in: ["quiz", "worksheet", "story"] },
     },
     orderBy: { createdAt: "desc" },
     include: {

@@ -26,53 +26,63 @@ export async function initializeStudentProgress(studentId: string, lessonId: str
   const lessons = await getOrderedLessonsForUnit(lesson.unitId)
   if (lessons.length === 0) throw new Error("NotFound")
   const firstLessonId = lessons[0].id
+  const lessonIds = lessons.map((l) => l.id)
 
-  const existingCount = await prisma.studentLessonProgress.count({
-    where: { studentId, lessonId: { in: lessons.map((l) => l.id) } },
+  const existingRows = await prisma.studentLessonProgress.findMany({
+    where: { studentId, lessonId: { in: lessonIds } },
+    select: { lessonId: true, status: true, updatedAt: true },
+    orderBy: { updatedAt: "asc" },
   })
-  if (existingCount > 0) {
-    return getStudentLessonState(studentId, lessonId)
+
+  if (existingRows.length < lessons.length) {
+    const existingIds = new Set(existingRows.map((row) => row.lessonId))
+    const missingIds = lessonIds.filter((id) => !existingIds.has(id))
+
+    if (missingIds.length > 0) {
+      await prisma.studentLessonProgress.createMany({
+        data: missingIds.map((id) => ({
+          studentId,
+          lessonId: id,
+          // If this is first-time initialization, unlock the first lesson only.
+          status: existingRows.length === 0 && id === firstLessonId ? "unlocked" : "locked",
+        })),
+        skipDuplicates: true,
+      })
+    }
   }
 
-  // Ensure all rows exist and exactly one unlocked lesson is present.
-  await prisma.$transaction(async (tx) => {
-    await Promise.all(
-      lessons.map((l) =>
-        tx.studentLessonProgress.upsert({
-          where: { studentId_lessonId: { studentId, lessonId: l.id } },
-          update: {},
-          create: {
-            studentId,
-            lessonId: l.id,
-            status: l.id === firstLessonId ? "unlocked" : "locked",
-          },
-        }),
-      ),
+  // Ensure exactly one unlocked lesson in the unit to prevent skip/parallel access.
+  const progressRows = await prisma.studentLessonProgress.findMany({
+    where: { studentId, lessonId: { in: lessonIds } },
+    select: { lessonId: true, status: true, updatedAt: true },
+    orderBy: { updatedAt: "asc" },
+  })
+
+  const unlockedRows = progressRows.filter((row) => row.status === "unlocked")
+
+  if (unlockedRows.length === 0) {
+    const firstLockedLesson = lessons.find((l) =>
+      progressRows.some((row) => row.lessonId === l.id && row.status === "locked"),
     )
-
-    const currentlyUnlocked = await tx.studentLessonProgress.findMany({
-      where: { studentId, lessonId: { in: lessons.map((l) => l.id) }, status: "unlocked" },
-      select: { lessonId: true },
-      orderBy: { updatedAt: "asc" },
+    if (!firstLockedLesson) {
+      // All lessons are completed in this unit; nothing to unlock.
+      return getStudentLessonState(studentId, lessonId)
+    }
+    await prisma.studentLessonProgress.update({
+      where: { studentId_lessonId: { studentId, lessonId: firstLockedLesson.id } },
+      data: { status: "unlocked", lastAccessedAt: new Date() },
     })
-
-    if (currentlyUnlocked.length === 0) {
-      await tx.studentLessonProgress.update({
-        where: { studentId_lessonId: { studentId, lessonId: firstLessonId } },
-        data: { status: "unlocked" },
-      })
-    } else if (currentlyUnlocked.length > 1) {
-      const keepUnlocked = currentlyUnlocked[0].lessonId
-      await tx.studentLessonProgress.updateMany({
-        where: {
-          studentId,
-          lessonId: { in: currentlyUnlocked.filter((u) => u.lessonId !== keepUnlocked).map((u) => u.lessonId) },
-          status: "unlocked",
-        },
+  } else if (unlockedRows.length > 1) {
+    const sortedUnlocked = unlockedRows.sort((a, b) => a.updatedAt.getTime() - b.updatedAt.getTime())
+    const keepUnlocked = sortedUnlocked[0].lessonId
+    const toLock = sortedUnlocked.filter((row) => row.lessonId !== keepUnlocked).map((row) => row.lessonId)
+    if (toLock.length > 0) {
+      await prisma.studentLessonProgress.updateMany({
+        where: { studentId, lessonId: { in: toLock }, status: "unlocked" },
         data: { status: "locked" },
       })
     }
-  })
+  }
 
   return getStudentLessonState(studentId, lessonId)
 }

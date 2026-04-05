@@ -34,6 +34,17 @@ type Gamification = {
   xpInLevel?: number
 }
 
+type SharedGeneratedItem = {
+  id: string
+  unitId: string | null
+  subjectName: string
+  unitTitle: string
+  contentType: "quiz" | "worksheet" | "story"
+  content: string
+  contentJson?: unknown
+  createdAt: string
+}
+
 export default function StudentDashboard() {
   const [child, setChild] = useState<Child | null>(null)
   const [subjects, setSubjects] = useState<Subject[]>([])
@@ -42,6 +53,7 @@ export default function StudentDashboard() {
   const [gamification, setGamification] = useState<Gamification | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showAssessment, setShowAssessment] = useState(false)
+  const [sharedGeneratedContent, setSharedGeneratedContent] = useState<SharedGeneratedItem[]>([])
   const [surpriseQuiz, setSurpriseQuiz] = useState<SurpriseQuiz | null>(null)
   const [quizState, setQuizState] = useState<"idle" | "generating" | "ready" | "error">("idle")
   const [quizError, setQuizError] = useState<string | null>(null)
@@ -97,6 +109,17 @@ export default function StudentDashboard() {
 
       const id = payload.child?.id
       if (id) {
+        const sharedRes = await apiFetch(`/api/student/generated-content?childId=${encodeURIComponent(id)}`)
+        if (sharedRes.ok) {
+          const sharedPayload = (await sharedRes.json()) as {
+            success?: boolean
+            data?: { items?: SharedGeneratedItem[] }
+          }
+          setSharedGeneratedContent(sharedPayload?.data?.items ?? [])
+        } else {
+          setSharedGeneratedContent([])
+        }
+
         const gRes = await apiFetch(`/api/student/gamification?childId=${encodeURIComponent(id)}`)
         if (gRes.ok) {
           const g = (await gRes.json()) as Gamification
@@ -389,6 +412,27 @@ export default function StudentDashboard() {
               </Button>
             </CardContent>
           </Card>
+        )}
+
+        {sharedGeneratedContent.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-xl font-bold text-violet-800 mb-4">Shared by Parent</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {sharedGeneratedContent.map((item) => (
+                <Card key={item.id} className="border-[2px] border-violet-200">
+                  <CardContent className="p-4">
+                    <p className="text-sm font-semibold capitalize text-violet-700">
+                      {item.contentType} • {item.subjectName || "Subject"} • {item.unitTitle || "Unit"}
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700 line-clamp-6">{item.content}</p>
+                    <p className="mt-2 text-xs text-slate-500">
+                      {new Date(item.createdAt).toLocaleString()}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
         )}
 
         <SubjectPath subjects={subjects} progress={progress} />

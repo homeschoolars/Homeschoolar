@@ -121,7 +121,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
       unitId: string | null
       subjectName: string
       unitTitle: string
-      contentType: "quiz" | "worksheet"
+      contentType: "quiz" | "worksheet" | "story"
       content: string
       contentJson?: unknown
       createdAt: string
@@ -708,7 +708,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Generated Worksheets & Quizzes</CardTitle>
+            <CardTitle>Generated Worksheets, Quizzes & Stories</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {sharedContent.filter((item) => item.subjectName.toLowerCase() === (subject?.name ?? "").toLowerCase()).length === 0 ? (
