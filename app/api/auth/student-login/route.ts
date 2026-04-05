@@ -42,6 +42,20 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Student login error:", error)
     const message = error instanceof Error ? error.message : "An unexpected error occurred"
+    if (
+      message.includes("STUDENT_SESSION_SECRET") ||
+      message.includes("NEXTAUTH_SECRET") ||
+      message.includes("AUTH_SECRET") ||
+      message.includes("student session signing")
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Student sign-in is temporarily unavailable. The server is missing an auth secret. Ask the site owner to set AUTH_SECRET (or STUDENT_SESSION_SECRET) in production.",
+        },
+        { status: 503 },
+      )
+    }
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
