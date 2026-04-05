@@ -235,12 +235,12 @@ export default function StudentDashboard() {
 
   if (loadError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-100 via-purple-100 to-cyan-100">
-        <div className="text-center max-w-md">
-          <div className="text-6xl mb-4">😕</div>
-          <p className="text-lg font-medium text-red-600 mb-2">Something went wrong</p>
-          <p className="text-sm text-gray-600 mb-4">{loadError}</p>
-          <Button onClick={() => router.push("/login")} className="bg-purple-500 hover:bg-purple-600">
+      <div className="min-h-screen dashboard-student-teen flex items-center justify-center px-4">
+        <div className="text-center max-w-md rounded-3xl border border-slate-200/80 bg-white/90 backdrop-blur-md p-8 shadow-2xl shadow-violet-500/10">
+          <div className="text-5xl mb-4">😕</div>
+          <p className="text-lg font-semibold text-red-600 mb-2 font-[family-name:var(--font-heading)]">Something went wrong</p>
+          <p className="text-sm text-slate-600 mb-6 leading-relaxed">{loadError}</p>
+          <Button onClick={() => router.push("/login")} className="rounded-xl bg-violet-600 hover:bg-violet-700 shadow-lg shadow-violet-500/25">
             Go to Login
           </Button>
         </div>
@@ -250,10 +250,13 @@ export default function StudentDashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-100 via-purple-100 to-cyan-100">
+      <div className="min-h-screen dashboard-student-teen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-bounce text-6xl mb-4">⭐</div>
-          <p className="text-lg font-medium text-purple-600">Loading your dashboard...</p>
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 text-3xl shadow-lg shadow-violet-500/30 mb-5 animate-pulse">
+            ⭐
+          </div>
+          <p className="text-lg font-semibold text-slate-700 font-[family-name:var(--font-heading)]">Loading your dashboard…</p>
+          <p className="text-sm text-slate-500 mt-1">One moment</p>
         </div>
       </div>
     )
@@ -261,11 +264,11 @@ export default function StudentDashboard() {
 
   if (!child) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-100 via-purple-100 to-cyan-100">
-        <div className="text-center">
-          <div className="text-6xl mb-4">😕</div>
-          <p className="text-lg font-medium text-purple-600 mb-4">Unable to load your profile</p>
-          <Button onClick={() => router.push("/login")} className="bg-purple-500 hover:bg-purple-600">
+      <div className="min-h-screen dashboard-student-teen flex items-center justify-center px-4">
+        <div className="text-center max-w-md rounded-3xl border border-slate-200/80 bg-white/90 backdrop-blur-md p-8 shadow-xl">
+          <div className="text-5xl mb-4">😕</div>
+          <p className="text-lg font-semibold text-slate-800 mb-4 font-[family-name:var(--font-heading)]">Unable to load your profile</p>
+          <Button onClick={() => router.push("/login")} className="rounded-xl bg-violet-600 hover:bg-violet-700">
             Go to Login
           </Button>
         </div>
@@ -275,7 +278,7 @@ export default function StudentDashboard() {
 
   if (showAssessment) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-cyan-100 py-8 px-4">
+      <div className="min-h-screen dashboard-student-teen py-8 px-4">
         <InitialAssessment
           childId={child.id}
           childName={child.name}
@@ -303,7 +306,7 @@ export default function StudentDashboard() {
   const ageBand: "4-7" | "8-13" = isYounger ? "4-7" : "8-13"
 
   return (
-    <div className={`min-h-screen ${isYounger ? "bg-gradient-to-br from-yellow-100 via-orange-100 to-pink-100" : "bg-gradient-to-br from-pink-100 via-purple-100 to-cyan-100"}`}>
+    <div className={`min-h-screen ${isYounger ? "dashboard-student-young" : "dashboard-student-teen"}`}>
       {surpriseQuiz && quizState === "ready" && (
         <SurpriseQuizModal
           quiz={surpriseQuiz}
@@ -319,29 +322,29 @@ export default function StudentDashboard() {
       )}
 
       {quizState === "generating" && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="max-w-md w-full border-4 border-amber-400">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <Card className="max-w-md w-full border border-amber-200/80 rounded-3xl shadow-2xl shadow-amber-500/20 bg-white/95 backdrop-blur-md">
             <CardContent className="p-8 text-center">
-              <Loader2 className="w-14 h-14 mx-auto mb-4 text-violet-500 animate-spin" />
-              <h2 className="text-xl font-bold text-violet-700 mb-2">Preparing your surprise quiz...</h2>
-              <p className="text-slate-600">AI is creating fun questions for you!</p>
+              <Loader2 className="w-12 h-12 mx-auto mb-4 text-violet-600 animate-spin" />
+              <h2 className="text-xl font-bold text-slate-900 mb-2 font-[family-name:var(--font-heading)]">Preparing your surprise quiz…</h2>
+              <p className="text-slate-600 text-sm">AI is crafting questions for you.</p>
             </CardContent>
           </Card>
         </div>
       )}
 
       {quizState === "error" && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="max-w-md w-full border-4 border-red-200">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <Card className="max-w-md w-full border border-red-200/80 rounded-3xl shadow-xl bg-white/95 backdrop-blur-md">
             <CardContent className="p-6 text-center">
               <div className="text-5xl mb-4">😕</div>
-              <h2 className="text-xl font-bold text-red-700 mb-2">Couldn&apos;t load quiz</h2>
+              <h2 className="text-xl font-bold text-red-700 mb-2 font-[family-name:var(--font-heading)]">Couldn&apos;t load quiz</h2>
               <p className="text-slate-600 mb-6 text-sm">{quizError ?? "Please try again."}</p>
               <div className="flex gap-3 justify-center">
-                <Button variant="outline" onClick={() => { setQuizState("idle"); setQuizError(null); }}>
+                <Button variant="outline" className="rounded-xl" onClick={() => { setQuizState("idle"); setQuizError(null); }}>
                   Dismiss
                 </Button>
-                <Button onClick={() => generateQuiz()} className="bg-violet-500 hover:bg-violet-600">
+                <Button onClick={() => generateQuiz()} className="rounded-xl bg-violet-600 hover:bg-violet-700">
                   Retry
                 </Button>
               </div>
@@ -360,7 +363,7 @@ export default function StudentDashboard() {
         xpToNextLevel={g?.xpToNextLevel}
       />
 
-      <main className="container mx-auto px-4 py-6 sm:py-8">
+      <main className="container mx-auto px-4 py-6 sm:py-10 max-w-6xl">
         <WelcomeBanner
           child={child}
           completedToday={completedToday}
@@ -382,14 +385,17 @@ export default function StudentDashboard() {
 
         {assignments.length > 0 && (
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-violet-800 mb-4">Your worksheets</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1 font-[family-name:var(--font-heading)] tracking-tight">
+              Your worksheets
+            </h2>
+            <p className="text-sm text-slate-600 mb-4">Tap a card to open and complete.</p>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {assignments.map((assignment) => (
                 <Link href={`/student/worksheet/${assignment.id}`} key={assignment.id} className="block group">
-                  <Card className="border-[3px] border-violet-200 hover:border-violet-400 transition-all hover:shadow-lg cursor-pointer h-full">
-                    <CardContent className="p-4 flex items-center justify-between gap-3">
+                  <Card className="h-full rounded-2xl border border-slate-200/80 bg-white/90 backdrop-blur-sm shadow-[0_8px_30px_-14px_rgba(15,23,42,0.12)] hover:border-violet-300/80 hover:shadow-[0_16px_40px_-12px_rgba(99,102,241,0.2)] transition-all cursor-pointer">
+                    <CardContent className="p-4 sm:p-5 flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <h3 className="font-bold text-violet-700 truncate">{assignment.worksheet?.title}</h3>
+                        <h3 className="font-bold text-violet-800 truncate group-hover:text-violet-900">{assignment.worksheet?.title}</h3>
                         <p className="text-sm text-slate-500 truncate">{assignment.worksheet?.description}</p>
                       </div>
                       <ChevronRight className="w-6 h-6 text-violet-400 shrink-0 group-hover:translate-x-1 transition-transform" />
@@ -402,12 +408,12 @@ export default function StudentDashboard() {
         )}
 
         {assignments.length === 0 && (
-          <Card className="mb-8 border-[3px] border-dashed border-violet-300 bg-violet-50/80">
-            <CardContent className="p-8 text-center">
+          <Card className="mb-8 rounded-3xl border border-dashed border-violet-200/80 bg-white/70 backdrop-blur-sm shadow-inner">
+            <CardContent className="p-8 sm:p-10 text-center">
               <div className="text-5xl mb-4">🌟</div>
-              <h3 className="text-xl font-bold text-violet-700 mb-2">No worksheets assigned yet!</h3>
-              <p className="text-violet-600">Ask your parent to assign some fun activities, or explore subjects below.</p>
-              <Button asChild className="mt-4 bg-[#7F77DD] hover:bg-[#6C63D5]">
+              <h3 className="text-xl font-bold text-slate-900 mb-2 font-[family-name:var(--font-heading)]">No worksheets yet</h3>
+              <p className="text-slate-600 max-w-md mx-auto">Ask your parent to assign activities, or explore subjects below.</p>
+              <Button asChild className="mt-5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-lg shadow-violet-500/25">
                 <Link href="/student/subjects">Explore subjects</Link>
               </Button>
             </CardContent>
@@ -416,11 +422,13 @@ export default function StudentDashboard() {
 
         {sharedGeneratedContent.length > 0 && (
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-violet-800 mb-4">Shared by Parent</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-4 font-[family-name:var(--font-heading)] tracking-tight">
+              Shared by parent
+            </h2>
             <div className="grid gap-4 md:grid-cols-2">
               {sharedGeneratedContent.map((item) => (
-                <Card key={item.id} className="border-[2px] border-violet-200">
-                  <CardContent className="p-4">
+                <Card key={item.id} className="rounded-2xl border border-violet-200/70 bg-white/85 backdrop-blur-sm shadow-sm">
+                  <CardContent className="p-4 sm:p-5">
                     <p className="text-sm font-semibold capitalize text-violet-700">
                       {item.contentType} • {item.subjectName || "Subject"} • {item.unitTitle || "Unit"}
                     </p>
@@ -449,16 +457,9 @@ export default function StudentDashboard() {
         />
       </main>
 
-      {isYounger && (
-        <div className="fixed bottom-4 right-4 pointer-events-none">
-          <Sparkles className="w-8 h-8 text-yellow-500 animate-pulse" />
-        </div>
-      )}
-      {!isYounger && (
-        <div className="fixed bottom-4 right-4 pointer-events-none">
-          <Sparkles className="w-8 h-8 text-pink-400 animate-pulse" />
-        </div>
-      )}
+      <div className="fixed bottom-5 right-5 pointer-events-none opacity-40">
+        <Sparkles className={`w-7 h-7 ${isYounger ? "text-amber-500" : "text-violet-400"} animate-pulse`} />
+      </div>
     </div>
   )
 }

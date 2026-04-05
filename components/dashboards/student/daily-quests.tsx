@@ -63,20 +63,22 @@ export function DailyQuests({
 
   return (
     <section className="mb-8">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-fuchsia-500 to-violet-600 flex items-center justify-center">
+      <div className="flex items-center gap-3 mb-5">
+        <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-fuchsia-500 to-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/25 ring-1 ring-white/30">
           <Target className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-violet-800">Daily quests</h2>
-          <p className="text-sm text-violet-600">Complete quests to earn XP and coins!</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-[family-name:var(--font-heading)] tracking-tight">
+            Daily quests
+          </h2>
+          <p className="text-sm text-slate-600">Complete quests to earn XP and coins.</p>
         </div>
       </div>
 
       <div className="space-y-4">
         {/* Hero: Surprise Quiz — Duolingo-style "Complete a lesson" */}
-        <Card className="border-[3px] border-amber-400 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 shadow-lg shadow-amber-200/30 hover:shadow-amber-300/40 hover:border-amber-500 transition-all overflow-hidden relative">
-          <div className="absolute top-2 right-3 flex items-center gap-1 text-amber-700 text-xs font-medium">
+        <Card className="rounded-3xl border border-amber-200/90 bg-gradient-to-br from-amber-50 via-white to-orange-50/90 shadow-[0_12px_40px_-16px_rgba(245,158,11,0.35)] hover:shadow-[0_16px_48px_-12px_rgba(245,158,11,0.4)] transition-all overflow-hidden relative">
+          <div className="absolute top-3 right-4 flex items-center gap-1 text-amber-800 text-xs font-semibold">
             <Sparkles className="h-3.5 w-3.5" />
             Bonus XP
           </div>
@@ -97,7 +99,7 @@ export function DailyQuests({
             <Button
               onClick={() => onTakeQuiz()}
               disabled={quizGenerating}
-              className="w-full sm:w-auto bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-bold text-base px-6 py-6 rounded-xl shadow-md hover:shadow-lg transition-all shrink-0"
+              className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold text-base px-6 py-6 rounded-2xl shadow-lg shadow-amber-500/25 transition-all shrink-0"
             >
               {quizGenerating ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -121,10 +123,10 @@ export function DailyQuests({
             return (
               <Card
                 key={q.id}
-                className={`border-2 transition-all ${
+                className={`rounded-2xl transition-all ${
                   q.done
-                    ? "border-green-400 bg-green-50/90 shadow-sm"
-                    : "border-violet-200 bg-white hover:border-violet-300 hover:shadow-md"
+                    ? "border border-emerald-200/90 bg-emerald-50/90 shadow-sm"
+                    : "border border-slate-200/80 bg-white/90 backdrop-blur-sm hover:border-violet-200 hover:shadow-lg"
                 }`}
               >
                 <CardContent className="p-4">
@@ -176,7 +178,7 @@ export function DailyQuests({
         </div>
 
         {hasAssignment && (
-          <p className="text-sm text-violet-600 text-center">
+          <p className="text-sm text-slate-600 text-center max-w-lg mx-auto">
             Complete a worksheet from &quot;Your worksheets&quot; or &quot;Your learning path&quot; below to finish the worksheet quest!
           </p>
         )}

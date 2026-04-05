@@ -58,13 +58,15 @@ export function SubjectPath({ subjects, progress }: SubjectPathProps) {
 
   return (
     <section className="mb-8">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center">
+      <div className="flex items-center gap-3 mb-5">
+        <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 ring-1 ring-white/25">
           <BookOpen className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-violet-800">Your learning path</h2>
-          <p className="text-sm text-violet-600">Continue where you left off</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-[family-name:var(--font-heading)] tracking-tight">
+            Your learning path
+          </h2>
+          <p className="text-sm text-slate-600">Continue where you left off</p>
         </div>
       </div>
 
@@ -78,14 +80,14 @@ export function SubjectPath({ subjects, progress }: SubjectPathProps) {
           return (
             <Link href={`/student/subject/${subject.id}`} key={subject.id} className="block group">
               <Card
-                className={`h-full border-[3px] transition-all overflow-hidden hover:scale-[1.02] ${
+                className={`h-full rounded-3xl border-2 transition-all overflow-hidden hover:scale-[1.01] hover:shadow-xl ${
                   isNext
-                    ? "border-amber-300 shadow-lg ring-2 ring-amber-300/50"
-                    : "hover:shadow-lg"
+                    ? "border-amber-300 shadow-xl ring-2 ring-amber-200/60"
+                    : "border-white/30 hover:shadow-lg"
                 }`}
                 style={{
-                  borderColor: isNext ? "#facc15" : `${color}55`,
-                  background: `linear-gradient(145deg, ${color}, ${color}dd)`,
+                  borderColor: isNext ? "#facc15" : `${color}66`,
+                  background: `linear-gradient(155deg, ${color}, ${color}dd)`,
                 }}
               >
                 <CardContent className="p-4 flex items-center gap-4">

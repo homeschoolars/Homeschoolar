@@ -41,13 +41,15 @@ export function AchievementsGrid({
 
   return (
     <section className="mb-8">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+      <div className="flex items-center gap-3 mb-5">
+        <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/25 ring-1 ring-white/25">
           <Trophy className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-violet-800">Achievements</h2>
-          <p className="text-sm text-violet-600">Unlock badges and earn rewards!</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-[family-name:var(--font-heading)] tracking-tight">
+            Achievements
+          </h2>
+          <p className="text-sm text-slate-600">Unlock badges and earn rewards.</p>
         </div>
       </div>
 
@@ -63,10 +65,10 @@ export function AchievementsGrid({
           return (
             <Card
               key={b.id}
-              className={`border-[3px] text-center transition-all touch-manipulation cursor-default ${
+              className={`rounded-2xl border text-center transition-all touch-manipulation cursor-default ${
                 unlocked
-                  ? "border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 hover:border-amber-500 hover:shadow-lg"
-                  : "border-slate-200 bg-slate-50/80 opacity-80"
+                  ? "border-amber-300/90 bg-gradient-to-br from-amber-50 to-yellow-50/90 hover:border-amber-400 hover:shadow-lg shadow-md shadow-amber-500/10"
+                  : "border-slate-200/80 bg-slate-50/90 opacity-85"
               }`}
               onClick={unlocked ? triggerCelebration : undefined}
             >
@@ -96,7 +98,7 @@ export function AchievementsGrid({
         })}
       </div>
       {!hasFirstLessonCompleted && (
-        <p className="mt-3 text-sm text-violet-600">Complete your first lesson to unlock badge rewards.</p>
+        <p className="mt-3 text-sm text-slate-600">Complete your first lesson to unlock badge rewards.</p>
       )}
     </section>
   )

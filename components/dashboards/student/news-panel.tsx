@@ -62,9 +62,15 @@ export function NewsPanel({ ageBand, isYounger = false }: NewsPanelProps) {
 
   if (loading) {
     return (
-      <Card className={isYounger ? "border-2 border-yellow-300 bg-gradient-to-br from-yellow-50 to-orange-50" : "border-slate-200"}>
+      <Card
+        className={
+          isYounger
+            ? "border-2 border-yellow-200/90 rounded-3xl bg-gradient-to-br from-yellow-50 to-orange-50 shadow-lg shadow-amber-500/10"
+            : "border border-slate-200/70 rounded-3xl bg-white/85 backdrop-blur-sm shadow-[0_8px_30px_-14px_rgba(15,23,42,0.1)]"
+        }
+      >
         <CardHeader>
-          <CardTitle className={isYounger ? "text-2xl font-bold text-orange-600" : "text-lg"}>
+          <CardTitle className={isYounger ? "text-2xl font-bold text-orange-600 font-[family-name:var(--font-heading)]" : "text-lg font-semibold text-slate-900"}>
             <Newspaper className="inline mr-2" />
             News for You
           </CardTitle>
@@ -80,9 +86,15 @@ export function NewsPanel({ ageBand, isYounger = false }: NewsPanelProps) {
 
   if (error) {
     return (
-      <Card className={isYounger ? "border-2 border-yellow-300 bg-gradient-to-br from-yellow-50 to-orange-50" : "border-slate-200"}>
+      <Card
+        className={
+          isYounger
+            ? "border-2 border-yellow-200/90 rounded-3xl bg-gradient-to-br from-yellow-50 to-orange-50"
+            : "border border-slate-200/70 rounded-3xl bg-white/85 backdrop-blur-sm"
+        }
+      >
         <CardHeader>
-          <CardTitle className={isYounger ? "text-2xl font-bold text-orange-600" : "text-lg"}>
+          <CardTitle className={isYounger ? "text-2xl font-bold text-orange-600 font-[family-name:var(--font-heading)]" : "text-lg font-semibold text-slate-900"}>
             <Newspaper className="inline mr-2" />
             News for You
           </CardTitle>
@@ -96,9 +108,15 @@ export function NewsPanel({ ageBand, isYounger = false }: NewsPanelProps) {
 
   if (news.length === 0) {
     return (
-      <Card className={isYounger ? "border-2 border-yellow-300 bg-gradient-to-br from-yellow-50 to-orange-50" : "border-slate-200"}>
+      <Card
+        className={
+          isYounger
+            ? "border-2 border-yellow-200/90 rounded-3xl bg-gradient-to-br from-yellow-50 to-orange-50"
+            : "border border-slate-200/70 rounded-3xl bg-white/85 backdrop-blur-sm"
+        }
+      >
         <CardHeader>
-          <CardTitle className={isYounger ? "text-2xl font-bold text-orange-600" : "text-lg"}>
+          <CardTitle className={isYounger ? "text-2xl font-bold text-orange-600 font-[family-name:var(--font-heading)]" : "text-lg font-semibold text-slate-900"}>
             <Newspaper className="inline mr-2" />
             News for You
           </CardTitle>
@@ -113,14 +131,26 @@ export function NewsPanel({ ageBand, isYounger = false }: NewsPanelProps) {
   }
 
   return (
-    <Card className={isYounger ? "border-2 border-yellow-300 bg-gradient-to-br from-yellow-50 to-orange-50 shadow-lg" : "border-slate-200"}>
+    <Card
+      className={
+        isYounger
+          ? "border-2 border-yellow-200/90 rounded-3xl bg-gradient-to-br from-yellow-50 to-orange-50 shadow-lg shadow-amber-500/15"
+          : "border border-slate-200/70 rounded-3xl bg-white/90 backdrop-blur-sm shadow-[0_12px_40px_-16px_rgba(91,33,182,0.12)]"
+      }
+    >
       <CardHeader>
-        <CardTitle className={isYounger ? "text-2xl font-bold text-orange-600 flex items-center" : "text-lg flex items-center"}>
+        <CardTitle
+          className={
+            isYounger
+              ? "text-2xl font-bold text-orange-600 flex items-center font-[family-name:var(--font-heading)]"
+              : "text-lg flex items-center font-semibold text-slate-900"
+          }
+        >
           <Newspaper className={`${isYounger ? "h-6 w-6 mr-2" : "h-4 w-4 mr-2"}`} />
           News for You
           {isYounger && <Sparkles className="h-5 w-5 ml-2 text-yellow-500 animate-pulse" />}
         </CardTitle>
-        <CardDescription className={isYounger ? "text-orange-600" : ""}>
+        <CardDescription className={isYounger ? "text-orange-600" : "text-slate-600"}>
           {isYounger ? "🌟 Fun stories just for you!" : "Stay updated with interesting news"}
         </CardDescription>
       </CardHeader>
@@ -128,10 +158,10 @@ export function NewsPanel({ ageBand, isYounger = false }: NewsPanelProps) {
         {news.map((item) => (
           <div
             key={item.id}
-            className={`p-4 rounded-lg border ${
+            className={`p-4 rounded-2xl border ${
               isYounger
                 ? "bg-white border-orange-200 hover:border-orange-400 hover:shadow-md transition-all"
-                : "border-slate-200 hover:border-slate-300 transition-colors"
+                : "border-slate-200/80 bg-slate-50/50 hover:border-violet-200 hover:bg-white transition-all"
             }`}
           >
             <div className="flex items-start justify-between mb-2">

@@ -43,14 +43,14 @@ export default function WorksheetsPageClient({ children, assignments }: Workshee
   const completedCount = filteredAssignments.filter((a) => a.status === "completed").length
 
   return (
-    <ParentPageShell title="Worksheets" subtitle="View and manage assigned worksheets">
+    <ParentPageShell title="Worksheets" subtitle="View and manage assigned worksheets" activeNav="worksheets">
 
         {/* Filters */}
-        <Card className="mb-6">
+        <Card className="mb-6 border border-slate-200/70 bg-white/80 backdrop-blur-sm shadow-[0_8px_30px_-14px_rgba(15,23,42,0.12)] rounded-2xl">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               <Select value={selectedChildId} onValueChange={setSelectedChildId}>
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-[220px] rounded-xl border-slate-200">
                   <SelectValue placeholder="Filter by child" />
                 </SelectTrigger>
                 <SelectContent>
@@ -62,14 +62,14 @@ export default function WorksheetsPageClient({ children, assignments }: Workshee
                   ))}
                 </SelectContent>
               </Select>
-              <div className="flex gap-4 ml-auto">
-                <div className="text-sm">
-                  <span className="text-gray-600">Pending: </span>
-                  <span className="font-semibold">{pendingCount}</span>
+              <div className="flex gap-6 ml-auto text-sm">
+                <div>
+                  <span className="text-slate-500">Pending</span>{" "}
+                  <span className="font-bold tabular-nums text-amber-700">{pendingCount}</span>
                 </div>
-                <div className="text-sm">
-                  <span className="text-gray-600">Completed: </span>
-                  <span className="font-semibold">{completedCount}</span>
+                <div>
+                  <span className="text-slate-500">Completed</span>{" "}
+                  <span className="font-bold tabular-nums text-emerald-700">{completedCount}</span>
                 </div>
               </div>
             </div>
@@ -78,11 +78,11 @@ export default function WorksheetsPageClient({ children, assignments }: Workshee
 
         {/* Worksheets List */}
         {filteredAssignments.length === 0 ? (
-          <Card>
+          <Card className="border border-dashed border-slate-200/80 bg-white/60 rounded-2xl">
             <CardContent className="p-12 text-center">
-              <FileText className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">No worksheets found</h3>
-              <p className="text-gray-500">
+              <FileText className="w-16 h-16 mx-auto text-violet-300 mb-4" />
+              <h3 className="text-lg font-semibold text-slate-800 mb-2 font-[family-name:var(--font-heading)]">No worksheets found</h3>
+              <p className="text-slate-500 max-w-md mx-auto">
                 {selectedChildId === "all"
                   ? "No worksheets have been assigned yet."
                   : "No worksheets assigned to this child."}
@@ -92,12 +92,15 @@ export default function WorksheetsPageClient({ children, assignments }: Workshee
         ) : (
           <div className="grid gap-4">
             {filteredAssignments.map((assignment) => (
-              <Card key={assignment.id}>
+              <Card
+                key={assignment.id}
+                className="border border-slate-200/70 bg-white/85 backdrop-blur-sm rounded-2xl shadow-[0_8px_28px_-12px_rgba(15,23,42,0.12)] hover:shadow-[0_12px_36px_-10px_rgba(99,102,241,0.15)] hover:border-violet-200/60 transition-all"
+              >
                 <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <BookOpen className="w-5 h-5 text-teal-600" />
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-3 mb-2">
+                        <BookOpen className="w-5 h-5 text-violet-600 shrink-0" />
                         <h3 className="text-lg font-semibold">{assignment.worksheet.title}</h3>
                         <Badge
                           variant={assignment.status === "completed" ? "default" : "secondary"}

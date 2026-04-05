@@ -19,14 +19,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import Link from "next/link"
-import Image from "next/image"
 import dynamic from "next/dynamic"
-import { useRouter } from "next/navigation"
 import {
   BookOpen,
   Plus,
   Users,
-  LogOut,
   Star,
   Check,
   CreditCard,
@@ -52,13 +49,12 @@ import type {
 import { RecommendationsPanel } from "@/components/ai/recommendations-panel"
 import { CurriculumPlanCard } from "@/components/ai/curriculum-plan-card"
 import { CurriculumPDFActions, AssessmentPDFActions } from "@/components/pdf/pdf-actions"
-import { NotificationCenter } from "@/components/notifications/notification-center"
 import { RoadmapViewer } from "@/components/dashboards/parent/roadmap-viewer"
 import { WeeklyAIInsights } from "@/components/dashboards/parent/weekly-ai-insights"
 import { QuickContentActions } from "@/components/parent/quick-content-actions"
 import { FullLessonGenerator } from "@/components/parent/full-lesson-generator"
-import { signOut } from "next-auth/react"
 import { apiFetch } from "@/lib/api-client"
+import { ParentAppHeader } from "@/components/layout/parent-app-header"
 import {
   attentionSpanOptions,
   interestPresets,
@@ -73,7 +69,9 @@ const ParentOverview = dynamic(
   () => import("@/components/dashboards/parent/parent-overview").then((m) => m.ParentOverview),
   {
     ssr: false,
-    loading: () => <div className="h-40 animate-pulse rounded-lg border bg-white" />,
+    loading: () => (
+      <div className="h-40 animate-pulse rounded-2xl border border-slate-200/60 bg-white/60" />
+    ),
   },
 )
 
@@ -81,7 +79,9 @@ const WorksheetGenerator = dynamic(
   () => import("@/components/ai/worksheet-generator").then((m) => m.WorksheetGenerator),
   {
     ssr: false,
-    loading: () => <div className="h-40 animate-pulse rounded-lg border bg-white" />,
+    loading: () => (
+      <div className="h-40 animate-pulse rounded-2xl border border-slate-200/60 bg-white/60" />
+    ),
   },
 )
 
@@ -135,7 +135,6 @@ export default function ParentDashboardClient({
   const [curriculumSubjects, setCurriculumSubjects] = useState<CurriculumSubjectSummary[]>([])
   const [curriculumLoading, setCurriculumLoading] = useState(false)
   const orphanInputRef = useRef<HTMLInputElement>(null)
-  const router = useRouter()
 
   const selectedChild = children.find((c) => c.id === selectedChildId)
   const curriculumAgeGroup = selectedChild?.age_group ?? "6-7"
@@ -245,11 +244,6 @@ export default function ParentDashboardClient({
     setter(list.includes(value) ? list.filter((item) => item !== value) : [...list, value])
   }
 
-  const handleLogout = async () => {
-    await signOut({ callbackUrl: "/login" })
-    router.push("/login")
-  }
-
   const handleOrphanSubmit = async () => {
     if (!orphanChildId || !orphanDocFile) return
     setOrphanSubmitting(true)
@@ -298,178 +292,128 @@ export default function ParentDashboardClient({
     (subscriptionStatus === "active" && subscription?.type === "paid") || (isTrial && trialDaysLeft > 0) || isOrphan
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white border-b shadow-sm">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/homeschoolars-logo-v2.png" alt="HomeSchoolar Logo" width={40} height={40} />
-            <span className="text-xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
-              HomeSchoolar
-            </span>
-          </Link>
+    <div className="min-h-screen dashboard-parent-bg">
+      <ParentAppHeader active="dashboard" />
 
-          <nav className="hidden md:flex items-center gap-6">
-            <Link href="/parent" className="text-sm font-medium text-teal-600">
-              Dashboard
-            </Link>
-            <Link href="/parent/worksheets" className="text-sm font-medium text-gray-600 hover:text-teal-600">
-              Worksheets
-            </Link>
-            <Link href="/parent/progress" className="text-sm font-medium text-gray-600 hover:text-teal-600">
-              Progress
-            </Link>
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <NotificationCenter />
-            <Button variant="ghost" size="icon" onClick={handleLogout}>
-              <LogOut className="w-5 h-5" />
-            </Button>
-          </div>
-        </div>
-        <div className="border-t bg-white md:hidden">
-          <div className="container mx-auto flex items-center gap-4 px-4 py-2 text-sm">
-            <Link href="/parent" className="font-medium text-teal-600">
-              Dashboard
-            </Link>
-            <Link href="/parent/worksheets" className="font-medium text-gray-600 hover:text-teal-600">
-              Worksheets
-            </Link>
-            <Link href="/parent/progress" className="font-medium text-gray-600 hover:text-teal-600">
-              Progress
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Welcome back, {profile?.full_name || "Parent"}!</h1>
-          <p className="text-gray-600">Manage your children&apos;s learning journey</p>
+      <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-7xl">
+        <div className="mb-8 sm:mb-10">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-600/80 mb-2">Parent dashboard</p>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 font-[family-name:var(--font-heading)]">
+            Welcome back, {profile?.full_name || "Parent"}
+          </h1>
+          <p className="text-slate-600 mt-2 max-w-xl leading-relaxed">
+            Manage profiles, AI tools, and progress — all in one calm, focused workspace.
+          </p>
         </div>
 
-        {/* Subscription Banner */}
         {hasActiveSubscription ? (
-          <Card className="mb-8 bg-gradient-to-r from-teal-500 to-cyan-500 text-white border-0">
-            <CardContent className="p-4 flex items-center justify-between">
+          <div className="mb-8 rounded-2xl bg-gradient-to-br from-violet-600 via-indigo-600 to-fuchsia-700 p-[1px] shadow-lg shadow-violet-500/20">
+            <div className="rounded-[15px] bg-gradient-to-br from-violet-600 via-indigo-600 to-fuchsia-700 px-5 py-4 sm:px-6 sm:py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <CreditCard className="w-6 h-6" />
+                <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-inner">
+                  <CreditCard className="w-5 h-5 text-white" />
+                </div>
                 <div>
-                  <p className="font-semibold">
+                  <p className="font-semibold text-white">
                     {isOrphan
                       ? "Orphan Education Plan"
                       : isTrial
-                        ? `Free Trial - ${trialDaysLeft} days left`
+                        ? `Free Trial — ${trialDaysLeft} days left`
                         : `${subscription?.plan_type?.toUpperCase() || "PAID"} Plan`}
                   </p>
-                  <p className="text-sm text-teal-100">
+                  <p className="text-sm text-violet-100/90">
                     {isOrphan ? "Full access at no cost" : "Full access to all features"}
                   </p>
                 </div>
               </div>
               {!isOrphan && (
-                <Button variant="secondary" size="sm" asChild>
+                <Button size="sm" asChild className="bg-white text-violet-800 hover:bg-violet-50 font-semibold rounded-xl shadow-lg shadow-violet-950/15 border border-white/40">
                   <Link href="/parent/subscription">{isTrial ? "Upgrade Now" : "Manage Plan"}</Link>
                 </Button>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ) : (
-          <Card className="mb-8 bg-gradient-to-r from-[#7F77DD] to-[#6C63D5] text-white border-0">
-            <CardContent className="p-4 flex items-center justify-between">
+          <div className="mb-8 rounded-2xl bg-gradient-to-br from-violet-600 via-indigo-600 to-fuchsia-700 p-[1px] shadow-lg shadow-violet-500/20">
+            <div className="rounded-[15px] bg-gradient-to-br from-violet-600 via-indigo-600 to-fuchsia-700 px-5 py-4 sm:px-6 sm:py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <Star className="w-6 h-6" />
+                <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-inner">
+                  <Star className="w-5 h-5 text-white" />
+                </div>
                 <div>
-                  <p className="font-semibold">Start Your Free Trial</p>
-                  <p className="text-sm text-violet-100">14 days of full access - no card required</p>
+                  <p className="font-semibold text-white">Start Your Free Trial</p>
+                  <p className="text-sm text-violet-100/90">14 days of full access — no card required</p>
                 </div>
               </div>
-              <Button variant="secondary" size="sm" asChild>
+              <Button size="sm" asChild className="bg-white text-violet-800 hover:bg-violet-50 font-semibold rounded-xl shadow-lg shadow-violet-950/15 border border-white/40">
                 <Link href="/parent/subscription">Start Trial</Link>
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
-        {/* Quick Stats */}
-        <div className="grid gap-4 md:grid-cols-4 mb-8">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-teal-100 flex items-center justify-center">
-                  <Users className="w-6 h-6 text-teal-600" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+          {[
+            { icon: Users, label: "Children", value: children.length, gradient: "from-violet-500 to-indigo-600", iconShadow: "shadow-violet-500/30" },
+            { icon: BookOpen, label: "Worksheets Assigned", value: 0, gradient: "from-fuchsia-500 to-rose-500", iconShadow: "shadow-fuchsia-500/30" },
+            { icon: TrendingUp, label: "Average Score", value: "0%", gradient: "from-emerald-500 to-teal-600", iconShadow: "shadow-emerald-500/30" },
+            { icon: Calendar, label: "This Week", value: 0, gradient: "from-amber-500 to-orange-500", iconShadow: "shadow-amber-500/30" },
+          ].map((stat) => (
+            <Card
+              key={stat.label}
+              className="group border border-slate-200/70 bg-white/75 backdrop-blur-sm shadow-[0_8px_30px_-14px_rgba(15,23,42,0.15)] hover:shadow-[0_16px_40px_-12px_rgba(99,102,241,0.2)] hover:border-violet-200/80 transition-all duration-300 rounded-2xl"
+            >
+              <CardContent className="p-5 sm:p-6">
+                <div className="flex items-center gap-4">
+                  <div
+                    className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg ${stat.iconShadow} ring-1 ring-white/30`}
+                  >
+                    <stat.icon className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-2xl font-bold text-slate-900 tracking-tight tabular-nums">{stat.value}</p>
+                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.12em]">{stat.label}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{children.length}</p>
-                  <p className="text-sm text-gray-500">Children</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
-                  <BookOpen className="w-6 h-6 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">0</p>
-                  <p className="text-sm text-gray-500">Worksheets Assigned</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">0%</p>
-                  <p className="text-sm text-gray-500">Average Score</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-                  <Calendar className="w-6 h-6 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">0</p>
-                  <p className="text-sm text-gray-500">This Week</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         <Tabs defaultValue="children" className="space-y-6">
-          <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto bg-white border p-1">
-            <TabsTrigger value="children">Children</TabsTrigger>
-            <TabsTrigger value="ai-tools" className="flex items-center gap-1">
-              <Sparkles className="w-4 h-4" /> AI Tools
+          <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-2xl border border-slate-200/70 bg-slate-100/40 backdrop-blur-md p-1.5 shadow-inner">
+            <TabsTrigger
+              value="children"
+              className="rounded-xl px-4 py-2 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-md data-[state=active]:ring-1 data-[state=active]:ring-slate-200/80 font-medium text-slate-600"
+            >
+              Children
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center gap-1">
-              <BarChart3 className="w-4 h-4" /> Analytics
+            <TabsTrigger
+              value="ai-tools"
+              className="flex items-center gap-1.5 rounded-xl px-4 py-2 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-md data-[state=active]:ring-1 data-[state=active]:ring-slate-200/80 font-medium text-slate-600"
+            >
+              <Sparkles className="w-3.5 h-3.5" /> AI Tools
             </TabsTrigger>
-            <TabsTrigger value="documents" className="flex items-center gap-1">
-              <FileText className="w-4 h-4" /> Documents
+            <TabsTrigger
+              value="analytics"
+              className="flex items-center gap-1.5 rounded-xl px-4 py-2 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-md data-[state=active]:ring-1 data-[state=active]:ring-slate-200/80 font-medium text-slate-600"
+            >
+              <BarChart3 className="w-3.5 h-3.5" /> Analytics
+            </TabsTrigger>
+            <TabsTrigger
+              value="documents"
+              className="flex items-center gap-1.5 rounded-xl px-4 py-2 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-md data-[state=active]:ring-1 data-[state=active]:ring-slate-200/80 font-medium text-slate-600"
+            >
+              <FileText className="w-3.5 h-3.5" /> Documents
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="children" className="space-y-6">
-            {/* Children Section */}
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Your Children</h2>
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">Your Children</h2>
               <Dialog open={isAddingChild} onOpenChange={setIsAddingChild}>
                 <DialogTrigger asChild>
-                  <Button className="bg-teal-600 hover:bg-teal-700">
+                  <Button className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl shadow-md shadow-violet-500/25 font-semibold">
                     <Plus className="w-4 h-4 mr-2" /> Add Child
                   </Button>
                 </DialogTrigger>
@@ -689,7 +633,7 @@ export default function ParentDashboardClient({
                         newChildLearningStyles.length === 0 ||
                         newChildLearnsBetterWith.length === 0
                       }
-                      className="w-full bg-teal-600 hover:bg-teal-700"
+                      className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 rounded-xl font-semibold"
                     >
                       {isLoading ? "Adding..." : "Add Child"}
                     </Button>
@@ -734,7 +678,7 @@ export default function ParentDashboardClient({
                   <Button
                     onClick={handleOrphanSubmit}
                     disabled={!orphanChildId || !orphanDocFile || orphanSubmitting}
-                    className="w-full bg-teal-600 hover:bg-teal-700"
+                    className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 rounded-xl font-semibold"
                   >
                     {orphanSubmitting ? "Submitting..." : "Submit for Review"}
                   </Button>
@@ -747,49 +691,49 @@ export default function ParentDashboardClient({
                 {children.map((child) => (
                   <Card
                     key={child.id}
-                    className={`hover:shadow-lg transition-shadow cursor-pointer ${
-                      selectedChildId === child.id ? "ring-2 ring-teal-500" : ""
+                    className={`border border-slate-200/70 shadow-sm hover:shadow-xl hover:border-violet-200/80 transition-all cursor-pointer rounded-2xl bg-white/90 backdrop-blur-sm group ${
+                      selectedChildId === child.id ? "ring-2 ring-violet-500/90 shadow-lg shadow-violet-200/40 border-violet-200/60" : ""
                     }`}
                     onClick={() => setSelectedChildId(child.id)}
                   >
                     <CardHeader className="pb-2">
                       <div className="flex items-center gap-3">
-                        <div className="w-14 h-14 rounded-full bg-gradient-to-r from-pink-400 to-purple-500 flex items-center justify-center text-2xl text-white">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-violet-500/30 ring-2 ring-white/20">
                           {child.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <CardTitle className="text-lg">{child.name}</CardTitle>
-                          <CardDescription>Age: {child.age_group} years</CardDescription>
+                          <CardTitle className="text-lg tracking-tight">{child.name}</CardTitle>
+                          <CardDescription className="text-slate-400 font-medium">Age: {child.age_group} years</CardDescription>
                         </div>
                       </div>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-500">Login Code</span>
-                          <code className="rounded-md bg-violet-100 px-2.5 py-1 font-mono text-xs font-semibold text-violet-800">
+                          <span className="text-slate-400 font-medium">Login Code</span>
+                          <code className="rounded-lg bg-violet-50 px-2.5 py-1 font-mono text-xs font-bold text-violet-700 border border-violet-100">
                             {child.login_code}
                           </code>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-500">Assessment</span>
+                          <span className="text-slate-400 font-medium">Assessment</span>
                           {child.assessment_completed ? (
-                            <span className="inline-flex items-center gap-1 font-medium text-green-600">
-                              <Check className="h-4 w-4" /> Completed
+                            <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg text-xs">
+                              <Check className="h-3.5 w-3.5" /> Completed
                             </span>
                           ) : (
-                            <span className="font-medium text-amber-600">Pending</span>
+                            <span className="font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg text-xs">Pending</span>
                           )}
                         </div>
-                        <div className="space-y-1">
+                        <div className="space-y-1.5">
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">Progress</span>
-                            <span className="font-medium">0%</span>
+                            <span className="text-slate-400 font-medium">Progress</span>
+                            <span className="font-bold text-slate-700">0%</span>
                           </div>
-                          <Progress value={0} className="h-2" />
+                          <Progress value={0} className="h-2 rounded-full" />
                         </div>
                         <div className="flex flex-wrap items-center gap-2 pt-2">
-                          <Button variant="outline" className="min-w-[130px] flex-1 bg-transparent" asChild>
+                          <Button variant="outline" className="min-w-[130px] flex-1 rounded-xl border-slate-200 hover:bg-violet-50 hover:border-violet-200 hover:text-violet-700 font-medium" asChild>
                             <Link href={`/parent/child/${child.id}`}>
                               View Details <ChevronRight className="w-4 h-4 ml-1" />
                             </Link>
@@ -797,7 +741,7 @@ export default function ParentDashboardClient({
                           {child.orphan_status !== "verified" && (
                             <Button
                               variant="outline"
-                              className="min-w-[130px] flex-1 bg-transparent"
+                              className="min-w-[130px] flex-1 rounded-xl border-slate-200 hover:bg-violet-50 hover:border-violet-200 font-medium"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 setOrphanChildId(child.id)
@@ -822,14 +766,16 @@ export default function ParentDashboardClient({
                 ))}
               </div>
             ) : (
-              <Card className="border-dashed border-2">
-                <CardContent className="p-8 text-center">
-                  <Users className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">No children added yet</h3>
-                  <p className="text-gray-500 mb-4">
+              <Card className="border border-dashed border-slate-300 rounded-2xl bg-white">
+                <CardContent className="p-10 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                    <Users className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">No children added yet</h3>
+                  <p className="text-slate-500 mb-6 max-w-sm mx-auto">
                     Add your first child to start assigning worksheets and tracking progress.
                   </p>
-                  <Button onClick={() => setIsAddingChild(true)} className="bg-teal-600 hover:bg-teal-700">
+                  <Button onClick={() => setIsAddingChild(true)} className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 rounded-xl font-semibold shadow-md shadow-violet-500/25">
                     <Plus className="w-4 h-4 mr-2" /> Add Your First Child
                   </Button>
                 </CardContent>
@@ -844,14 +790,16 @@ export default function ParentDashboardClient({
               </div>
             )}
             {selectedChild && selectedChild.assessment_completed && !hasActiveSubscription && (
-              <Card className="mt-6 border-dashed border-2">
-                <CardContent className="p-6 text-center">
-                  <Sparkles className="mx-auto mb-3 h-8 w-8 text-gray-400" />
-                  <h3 className="mb-2 text-base font-semibold text-gray-700">AI roadmap and insights are locked</h3>
-                  <p className="mb-4 text-sm text-gray-500">
+              <Card className="mt-6 border border-dashed border-slate-300 rounded-2xl bg-white">
+                <CardContent className="p-8 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                    <Sparkles className="h-7 w-7 text-slate-400" />
+                  </div>
+                  <h3 className="mb-2 text-base font-bold text-slate-800">AI roadmap and insights are locked</h3>
+                  <p className="mb-5 text-sm text-slate-500 max-w-sm mx-auto">
                     Activate your subscription to view personalized roadmap, weekly AI insights, and curriculum plan.
                   </p>
-                  <Button asChild className="bg-teal-600 hover:bg-teal-700">
+                  <Button asChild className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 rounded-xl font-semibold shadow-md shadow-violet-500/25">
                     <Link href="/parent/subscription">View Plans</Link>
                   </Button>
                 </CardContent>
@@ -867,13 +815,13 @@ export default function ParentDashboardClient({
                     childAgeGroup={selectedChild.age_group}
                   />
                 ) : (
-                  <Card className="border-dashed border-2">
-                    <CardContent className="p-5 text-center">
-                      <p className="text-sm text-gray-600">
+                  <Card className="border border-dashed border-slate-300 rounded-2xl bg-white">
+                    <CardContent className="p-6 text-center">
+                      <p className="text-sm text-slate-500">
                         Worksheet, quiz, and story generation for this child is available after subscription activation.
                       </p>
-                      <Button asChild className="mt-3 bg-teal-600 hover:bg-teal-700">
-                        <Link href="/parent/subscription">Unlock Parent AI Generation</Link>
+                      <Button asChild className="mt-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 rounded-xl font-semibold">
+                        <Link href="/parent/subscription">Unlock AI Generation</Link>
                       </Button>
                     </CardContent>
                   </Card>
@@ -884,14 +832,16 @@ export default function ParentDashboardClient({
 
           <TabsContent value="ai-tools" className="space-y-6">
             {!hasActiveSubscription ? (
-              <Card className="border-dashed border-2">
-                <CardContent className="p-8 text-center">
-                  <Sparkles className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">Subscription required</h3>
-                  <p className="text-gray-500 mb-4">
+              <Card className="border border-dashed border-slate-300 rounded-2xl bg-white">
+                <CardContent className="p-10 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                    <Sparkles className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">Subscription required</h3>
+                  <p className="text-slate-500 mb-6 max-w-sm mx-auto">
                     Activate your subscription to access AI tools and personalized content.
                   </p>
-                  <Button asChild className="bg-teal-600 hover:bg-teal-700">
+                  <Button asChild className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 rounded-xl font-semibold shadow-md shadow-violet-500/25">
                     <Link href="/parent/subscription">View Plans</Link>
                   </Button>
                 </CardContent>
@@ -915,9 +865,9 @@ export default function ParentDashboardClient({
                   </Select>
                 </div>
 
-                <Card className="lg:col-span-2 border-teal-200 bg-teal-50/60">
+                <Card className="lg:col-span-2 border-0 bg-gradient-to-br from-violet-50 to-indigo-50 rounded-2xl shadow-sm">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">
+                    <CardTitle className="text-base tracking-tight text-slate-800">
                       Curriculum for age {curriculumAgeGroup}
                     </CardTitle>
                     <CardDescription>
@@ -994,11 +944,13 @@ export default function ParentDashboardClient({
                 )}
               </div>
             ) : (
-              <Card className="border-dashed border-2">
-                <CardContent className="p-8 text-center">
-                  <Sparkles className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">Add a child first</h3>
-                  <p className="text-gray-500">
+              <Card className="border border-dashed border-slate-300 rounded-2xl bg-white">
+                <CardContent className="p-10 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                    <Sparkles className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">Add a child first</h3>
+                  <p className="text-slate-500 max-w-sm mx-auto">
                     You need to add a child before you can use AI tools to generate personalized content.
                   </p>
                 </CardContent>
@@ -1013,11 +965,12 @@ export default function ParentDashboardClient({
           <TabsContent value="documents" className="space-y-6">
             {hasActiveSubscription ? (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {/* Curriculum PDF */}
-                <Card>
+                <Card className="border-0 shadow-sm rounded-2xl bg-white hover:shadow-md transition-shadow">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <BookOpen className="w-5 h-5 text-teal-600" />
+                    <CardTitle className="flex items-center gap-2 tracking-tight">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center">
+                        <BookOpen className="w-4 h-4 text-white" />
+                      </div>
                       Curriculum Guide
                     </CardTitle>
                     <CardDescription>Download the full curriculum for any age group</CardDescription>
@@ -1033,10 +986,12 @@ export default function ParentDashboardClient({
 
                 {/* Assessment Reports */}
                 {children.map((child) => (
-                  <Card key={child.id}>
+                  <Card key={child.id} className="border-0 shadow-sm rounded-2xl bg-white hover:shadow-md transition-shadow">
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-purple-600" />
+                      <CardTitle className="flex items-center gap-2 tracking-tight">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center">
+                          <FileText className="w-4 h-4 text-white" />
+                        </div>
                         {child.name}&apos;s Report
                       </CardTitle>
                       <CardDescription>Assessment results and progress report</CardDescription>
@@ -1053,14 +1008,16 @@ export default function ParentDashboardClient({
                 ))}
               </div>
             ) : (
-              <Card className="border-dashed border-2">
-                <CardContent className="p-8 text-center">
-                  <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">Subscription required</h3>
-                  <p className="text-gray-500 mb-4">
+              <Card className="border border-dashed border-slate-300 rounded-2xl bg-white">
+                <CardContent className="p-10 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">Subscription required</h3>
+                  <p className="text-slate-500 mb-6 max-w-sm mx-auto">
                     Documents and reports unlock after you activate a subscription.
                   </p>
-                  <Button asChild className="bg-teal-600 hover:bg-teal-700">
+                  <Button asChild className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 rounded-xl font-semibold shadow-md shadow-violet-500/25">
                     <Link href="/parent/subscription">View Plans</Link>
                   </Button>
                 </CardContent>

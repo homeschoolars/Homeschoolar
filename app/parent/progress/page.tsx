@@ -17,7 +17,11 @@ export default async function ProgressPage() {
   const mappedSubjects = subjects.map(serializeSubject)
 
   return (
-    <ParentPageShell title="Progress & Analytics" subtitle="Track your children&apos;s learning progress">
+    <ParentPageShell
+      title="Progress & Analytics"
+      subtitle="Track your children's learning progress"
+      activeNav="progress"
+    >
         {/* eslint-disable-next-line react/no-children-prop */}
         <ParentAnalytics children={mappedChildren} subjects={mappedSubjects} />
     </ParentPageShell>
