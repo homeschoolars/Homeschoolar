@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
+import { enforceParentOrStudentChildAccess } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 import { getStudentLearningProfile } from "@/services/learning-profile-service"
 
@@ -35,10 +36,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Student not found" }, { status: 404 })
     }
 
-    // Check access
-    if (session.user.role === "parent" && student.parentId !== session.user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-    }
+    await enforceParentOrStudentChildAccess({
+      childId: student.id,
+      session,
+      request,
+    })
 
     // Get learning profile
     const learningProfile = await getStudentLearningProfile(studentId)

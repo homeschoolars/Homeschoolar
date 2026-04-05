@@ -219,7 +219,6 @@ export function CurriculumManagement() {
       }
     }
     void run()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAgeGroup])
 
   useEffect(() => {
@@ -232,7 +231,6 @@ export function CurriculumManagement() {
       }
     }
     void run()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSubjectId])
 
   useEffect(() => {
@@ -245,7 +243,6 @@ export function CurriculumManagement() {
       }
     }
     void run()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUnitId])
 
   useEffect(() => {
@@ -258,7 +255,6 @@ export function CurriculumManagement() {
       }
     }
     void run()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLessonId])
 
   const createSubject = async () => {

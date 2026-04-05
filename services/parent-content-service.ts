@@ -133,18 +133,36 @@ export async function generateParentControlledContent({
   const content = JSON.stringify(mergedJson, null, 2)
   const normalizedContentJson = JSON.parse(content)
 
-  const generated = await prisma.curriculumGeneratedContent.create({
-    data: {
+  const parentSessionKey = `parent:${studentId}:${unitId}:${contentType}`
+  const generated = await prisma.curriculumGeneratedContent.upsert({
+    where: {
+      lessonId_type_sessionKey: {
+        lessonId: unit.lessons[0].id,
+        type: contentType,
+        sessionKey: parentSessionKey,
+      },
+    },
+    create: {
       lessonId: unit.lessons[0].id,
       studentId,
       unitId,
       type: contentType,
-      sessionKey: "global",
+      sessionKey: parentSessionKey,
       visibility: "shared",
       generatedBy: "parent",
       content,
       contentJson: normalizedContentJson,
       promptSnapshot: `Parent generated ${contentType} for unit ${unit.title}`,
+      model: "gpt-4o-mini",
+    },
+    update: {
+      studentId,
+      unitId,
+      visibility: "shared",
+      generatedBy: "parent",
+      content,
+      contentJson: normalizedContentJson,
+      promptSnapshot: `Parent regenerated ${contentType} for unit ${unit.title}`,
       model: "gpt-4o-mini",
     },
   })

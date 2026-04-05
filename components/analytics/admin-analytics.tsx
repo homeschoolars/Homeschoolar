@@ -61,7 +61,6 @@ export function AdminAnalytics() {
 
   useEffect(() => {
     const fetchStats = async () => {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLoading(true)
 
       const response = await apiFetch(`/api/admin/analytics?range=${timeRange}`)
@@ -79,7 +78,6 @@ export function AdminAnalytics() {
       setSubjectEngagement(data.subjectEngagement || [])
       setAiUsageData(data.aiUsageData || [])
 
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLoading(false)
     }
 

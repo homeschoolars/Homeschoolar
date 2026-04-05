@@ -1,6 +1,7 @@
 import { auth } from "@/auth"
 import { enforceParentOrStudentChildAccess } from "@/lib/auth-helpers"
 import { fail, ok, statusFromErrorMessage } from "@/lib/api-response"
+import { prisma } from "@/lib/prisma"
 import { submitSubjectExam } from "@/services/parent-content-service"
 
 export const dynamic = "force-dynamic"
@@ -22,6 +23,17 @@ export async function POST(request: Request) {
 
     const session = await auth()
     await enforceParentOrStudentChildAccess({ childId: body.studentId, session, request })
+
+    const exam = await prisma.subjectExam.findUnique({
+      where: { id: body.examId },
+      select: { id: true, studentId: true },
+    })
+    if (!exam) {
+      return fail("Exam not found", 404)
+    }
+    if (exam.studentId !== body.studentId) {
+      return fail("Forbidden", 403)
+    }
 
     const result = await submitSubjectExam({
       examId: body.examId,

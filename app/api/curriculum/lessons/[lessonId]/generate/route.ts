@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { safeParseRequestJson } from "@/lib/safe-json"
+import { requireSession } from "@/lib/auth-helpers"
 import { generateLessonAsset } from "@/services/curriculum-structured-service"
 
 export const dynamic = "force-dynamic"
@@ -10,6 +11,8 @@ export async function POST(
   { params }: { params: Promise<{ lessonId: string }> }
 ) {
   try {
+    await requireSession()
+
     const { lessonId } = await params
     const body = await safeParseRequestJson(req, {} as {
       type: "story" | "worksheet" | "quiz" | "project" | "debate" | "research" | "reflection"

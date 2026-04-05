@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
+import { enforceParentOrStudentChildAccess } from "@/lib/auth-helpers"
 import { getLearningRoadmap } from "@/services/roadmap-service"
 import { prisma } from "@/lib/prisma"
 
@@ -29,9 +30,11 @@ export async function GET(
       return NextResponse.json({ error: "Student not found" }, { status: 404 })
     }
 
-    if (session.user.role === "parent" && student.parentId !== session.user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-    }
+    await enforceParentOrStudentChildAccess({
+      childId: student.id,
+      session,
+      request,
+    })
 
     const roadmap = await getLearningRoadmap(studentId)
 

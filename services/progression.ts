@@ -252,7 +252,12 @@ export async function submitLessonQuiz({
     data: { quizPassed: true, lastAccessedAt: new Date() },
   })
   await completeLesson({ studentId, lessonId, skipQuizRequirement: true })
-  const unlocked = await unlockNextLesson(studentId, lessonId)
 
-  return { passed: true, unlocked: unlocked.unlocked }
+  const stateAfterCompletion = await getStudentLessonState(studentId, lessonId)
+  const unlockedLesson = stateAfterCompletion.lessons.find((l) => l.status === "unlocked")
+
+  return {
+    passed: true,
+    unlocked: unlockedLesson ? { id: unlockedLesson.lessonId, title: unlockedLesson.title } : null,
+  }
 }

@@ -12,7 +12,7 @@ import { apiFetch } from "@/lib/api-client"
 import type { Child, Subject, Progress, Assessment } from "@/lib/types"
 
 interface ParentOverviewProps {
-  children: Child[]
+  childProfiles: Child[]
   subjects: Subject[]
 }
 
@@ -85,14 +85,14 @@ function normalizeInsightsPayload(payload: unknown): InsightsData | null {
   }
 }
 
-export function ParentOverview({ children, subjects }: ParentOverviewProps) {
-  const [selectedChildId, setSelectedChildId] = useState<string | null>(children[0]?.id ?? null)
+export function ParentOverview({ childProfiles, subjects }: ParentOverviewProps) {
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(childProfiles[0]?.id ?? null)
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [insights, setInsights] = useState<InsightsData | null>(null)
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [loading, setLoading] = useState(true)
 
-  const selectedChild = children.find((c) => c.id === selectedChildId)
+  const selectedChild = childProfiles.find((c) => c.id === selectedChildId)
 
   useEffect(() => {
     if (!selectedChildId) return
@@ -141,7 +141,7 @@ export function ParentOverview({ children, subjects }: ParentOverviewProps) {
     return () => abort.abort()
   }, [selectedChildId])
 
-  if (children.length === 0) {
+  if (childProfiles.length === 0) {
     return (
       <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-8 text-center">
         <p className="text-slate-600">Add a child to see the overview.</p>
@@ -158,7 +158,7 @@ export function ParentOverview({ children, subjects }: ParentOverviewProps) {
             <SelectValue placeholder="Choose child" />
           </SelectTrigger>
           <SelectContent>
-            {children.map((c) => (
+            {childProfiles.map((c) => (
               <SelectItem key={c.id} value={c.id}>
                 {c.name}
               </SelectItem>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BookOpen, RefreshCw, Loader2 } from "lucide-react"
@@ -26,7 +26,7 @@ export function CurriculumPlanCard({ childId, childName }: CurriculumPlanCardPro
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const loadPlan = async () => {
+  const loadPlan = useCallback(async () => {
     if (!childId) return
     setIsLoading(true)
     setError(null)
@@ -46,11 +46,11 @@ export function CurriculumPlanCard({ childId, childName }: CurriculumPlanCardPro
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [childId])
 
   useEffect(() => {
     loadPlan()
-  }, [childId])
+  }, [loadPlan])
 
   const handleRegenerate = async () => {
     if (!childId) return

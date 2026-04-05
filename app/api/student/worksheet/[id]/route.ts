@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
+import { enforceParentOrStudentChildAccess } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 import { serializeWorksheet } from "@/lib/serializers"
 
@@ -12,8 +13,6 @@ export async function GET(
 ) {
   try {
     const session = await auth()
-    const { searchParams } = new URL(req.url)
-    const childIdFromQuery = searchParams.get("childId")
     const { id } = await params
 
     const assignment = await prisma.worksheetAssignment.findUnique({
@@ -24,20 +23,11 @@ export async function GET(
       return NextResponse.json({ error: "Worksheet assignment not found" }, { status: 404 })
     }
 
-    if (session?.user?.role === "parent") {
-      const child = await prisma.child.findUnique({
-        where: { id: assignment.childId },
-        select: { parentId: true },
-      })
-      if (!child || child.parentId !== session.user.id) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-      }
-    } else if (session?.user?.role !== "admin") {
-      // Student/login-code flow fallback via childId in query.
-      if (!childIdFromQuery || childIdFromQuery !== assignment.childId) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-      }
-    }
+    await enforceParentOrStudentChildAccess({
+      childId: assignment.childId,
+      session,
+      request: req,
+    })
 
     return NextResponse.json({
       assignmentId: assignment.id,
@@ -80,20 +70,11 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    if (session?.user?.role === "parent") {
-      const child = await prisma.child.findUnique({
-        where: { id: assignment.childId },
-        select: { parentId: true },
-      })
-      if (!child || child.parentId !== session.user.id) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-      }
-    } else if (session?.user?.role !== "admin") {
-      // Student/login-code flow is allowed when childId matches assignment owner.
-      if (assignment.childId !== body.childId) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-      }
-    }
+    await enforceParentOrStudentChildAccess({
+      childId: assignment.childId,
+      session,
+      request: req,
+    })
 
     const questions = (assignment.worksheet.questions as Array<{ id: string; correct_answer: string; points: number }>) ?? []
     const totalPoints = questions.reduce((sum, q) => sum + (q.points || 0), 0)

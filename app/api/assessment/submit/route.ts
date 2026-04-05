@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
+import { enforceParentOrStudentChildAccess } from "@/lib/auth-helpers"
 import { submitAssessment } from "@/services/assessment-service"
 import { z } from "zod"
 
@@ -26,8 +27,21 @@ export async function POST(request: Request) {
     const body = submitAssessmentSchema.parse(await request.json())
     const userId = session.user.id
 
-    // Update raw_answers in assessment
     const { prisma } = await import("@/lib/prisma")
+    const assessment = await prisma.assessment.findUnique({
+      where: { id: body.assessment_id },
+      select: { id: true, childId: true },
+    })
+    if (!assessment) {
+      return NextResponse.json({ error: "Assessment not found" }, { status: 404 })
+    }
+    await enforceParentOrStudentChildAccess({
+      childId: assessment.childId,
+      session,
+      request,
+    })
+
+    // Update raw_answers in assessment
     await prisma.assessment.update({
       where: { id: body.assessment_id },
       data: { rawAnswers: body.raw_answers as unknown as object },

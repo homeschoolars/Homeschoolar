@@ -23,12 +23,14 @@ const makeAdminSchema = z.object({
  */
 export async function POST(request: Request) {
   try {
-    // TODO: Add security check in production
-    // For example: require a secret key or restrict to localhost
     const authHeader = request.headers.get("authorization")
     const secretKey = process.env.ADMIN_SETUP_SECRET
 
-    if (secretKey && authHeader !== `Bearer ${secretKey}`) {
+    if (!secretKey) {
+      return NextResponse.json({ error: "Admin setup endpoint is disabled" }, { status: 403 })
+    }
+
+    if (authHeader !== `Bearer ${secretKey}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 

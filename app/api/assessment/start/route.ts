@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
+import { enforceParentOrStudentChildAccess } from "@/lib/auth-helpers"
 import { createAssessment } from "@/services/assessment-service"
 import { z } from "zod"
 
@@ -24,6 +25,11 @@ export async function POST(request: Request) {
 
     const body = startAssessmentSchema.parse(await request.json())
     const userId = session.user.id
+    await enforceParentOrStudentChildAccess({
+      childId: body.student_id,
+      session,
+      request,
+    })
 
     const assessment = await createAssessment({
       childId: body.student_id,

@@ -76,7 +76,7 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
     await loadSubjectAssessment(currentSubject)
   }
 
-  const loadSubjectAssessment = async (subject: Subject) => {
+  const loadSubjectAssessment = useCallback(async (subject: Subject) => {
     setIsLoading(true)
     setQuestions([])
     setCurrentQuestionIndex(0)
@@ -116,7 +116,7 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [ageGroup, childId])
 
   const handleAnswer = () => {
     if (!selectedAnswer) return
@@ -143,7 +143,7 @@ export function InitialAssessment({ childId, childName, ageGroup, subjects, onCo
     setCurrentSubjectIndex(next.index)
     setResults(null)
     loadSubjectAssessment(next.subject)
-  }, [])
+  }, [loadSubjectAssessment])
 
   useEffect(() => {
     return () => {

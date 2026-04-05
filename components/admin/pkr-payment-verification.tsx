@@ -18,6 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Check, X, Eye, Loader2, Smartphone, Wallet, Building2 } from "lucide-react"
 import { formatPricePKR } from "@/lib/subscription-plans"
 import { apiFetch } from "@/lib/api-client"
+import Image from "next/image"
 
 interface PendingPayment {
   id: string
@@ -275,7 +276,13 @@ export function PKRPaymentVerification() {
                 <div>
                   <Label className="text-gray-500 mb-2 block">Payment Receipt</Label>
                   <div className="border rounded-lg overflow-hidden">
-                    <img src={receiptUrl || "/placeholder.svg"} alt="Payment Receipt" className="max-w-full h-auto" />
+                    <Image
+                      src={receiptUrl || "/placeholder.svg"}
+                      alt="Payment Receipt"
+                      width={900}
+                      height={1200}
+                      className="max-w-full h-auto"
+                    />
                   </div>
                 </div>
               )}

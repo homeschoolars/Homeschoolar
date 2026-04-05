@@ -54,7 +54,6 @@ export function ParentAnalytics({ children, subjects }: ParentAnalyticsProps) {
 
   useEffect(() => {
     const fetchChildProgress = async () => {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLoading(true)
       const response = await apiFetch("/api/analytics/parent", {
         method: "POST",
@@ -78,7 +77,6 @@ export function ParentAnalytics({ children, subjects }: ParentAnalyticsProps) {
       setSubjectScores(data.subjectScores || [])
       setWeeklyActivity(data.weeklyActivity || [])
       
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLoading(false)
     }
 

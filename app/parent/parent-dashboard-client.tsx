@@ -1007,7 +1007,7 @@ export default function ParentDashboardClient({
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">
-            <ParentOverview children={children} subjects={allDashboardSubjects} />
+            <ParentOverview childProfiles={children} subjects={allDashboardSubjects} />
           </TabsContent>
 
           <TabsContent value="documents" className="space-y-6">
