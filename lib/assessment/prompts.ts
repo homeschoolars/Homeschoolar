@@ -1,4 +1,5 @@
 import type { BankQuestion } from "@/lib/assessment/types"
+import { assessmentMcqBand } from "@/lib/assessment/question-bank"
 
 export const SYSTEM_PROMPT = `You are an expert child education assessor and learning psychologist for HomeSchoolar, 
 an AI-powered homeschooling platform for children aged 4-13.
@@ -93,6 +94,7 @@ Name: ${childName}
 Age: ${age} years old
 Age group: ${ageGroup}
 Assessment type: ${age <= 5 ? "Parent observation mode" : "Direct child assessment"}
+Quiz level (MCQ difficulty band): ${age <= 5 ? "N/A (parent observation)" : assessmentMcqBand(age)}
 Islamic Studies included: ${hasIslamic ? "Yes" : "No"}
 
 SUBJECT SCORES (percentage out of 100):

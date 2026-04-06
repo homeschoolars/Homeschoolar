@@ -1,15 +1,21 @@
 /**
- * Script to remove all users except admin users
- * 
- * WARNING: This will permanently delete all non-admin users and their associated data.
- * Make sure you have a database backup before running this script.
- * 
+ * Remove all users except those with role `admin`, including subscription and payment rows
+ * tied to those users. Child profiles and all child-scoped data cascade from parent User deletion.
+ *
+ * WARNING: Irreversible. Back up the database first.
+ *
  * Usage:
- *   node scripts/remove-non-admin-users.js
- * 
- * To preview what will be deleted (dry run):
- *   node scripts/remove-non-admin-users.js --dry-run
+ *   node -r dotenv/config scripts/remove-non-admin-users.js --dry-run
+ *   node -r dotenv/config scripts/remove-non-admin-users.js --force   # skip 5s countdown
  */
+
+const path = require("path")
+try {
+  require("dotenv").config({ path: path.join(__dirname, "..", ".env.local") })
+  require("dotenv").config({ path: path.join(__dirname, "..", ".env") })
+} catch {
+  /* optional */
+}
 
 const { PrismaClient } = require("@prisma/client")
 
@@ -18,141 +24,164 @@ const prisma = new PrismaClient()
 async function main() {
   const args = process.argv.slice(2)
   const isDryRun = args.includes("--dry-run") || args.includes("-d")
+  const force = args.includes("--force") || args.includes("-y")
 
   console.log("=".repeat(60))
-  console.log("Remove Non-Admin Users Script")
+  console.log("Remove non-admin users (full data wipe for those accounts)")
   console.log("=".repeat(60))
   console.log()
 
   try {
-    // First, get all admin users
     const adminUsers = await prisma.user.findMany({
-      where: {
-        role: "admin",
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        adminRole: true,
-        createdAt: true,
-      },
+      where: { role: "admin" },
+      select: { id: true, email: true, name: true, adminRole: true, createdAt: true },
     })
 
-    console.log(`Found ${adminUsers.length} admin user(s) that will be preserved:`)
-    adminUsers.forEach((user) => {
-      console.log(`  - ${user.email} (${user.name || "No name"}) - Role: ${user.adminRole || "admin"}`)
+    if (adminUsers.length === 0) {
+      console.error("Refusing to run: no users with role=admin found. Promote an admin first.")
+      process.exit(1)
+    }
+
+    console.log(`Preserving ${adminUsers.length} admin user(s):`)
+    adminUsers.forEach((u) => {
+      console.log(`  - ${u.email} (${u.name || "No name"})${u.adminRole ? ` [${u.adminRole}]` : ""}`)
     })
     console.log()
 
-    // Get all non-admin users
     const nonAdminUsers = await prisma.user.findMany({
-      where: {
-        role: {
-          not: "admin",
-        },
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-      },
+      where: { role: { not: "admin" } },
+      select: { id: true, email: true, name: true, role: true, createdAt: true },
     })
 
-    console.log(`Found ${nonAdminUsers.length} non-admin user(s) that will be deleted:`)
-    if (nonAdminUsers.length > 0) {
-      // Group by role
-      const byRole = nonAdminUsers.reduce((acc, user) => {
-        acc[user.role] = (acc[user.role] || 0) + 1
-        return acc
-      }, {})
-
-      Object.entries(byRole).forEach(([role, count]) => {
-        console.log(`  - ${count} user(s) with role: ${role}`)
-      })
-      console.log()
-
-      // Show first 10 users as examples
-      console.log("Sample users to be deleted (first 10):")
-      nonAdminUsers.slice(0, 10).forEach((user) => {
-        console.log(`  - ${user.email} (${user.name || "No name"}) - Role: ${user.role}`)
-      })
-      if (nonAdminUsers.length > 10) {
-        console.log(`  ... and ${nonAdminUsers.length - 10} more`)
-      }
-      console.log()
-    } else {
-      console.log("  No non-admin users found. Nothing to delete.")
-      console.log()
+    if (nonAdminUsers.length === 0) {
+      console.log("No non-admin users found. Nothing to delete.")
       return
     }
+
+    const byRole = nonAdminUsers.reduce((acc, u) => {
+      acc[u.role] = (acc[u.role] || 0) + 1
+      return acc
+    }, {})
+    console.log(`Found ${nonAdminUsers.length} non-admin user(s) to delete:`)
+    Object.entries(byRole).forEach(([role, count]) => console.log(`  - ${count} × ${role}`))
+    console.log()
+    console.log("Sample (first 10):")
+    nonAdminUsers.slice(0, 10).forEach((u) => console.log(`  - ${u.email} (${u.name || "—"})`))
+    if (nonAdminUsers.length > 10) console.log(`  ... +${nonAdminUsers.length - 10} more`)
+    console.log()
 
     if (isDryRun) {
-      console.log("=".repeat(60))
-      console.log("DRY RUN MODE - No changes will be made")
-      console.log("=".repeat(60))
-      console.log()
-      console.log(`Would delete ${nonAdminUsers.length} non-admin user(s)`)
-      console.log(`Would preserve ${adminUsers.length} admin user(s)`)
-      console.log()
-      console.log("To actually delete these users, run without --dry-run flag:")
-      console.log("  node scripts/remove-non-admin-users.js")
+      console.log("DRY RUN — no changes.")
       return
     }
 
-    // Confirm deletion
-    console.log("=".repeat(60))
-    console.log("WARNING: This will permanently delete all non-admin users!")
-    console.log("=".repeat(60))
-    console.log()
-    console.log(`This will delete ${nonAdminUsers.length} user(s) and their associated data.`)
-    console.log(`Admin users (${adminUsers.length}) will be preserved.`)
-    console.log()
-    console.log("Press Ctrl+C to cancel, or wait 5 seconds to continue...")
-    console.log()
+    if (!force) {
+      console.log("Starting in 5s (Ctrl+C to cancel)...")
+      await new Promise((r) => setTimeout(r, 5000))
+    }
 
-    // Wait 5 seconds
-    await new Promise((resolve) => setTimeout(resolve, 5000))
+    const nonAdminIds = nonAdminUsers.map((u) => u.id)
+    const emails = nonAdminUsers.map((u) => u.email.toLowerCase())
 
-    console.log("Starting deletion...")
-    console.log()
+    const deleted = await prisma.$transaction(async (tx) => {
+      const children = await tx.child.findMany({
+        where: { parentId: { in: nonAdminIds } },
+        select: { id: true },
+      })
+      const childIds = children.map((c) => c.id)
 
-    // Delete non-admin users
-    // Prisma will handle cascading deletes based on schema relationships
-    const deleteResult = await prisma.user.deleteMany({
-      where: {
-        role: {
-          not: "admin",
+      const analytics = await tx.analyticsEvent.deleteMany({
+        where: {
+          OR: [{ userId: { in: nonAdminIds } }, ...(childIds.length ? [{ childId: { in: childIds } }] : [])],
         },
-      },
+      })
+
+      const subs = await tx.subscription.findMany({
+        where: { userId: { in: nonAdminIds } },
+        select: { id: true },
+      })
+      const subIds = subs.map((s) => s.id)
+
+      const payTx = await tx.paymentTransaction.deleteMany({
+        where: {
+          OR: [
+            { userId: { in: nonAdminIds } },
+            ...(subIds.length ? [{ subscriptionId: { in: subIds } }] : []),
+          ],
+        },
+      })
+
+      const payments = await tx.payment.deleteMany({
+        where: {
+          OR: [
+            { userId: { in: nonAdminIds } },
+            ...(subIds.length ? [{ subscriptionId: { in: subIds } }] : []),
+            { verifiedBy: { in: nonAdminIds } },
+          ],
+        },
+      })
+
+      const subscriptions = await tx.subscription.deleteMany({
+        where: { userId: { in: nonAdminIds } },
+      })
+
+      const worksheets = await tx.worksheet.updateMany({
+        where: { createdBy: { in: nonAdminIds } },
+        data: { createdBy: null },
+      })
+
+      const posts = await tx.blogPost.updateMany({
+        where: { authorId: { in: nonAdminIds } },
+        data: { authorId: null },
+      })
+
+      const lectures = await tx.videoLecture.updateMany({
+        where: { createdBy: { in: nonAdminIds } },
+        data: { createdBy: null },
+      })
+
+      const orphans = await tx.orphanVerification.updateMany({
+        where: { reviewedByAdminId: { in: nonAdminIds } },
+        data: { reviewedByAdminId: null },
+      })
+
+      let tokens = { count: 0 }
+      if (emails.length) {
+        tokens = await tx.verificationToken.deleteMany({
+          where: { identifier: { in: emails } },
+        })
+      }
+
+      const users = await tx.user.deleteMany({
+        where: { id: { in: nonAdminIds } },
+      })
+
+      return {
+        analytics: analytics.count,
+        paymentTransactions: payTx.count,
+        payments: payments.count,
+        subscriptions: subscriptions.count,
+        worksheetsOrphaned: worksheets.count,
+        blogPostsDetached: posts.count,
+        videoLecturesDetached: lectures.count,
+        orphanReviewsCleared: orphans.count,
+        verificationTokens: tokens.count,
+        users: users.count,
+      }
     })
 
-    console.log("=".repeat(60))
-    console.log("Deletion Complete!")
-    console.log("=".repeat(60))
-    console.log()
-    console.log(`Deleted ${deleteResult.count} non-admin user(s)`)
-    console.log(`Preserved ${adminUsers.length} admin user(s)`)
+    console.log("Deletion summary:")
+    Object.entries(deleted).forEach(([k, v]) => console.log(`  ${k}: ${v}`))
     console.log()
 
-    // Verify remaining users
-    const remainingUsers = await prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        adminRole: true,
-      },
+    const remaining = await prisma.user.findMany({
+      select: { email: true, name: true, role: true, adminRole: true },
+      orderBy: { email: "asc" },
     })
-
-    console.log("Remaining users in database:")
-    remainingUsers.forEach((user) => {
-      console.log(`  - ${user.email} (${user.name || "No name"}) - Role: ${user.role}${user.adminRole ? ` (${user.adminRole})` : ""}`)
-    })
-    console.log()
+    console.log("Remaining users:")
+    remaining.forEach((u) =>
+      console.log(`  - ${u.email} (${u.name || "—"}) role=${u.role}${u.adminRole ? ` ${u.adminRole}` : ""}`),
+    )
   } catch (error) {
     console.error("Error:", error)
     throw error
@@ -161,8 +190,4 @@ async function main() {
   }
 }
 
-main()
-  .catch((error) => {
-    console.error("Script failed:", error)
-    process.exit(1)
-  })
+main().catch(() => process.exit(1))

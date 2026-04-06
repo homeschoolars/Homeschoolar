@@ -69,7 +69,10 @@ export function AssessmentSetup({
               value={age}
               onChange={(e) => onAge(Number.parseInt(e.target.value, 10) || 4)}
             />
-            <p className="text-xs text-slate-500">Ages 4–5 use parent observation prompts; older ages mix question types.</p>
+            <p className="text-xs text-slate-500">
+              Ages 4–5 use parent observation prompts. Ages 6–13 get multiple-choice and follow-ups matched to their age band
+              (6–7, 8–9, 10–11, 12–13).
+            </p>
           </div>
 
           <div className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
