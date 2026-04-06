@@ -27,7 +27,11 @@ const worksheetActivitySchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("short_answer"),
     question: z.string().min(1),
-    hint: z.string().optional(),
+    /**
+     * IMPORTANT: must be present for OpenAI structured output JSON schema.
+     * Use null (or empty string) when not applicable.
+     */
+    hint: z.string().nullable(),
   }),
   z.object({
     type: z.literal("fill_in_blank"),

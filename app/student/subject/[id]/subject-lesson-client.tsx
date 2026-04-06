@@ -62,7 +62,7 @@ type GenerationType = "story" | "worksheet" | "quiz" | "project" | "debate" | "r
 
 type WorksheetActivityStructured =
   | { type: "mcq"; question: string; options: string[]; correctAnswer: string }
-  | { type: "short_answer"; question: string; hint?: string }
+  | { type: "short_answer"; question: string; hint: string | null }
   | { type: "fill_in_blank"; prompt: string; answers: string[] }
   | {
       type: "match"

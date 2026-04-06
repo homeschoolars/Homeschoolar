@@ -21,6 +21,8 @@ const bodySchema = z.object({
   age: z.number().int().min(4).max(13),
   scores: z.record(scoreEntry),
   openAnswers: z.record(z.string()),
+  /** When true, parent explicitly started a retake (always creates a new AssessmentReport row). */
+  retake: z.boolean().optional(),
   questionMetas: z.array(
     z.object({
       s: z.string(),
@@ -51,6 +53,56 @@ const reportSchema = z.object({
   parentMessage: z.string(),
   islamicNote: z.string().nullable(),
 })
+
+/** Latest holistic assessment report for a child (parent-only). Always filters by childId. */
+export async function GET(req: Request) {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (session.user.role !== "parent") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(req.url)
+    const childIdRaw = searchParams.get("childId")
+    const parsed = z.string().uuid().safeParse(childIdRaw)
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid childId" }, { status: 400 })
+    }
+    const childId = parsed.data
+
+    const child = await prisma.child.findFirst({
+      where: { id: childId, parentId: session.user.id },
+      select: { id: true },
+    })
+    if (!child) {
+      return NextResponse.json({ error: "Child not found" }, { status: 404 })
+    }
+
+    const latest = await prisma.assessmentReport.findFirst({
+      where: { childId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        createdAt: true,
+        age: true,
+        scores: true,
+        report: true,
+        learnerType: true,
+        interestProfile: true,
+        aptitudeProfile: true,
+      },
+    })
+
+    return NextResponse.json({ latest })
+  } catch (error) {
+    console.error("[assessment/report GET]", error)
+    const message = error instanceof Error ? error.message : "Failed to load report"
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
+}
 
 function parseOpenAnswers(raw: Record<string, string>): Record<number, string> {
   const o: Record<number, string> = {}

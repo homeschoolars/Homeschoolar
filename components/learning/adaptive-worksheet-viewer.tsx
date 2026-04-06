@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export type WorksheetActivityView =
   | { type: "mcq"; question: string; options: string[]; correctAnswer: string }
-  | { type: "short_answer"; question: string; hint?: string }
+  | { type: "short_answer"; question: string; hint: string | null }
   | { type: "fill_in_blank"; prompt: string; answers: string[] }
   | { type: "match"; leftColumn: string[]; rightColumn: string[]; correctPairs: { left: string; right: string }[] }
 

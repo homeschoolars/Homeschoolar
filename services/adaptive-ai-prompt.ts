@@ -104,7 +104,7 @@ TASK: Generate a worksheet as JSON with shape:
   "instructions": string,
   "activities": array of 2 OR 3 items. Each item is ONE of:
     { "type": "mcq", "question": string, "options": [4 strings], "correctAnswer": string }
-    { "type": "short_answer", "question": string, "hint"?: string }
+    { "type": "short_answer", "question": string, "hint": string | null }
     { "type": "fill_in_blank", "prompt": string, "answers": string[] }
     { "type": "match", "leftColumn": string[], "rightColumn": string[], "correctPairs": [ { "left": string, "right": string }, ... ] }
 }
@@ -115,7 +115,7 @@ RULES:
 - fill_in_blank: "prompt" is a sentence with one or more blanks written as _____ (five underscores). "answers" array length MUST equal the number of _____ blanks, in order left-to-right.
 - match: leftColumn and rightColumn same length (3–5 items). correctPairs must pair each leftColumn string exactly once with the correct rightColumn string.
 - MCQ: exactly 4 options; correctAnswer must match one option exactly.
-- short_answer: one clear prompt answerable in 1–3 sentences.
+- short_answer: one clear prompt answerable in 1–3 sentences. Always include \"hint\" (use null if not needed).
 - Friendly, age-appropriate tone.
 `
   }

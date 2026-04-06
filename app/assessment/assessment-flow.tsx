@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { AssessmentSetup, type ChildOption } from "@/components/assessment/AssessmentSetup"
 import { AssessmentProgressBar } from "@/components/assessment/ProgressBar"
@@ -10,19 +10,36 @@ import { Button } from "@/components/ui/button"
 import { buildQuestionList } from "@/lib/assessment/question-bank"
 import { questionsForPrompt } from "@/lib/assessment/prompts"
 import { computeScores, extractOpenAnswers } from "@/lib/assessment/scoring"
-import type { AnswerValue, BankQuestion } from "@/lib/assessment/types"
+import type { AnswerValue, BankQuestion, SubjectScore } from "@/lib/assessment/types"
 import { apiFetch } from "@/lib/api-client"
 import { ParentAppHeader } from "@/components/layout/parent-app-header"
 import { Loader2 } from "lucide-react"
 
 type Phase = "setup" | "quiz" | "loading" | "report"
 
-export function AssessmentFlow({ initialChildren }: { initialChildren: ChildOption[] }) {
+export type ExistingHolisticReport = {
+  id: string
+  scores: Record<string, SubjectScore>
+  report: AIReportPayload
+}
+
+export function AssessmentFlow({
+  routeChildId,
+  initialChildren,
+  existingReport,
+  isRetake,
+}: {
+  routeChildId: string
+  initialChildren: ChildOption[]
+  existingReport: ExistingHolisticReport | null
+  isRetake: boolean
+}) {
   const router = useRouter()
-  const [phase, setPhase] = useState<Phase>("setup")
-  const [childId, setChildId] = useState(() => initialChildren[0]?.id ?? "")
+  const showSavedReport = Boolean(existingReport && !isRetake)
+
+  const [phase, setPhase] = useState<Phase>(() => (showSavedReport ? "report" : "setup"))
   const [age, setAge] = useState(() => {
-    const c = initialChildren[0]
+    const c = initialChildren.find((x) => x.id === routeChildId)
     return c?.ageYears != null ? Math.min(13, Math.max(4, c.ageYears)) : 8
   })
   const [includeIslamic, setIncludeIslamic] = useState(false)
@@ -30,20 +47,30 @@ export function AssessmentFlow({ initialChildren }: { initialChildren: ChildOpti
   const [qIndex, setQIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<number, AnswerValue>>({})
   const [fieldError, setFieldError] = useState<string | null>(null)
-  const [scores, setScores] = useState<Record<string, { pct: number; total: number; max: number }>>({})
-  const [report, setReport] = useState<AIReportPayload | null>(null)
+  const [scores, setScores] = useState<Record<string, { pct: number; total: number; max: number }>>(() =>
+    showSavedReport && existingReport ? existingReport.scores : {},
+  )
+  const [report, setReport] = useState<AIReportPayload | null>(() =>
+    showSavedReport && existingReport ? existingReport.report : null,
+  )
   const [loadError, setLoadError] = useState<string | null>(null)
 
-  const childName = useMemo(() => initialChildren.find((c) => c.id === childId)?.name ?? "", [childId, initialChildren])
-
   useEffect(() => {
-    const c = initialChildren.find((x) => x.id === childId)
+    const c = initialChildren.find((x) => x.id === routeChildId)
     if (c?.ageYears != null) {
       setAge(Math.min(13, Math.max(4, c.ageYears)))
     }
-  }, [childId, initialChildren])
+  }, [routeChildId, initialChildren])
 
   const parentMode = age <= 5
+
+  const navigateToChild = useCallback(
+    (id: string) => {
+      if (id === routeChildId) return
+      router.push(`/assessment/${id}`)
+    },
+    [router, routeChildId],
+  )
 
   const startQuiz = useCallback(() => {
     setQuestions(buildQuestionList(age, includeIslamic))
@@ -98,10 +125,11 @@ export function AssessmentFlow({ initialChildren }: { initialChildren: ChildOpti
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          childId,
+          childId: routeChildId,
           age,
           scores: sc,
           openAnswers,
+          retake: isRetake,
           questionMetas: questionsForPrompt(questions),
         }),
       })
@@ -111,6 +139,8 @@ export function AssessmentFlow({ initialChildren }: { initialChildren: ChildOpti
       }
       setReport(payload.report)
       setPhase("report")
+      router.replace(`/assessment/${routeChildId}`, { scroll: false })
+      router.refresh()
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "Failed to generate report")
       setPhase("quiz")
@@ -126,6 +156,10 @@ export function AssessmentFlow({ initialChildren }: { initialChildren: ChildOpti
     router.push(`/parent/dashboard?${q.toString()}`)
   }, [report, router])
 
+  const goRetake = useCallback(() => {
+    router.push(`/assessment/${routeChildId}?retake=true`)
+  }, [router, routeChildId])
+
   const currentQ = questions[qIndex]
 
   return (
@@ -135,14 +169,14 @@ export function AssessmentFlow({ initialChildren }: { initialChildren: ChildOpti
         {phase === "setup" ? (
           <AssessmentSetup
             childrenList={initialChildren}
-            childId={childId}
-            onChildId={setChildId}
+            childId={routeChildId}
+            onChildId={navigateToChild}
             age={age}
             onAge={(n) => setAge(Math.min(13, Math.max(4, n)))}
             includeIslamic={includeIslamic}
             onIncludeIslamic={setIncludeIslamic}
             onStart={startQuiz}
-            disabled={!childId}
+            disabled={!routeChildId}
           />
         ) : null}
 
@@ -176,7 +210,14 @@ export function AssessmentFlow({ initialChildren }: { initialChildren: ChildOpti
         ) : null}
 
         {phase === "report" && report ? (
-          <AssessmentReportView scores={scores} report={report} onContinue={goDashboard} continueLabel="Go to parent dashboard" />
+          <AssessmentReportView
+            scores={scores}
+            report={report}
+            onContinue={goDashboard}
+            continueLabel="Go to parent dashboard"
+            onRetake={goRetake}
+            retakeLabel="Retake assessment"
+          />
         ) : null}
       </div>
     </div>

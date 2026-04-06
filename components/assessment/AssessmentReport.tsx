@@ -30,11 +30,16 @@ export function AssessmentReportView({
   report,
   onContinue,
   continueLabel,
+  onRetake,
+  retakeLabel,
 }: {
   scores: Record<string, SubjectScore>
   report: AIReportPayload
   onContinue: () => void
   continueLabel?: string
+  /** When set, shows a secondary control to start a new assessment attempt (new DB row on submit). */
+  onRetake?: () => void
+  retakeLabel?: string
 }) {
   const entries = Object.entries(scores).sort((a, b) => b[1].pct - a[1].pct)
   const strong = entries.filter(([, s]) => s.pct >= 70)
@@ -183,9 +188,21 @@ export function AssessmentReportView({
         </CardContent>
       </Card>
 
-      <Button className="w-full bg-violet-600 hover:bg-violet-700" size="lg" onClick={onContinue}>
-        {continueLabel ?? "Back to dashboard"}
-      </Button>
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+        {onRetake ? (
+          <Button type="button" variant="outline" size="lg" className="sm:order-1 sm:flex-1" onClick={onRetake}>
+            {retakeLabel ?? "Retake assessment"}
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          className="bg-violet-600 hover:bg-violet-700 sm:order-2 sm:min-w-[200px]"
+          size="lg"
+          onClick={onContinue}
+        >
+          {continueLabel ?? "Back to dashboard"}
+        </Button>
+      </div>
     </div>
   )
 }
