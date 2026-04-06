@@ -137,6 +137,7 @@ model Child {
   subjectExams        SubjectExam[]
   lectureProgress     StudentLectureProgress[]
   lessonWorksheetDones StudentLessonWorksheetDone[]
+  assessmentReports   AssessmentReport[]
 
   @@index([parentId])
   @@index([ageGroup])
@@ -207,6 +208,24 @@ model InitialAssessment {
 
   @@index([childId])
   @@map("initial_assessments")
+}
+
+model AssessmentReport {
+  id              String   @id @default(cuid())
+  childId         String   @map("child_id")
+  child           Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  age             Int
+  scores          Json
+  openAnswers     Json     @map("open_answers")
+  report          Json
+  learnerType     String   @map("learner_type")
+  interestProfile String   @map("interest_profile")
+  aptitudeProfile String   @map("aptitude_profile")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([childId])
+  @@map("assessment_reports")
 }
 
 model Subject {

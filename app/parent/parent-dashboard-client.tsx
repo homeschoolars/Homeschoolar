@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -57,6 +57,7 @@ import { ParentCurriculumImport } from "@/components/parent/parent-curriculum-im
 import { LessonWorksheetAssigner } from "@/components/parent/lesson-worksheet-assigner"
 import { apiFetch } from "@/lib/api-client"
 import { ParentAppHeader } from "@/components/layout/parent-app-header"
+import { AssessmentCompleteToast } from "@/components/parent/assessment-complete-toast"
 import {
   attentionSpanOptions,
   interestPresets,
@@ -295,6 +296,9 @@ export default function ParentDashboardClient({
 
   return (
     <div className="min-h-screen dashboard-parent-bg">
+      <Suspense fallback={null}>
+        <AssessmentCompleteToast />
+      </Suspense>
       <ParentAppHeader active="dashboard" />
 
       <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-7xl">

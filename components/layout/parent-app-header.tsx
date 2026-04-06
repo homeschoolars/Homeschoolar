@@ -55,6 +55,12 @@ export function ParentAppHeader({ active }: { active: ParentNavKey }) {
             <Link href="/parent/progress" className={linkClass("progress")}>
               Progress
             </Link>
+            <Link
+              href="/assessment"
+              className="px-4 py-1.5 text-sm font-medium rounded-lg text-slate-500 hover:text-slate-900 hover:bg-white/70 transition-all"
+            >
+              Assessment
+            </Link>
           </div>
         </nav>
 
@@ -82,6 +88,9 @@ export function ParentAppHeader({ active }: { active: ParentNavKey }) {
           </Link>
           <Link href="/parent/progress" className={mobileLinkClass("progress")}>
             Progress
+          </Link>
+          <Link href="/assessment" className="px-3 py-1 text-sm font-medium rounded-lg text-slate-500 hover:bg-slate-50 shrink-0">
+            Assessment
           </Link>
         </div>
       </div>
