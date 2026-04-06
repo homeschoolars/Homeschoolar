@@ -52,7 +52,6 @@ import { CurriculumPDFActions, AssessmentPDFActions } from "@/components/pdf/pdf
 import { RoadmapViewer } from "@/components/dashboards/parent/roadmap-viewer"
 import { WeeklyAIInsights } from "@/components/dashboards/parent/weekly-ai-insights"
 import { QuickContentActions } from "@/components/parent/quick-content-actions"
-import { FullLessonGenerator } from "@/components/parent/full-lesson-generator"
 import { ParentCurriculumImport } from "@/components/parent/parent-curriculum-import"
 import { LessonWorksheetAssigner } from "@/components/parent/lesson-worksheet-assigner"
 import { apiFetch } from "@/lib/api-client"
@@ -70,16 +69,6 @@ import { calculateAgeYears, deriveAgeGroup } from "@/lib/onboarding-utils"
 
 const ParentOverview = dynamic(
   () => import("@/components/dashboards/parent/parent-overview").then((m) => m.ParentOverview),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-40 animate-pulse rounded-2xl border border-slate-200/60 bg-white/60" />
-    ),
-  },
-)
-
-const WorksheetGenerator = dynamic(
-  () => import("@/components/ai/worksheet-generator").then((m) => m.WorksheetGenerator),
   {
     ssr: false,
     loading: () => (
@@ -940,26 +929,11 @@ export default function ParentDashboardClient({
                   </div>
                 ) : null}
 
-                {selectedChildId ? (
-                  <div className="lg:col-span-2">
-                    <FullLessonGenerator childId={selectedChildId} subjects={selectedChildSubjects} />
-                  </div>
-                ) : null}
-
-                {/* Worksheet Generator */}
-                <WorksheetGenerator
-                  subjects={selectedChildSubjects}
-                  childId={selectedChildId || undefined}
-                  childAgeGroup={selectedChild?.age_group}
-                  childLevel={selectedChild?.current_level}
-                  onGenerated={(worksheet) => {
-                    console.log("Worksheet generated:", worksheet)
-                  }}
-                />
-
                 {/* AI Recommendations */}
                 {selectedChildId && selectedChild && (
-                  <RecommendationsPanel childId={selectedChildId} childName={selectedChild.name} />
+                  <div className="lg:col-span-2">
+                    <RecommendationsPanel childId={selectedChildId} childName={selectedChild.name} />
+                  </div>
                 )}
               </div>
             ) : (
