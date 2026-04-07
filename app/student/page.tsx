@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation"
 import { ChevronRight, Loader2, Sparkles } from "lucide-react"
 import type { Child, Subject, WorksheetAssignment, Progress as ProgressType, SurpriseQuiz } from "@/lib/types"
 import { SurpriseQuizModal } from "@/components/ai/surprise-quiz-modal"
-import { InitialAssessment } from "@/components/ai/initial-assessment"
 import { GamifiedHeader } from "@/components/dashboards/student/gamified-header"
 import { WelcomeBanner } from "@/components/dashboards/student/welcome-banner"
 import { DailyQuests, type Quest } from "@/components/dashboards/student/daily-quests"
@@ -16,6 +15,7 @@ import { SubjectPath } from "@/components/dashboards/student/subject-path"
 import { AchievementsGrid } from "@/components/dashboards/student/achievements-grid"
 import { NewsPanel } from "@/components/dashboards/student/news-panel"
 import { apiFetch } from "@/lib/api-client"
+import { augmentChildLearningFields, isYoungLearnerClassKey } from "@/lib/learning-class"
 import confetti from "canvas-confetti"
 
 type Gamification = {
@@ -52,7 +52,6 @@ export default function StudentDashboard() {
   const [progress, setProgress] = useState<ProgressType[]>([])
   const [gamification, setGamification] = useState<Gamification | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [showAssessment, setShowAssessment] = useState(false)
   const [sharedGeneratedContent, setSharedGeneratedContent] = useState<SharedGeneratedItem[]>([])
   const [surpriseQuiz, setSurpriseQuiz] = useState<SurpriseQuiz | null>(null)
   const [quizState, setQuizState] = useState<"idle" | "generating" | "ready" | "error">("idle")
@@ -93,17 +92,20 @@ export default function StudentDashboard() {
 
       // Update child data from server (in case it changed)
       if (payload.child) {
-        setChild(payload.child)
-        sessionStorage.setItem("student_child", JSON.stringify(payload.child))
+        const merged = { ...payload.child, ...augmentChildLearningFields(payload.child) }
+        setChild(merged)
+        sessionStorage.setItem("student_child", JSON.stringify(merged))
 
-        if (!payload.child.assessment_completed) {
-          setShowAssessment(true)
-        } else if (payload.pendingQuiz) {
-          // Always show any pending quiz already generated for this child.
-          setSurpriseQuiz(payload.pendingQuiz)
-          setQuizState("ready")
+        if (payload.child.assessment_completed) {
+          if (payload.pendingQuiz) {
+            setSurpriseQuiz(payload.pendingQuiz)
+            setQuizState("ready")
+          } else {
+            checkForSurpriseQuiz(payload.child)
+          }
         } else {
-          checkForSurpriseQuiz(payload.child)
+          setSurpriseQuiz(null)
+          setQuizState("idle")
         }
       }
 
@@ -160,7 +162,8 @@ export default function StudentDashboard() {
     }
 
     try {
-      const childData = JSON.parse(storedChild) as Child
+      const parsed = JSON.parse(storedChild) as Child
+      const childData = { ...parsed, ...augmentChildLearningFields(parsed) }
       setChild(childData)
       loadData(childData.id)
     } catch (e) {
@@ -218,16 +221,6 @@ export default function StudentDashboard() {
     }
   }
 
-  const handleAssessmentComplete = () => {
-    setShowAssessment(false)
-    // Update child in session storage
-    if (child) {
-      const updatedChild = { ...child, assessment_completed: true }
-      sessionStorage.setItem("student_child", JSON.stringify(updatedChild))
-      setChild(updatedChild)
-    }
-  }
-
   const handleLogout = () => {
     sessionStorage.removeItem("student_child")
     router.push("/login")
@@ -276,20 +269,6 @@ export default function StudentDashboard() {
     )
   }
 
-  if (showAssessment) {
-    return (
-      <div className="min-h-screen dashboard-student-teen py-8 px-4">
-        <InitialAssessment
-          childId={child.id}
-          childName={child.name}
-          ageGroup={child.age_group}
-          subjects={subjects}
-          onComplete={handleAssessmentComplete}
-        />
-      </div>
-    )
-  }
-
   const g = gamification
   const stars = g?.stars ?? 0
   const level = g?.level ?? 1
@@ -300,9 +279,8 @@ export default function StudentDashboard() {
   const hasFirstLessonCompleted =
     (g?.worksheetsCompleted ?? 0) > 0 || progress.some((entry) => (entry.completed_worksheets ?? 0) > 0)
 
-  // Determine age band for UI styling and news
-  const ageGroup = child.age_group
-  const isYounger = ageGroup === "4-5" || ageGroup === "6-7"
+  // Younger dashboard theme + news band (aligned with classes through age 7)
+  const isYounger = isYoungLearnerClassKey(child.learning_class_key)
   const ageBand: "4-7" | "8-13" = isYounger ? "4-7" : "8-13"
 
   return (

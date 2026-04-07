@@ -205,8 +205,6 @@ export function ParentOverview({ childProfiles, subjects }: ParentOverviewProps)
             />
             <ReportDownloads
               child={selectedChild}
-              progress={[]}
-              assessments={[]}
               subjects={subjects}
               curriculumAgeGroup={selectedChild.age_group}
               insights={insights}

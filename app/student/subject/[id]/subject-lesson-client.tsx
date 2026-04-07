@@ -6,6 +6,7 @@ import Image from "next/image"
 import { CheckCircle2, ChevronLeft, Circle, ListVideo, Loader2, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { apiFetch } from "@/lib/api-client"
 import { getSiteBranding } from "@/lib/site-branding"
@@ -33,6 +34,7 @@ type CurriculumSubjectResponse = {
     name: string
     units: CurriculumUnit[]
   }
+  level?: { id: string; name: string; stageName: string } | null
 }
 
 type LessonDetailResponse = {
@@ -75,18 +77,6 @@ type WorksheetContent = {
   title: string
   instructions: string
   activities: string[] | WorksheetActivityStructured[]
-}
-
-const AGE_GROUP_LABELS: Record<string, string> = {
-  "4-5": "Little Explorers 🌱",
-  "5-6": "Mini Adventurers 🐾",
-  "6-7": "Curious Minds 🔍",
-  "7-8": "Young Investigators 🧩",
-  "8-9": "Growing Learners 💡",
-  "9-10": "Knowledge Explorers 🚀",
-  "10-11": "Knowledge Builders 🏗️",
-  "11-12": "Skill Sharpeners ⚡",
-  "12-13": "Future Leaders 🌟",
 }
 
 function getAgeStart(ageGroup: string) {
@@ -202,8 +192,9 @@ function LessonPdfLinks(props: {
 }
 
 export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
-  const [ageGroup, setAgeGroup] = useState("4-5")
-  const [availableAgeGroups, setAvailableAgeGroups] = useState<Array<{ name: string; label: string }>>([])
+  const [studentId, setStudentId] = useState("")
+  const [internalAgeBand, setInternalAgeBand] = useState("4-5")
+  const [levelLabel, setLevelLabel] = useState("")
   const [subject, setSubject] = useState<CurriculumSubjectResponse["subject"] | null>(null)
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null)
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null)
@@ -273,44 +264,37 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
   const siteBrand = useMemo(() => getSiteBranding(), [])
 
   useEffect(() => {
-    const loadAgeGroups = async () => {
-      try {
-        const res = await apiFetch("/api/age-groups")
-        if (!res.ok) return
-        const payload = (await res.json()) as { ageGroups?: Array<{ name: string; stageName?: string }> }
-        const groups = (payload.ageGroups ?? []).map((a) => ({
-          name: a.name,
-          label: AGE_GROUP_LABELS[a.name] ?? a.stageName ?? a.name,
-        }))
-        groups.sort((a, b) => getAgeStart(a.name) - getAgeStart(b.name))
-        if (groups.length > 0) {
-          setAvailableAgeGroups(groups)
-        }
-      } catch {
-        // Ignore age group fetch errors.
-      }
-    }
-    void loadAgeGroups()
-  }, [])
-
-  useEffect(() => {
     const raw = sessionStorage.getItem("student_child")
-    if (!raw) return
+    if (!raw) {
+      setLoading(false)
+      setError("Please sign in as a student to view this subject.")
+      return
+    }
     try {
-      const parsed = JSON.parse(raw) as { id?: string; age_group?: string }
-      if (parsed?.age_group) setAgeGroup(parsed.age_group)
+      const parsed = JSON.parse(raw) as { id?: string; age_group?: string; learning_class?: string }
+      if (!parsed.id) {
+        setLoading(false)
+        setError("Student session missing. Please sign in again.")
+        return
+      }
+      setStudentId(parsed.id)
+      if (parsed.age_group) setInternalAgeBand(parsed.age_group)
+      if (parsed.learning_class) setLevelLabel(parsed.learning_class)
     } catch {
-      // Ignore malformed session storage and keep default age group.
+      setLoading(false)
+      setError("Invalid student session. Please sign in again.")
     }
   }, [])
 
   useEffect(() => {
+    if (!studentId) return
+
     const fetchSubject = async () => {
       setLoading(true)
       setError(null)
       try {
         const res = await apiFetch(
-          `/api/curriculum/subjects/${encodeURIComponent(subjectId)}?ageGroup=${encodeURIComponent(ageGroup)}`
+          `/api/curriculum/subjects/${encodeURIComponent(subjectId)}?studentId=${encodeURIComponent(studentId)}`,
         )
         if (!res.ok) {
           const payload = (await res.json().catch(() => ({}))) as { error?: string }
@@ -318,6 +302,11 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
         }
         const data = (await res.json()) as CurriculumSubjectResponse
         setSubject(data.subject)
+        if (data.level?.stageName) {
+          setLevelLabel(data.level.stageName)
+        } else if (data.level?.name) {
+          setLevelLabel(data.level.name)
+        }
         const firstUnit = data.subject.units[0]
         const firstLesson = firstUnit?.lessons[0]
         setSelectedUnitId(firstUnit?.id ?? null)
@@ -330,7 +319,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
     }
 
     void fetchSubject()
-  }, [subjectId, ageGroup])
+  }, [subjectId, studentId])
 
   useEffect(() => {
     if (!selectedLessonId) return
@@ -437,7 +426,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
     [subject, selectedUnitId]
   )
 
-  const ageStart = getAgeStart(ageGroup)
+  const ageStart = getAgeStart(internalAgeBand)
   /** AI self-serve buttons: age > 7 (aligned with API). */
   const supportsStudentAiGeneration = ageStart >= 8
   const supportsProject = ageStart >= 8
@@ -452,6 +441,11 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
     (lessonProgress ? !lessonProgress.canAccess : false) ||
     Boolean(lesson?.locked) ||
     !supportsStudentAiGeneration
+
+  const lecturesBlockWorksheet =
+    Boolean(lessonFlow && lessonFlow.lectures.length > 0 && !lessonFlow.lecturesComplete)
+
+  const disableWorksheetAi = disableStudentAi || lecturesBlockWorksheet
 
   const refreshProgress = async () => {
     const raw = sessionStorage.getItem("student_child")
@@ -503,7 +497,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
     }
   }
 
-  const handleGenerate = async (type: GenerationType) => {
+  const handleGenerate = async (type: GenerationType, options?: { forceRegenerate?: boolean }) => {
     if (!selectedLessonId) return
     if (lessonProgress && !lessonProgress.canAccess) return
     if (lesson?.locked) return
@@ -515,7 +509,12 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
       const res = await apiFetch(`/api/ai/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lessonId: selectedLessonId, contentType: type, childId }),
+        body: JSON.stringify({
+          lessonId: selectedLessonId,
+          contentType: type,
+          childId,
+          forceRegenerate: Boolean(options?.forceRegenerate),
+        }),
       })
       const payload = (await res.json()) as {
         success?: boolean
@@ -680,6 +679,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
             lessonId={lessonId}
             childId={childId}
             questions={generated.json.questions}
+            timeLimitSeconds={300}
             onSubmitted={() => void refreshProgress()}
           />
           <LessonPdfLinks lessonId={lessonId} childId={childId} contentType="quiz" />
@@ -728,27 +728,16 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
 
       {!subject ? (
         <Card>
-          <CardContent className="pt-6">No curriculum found for this subject and age group.</CardContent>
+          <CardContent className="pt-6">No curriculum found for this subject at your level.</CardContent>
         </Card>
       ) : (
         <div className="space-y-4">
           <Card>
             <CardContent className="pt-6">
-              <div className="max-w-xs">
-                <p className="text-sm font-medium text-slate-700 mb-2">Age selection</p>
-                <Select value={ageGroup} onValueChange={setAgeGroup}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select age group" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableAgeGroups.map((age) => (
-                      <SelectItem key={age.name} value={age.name}>
-                        {age.label} ({age.name})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <p className="text-sm font-semibold text-slate-800">
+                Level: <span className="font-medium text-violet-800">{levelLabel || "—"}</span>
+              </p>
+              <p className="mt-1 text-xs text-slate-500">Your band is set from your profile at signup — it isn&apos;t changed here.</p>
             </CardContent>
           </Card>
 
@@ -799,7 +788,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
             <CardHeader>
               <CardTitle>
                 {lesson?.title ?? selectedUnit?.title ?? "Lesson"}{" "}
-                <span className="text-sm font-normal text-slate-500">({ageGroup})</span>
+                {levelLabel ? <span className="text-sm font-normal text-slate-500">({levelLabel})</span> : null}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -888,10 +877,18 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                           Progress: {lessonFlow.worksheetsCompleted} / {lessonFlow.requiredWorksheetCount}
                           {lessonFlow.requiredWorksheetCount === 0 ? " (none required for this lesson)" : ""}
                         </p>
+                        {lessonFlow.requiredWorksheetCount > 0 ? (
+                          <div className="mt-2">
+                            <Progress
+                              value={Math.min(100, (lessonFlow.worksheetsCompleted / lessonFlow.requiredWorksheetCount) * 100)}
+                              className="h-2 rounded-full"
+                            />
+                          </div>
+                        ) : null}
                         {lessonFlow.assignments.length > 0 ? (
                           <ul className="mt-2 space-y-1">
                             {lessonFlow.assignments.map((a) => (
-                              <li key={a.id}>
+                              <li key={a.id} className="flex flex-wrap items-center gap-2">
                                 <Link
                                   href={`/student/worksheet/${a.id}`}
                                   className="text-violet-700 font-medium underline-offset-2 hover:underline"
@@ -899,6 +896,13 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                                   {a.worksheetTitle}
                                 </Link>
                                 <span className="text-slate-500"> — {a.status.replace("_", " ")}</span>
+                                {a.status !== "completed" ? (
+                                  <Button size="sm" variant="secondary" className="h-7 text-xs" asChild>
+                                    <Link href={`/student/worksheet/${a.id}`}>Resume</Link>
+                                  </Button>
+                                ) : (
+                                  <span className="text-xs font-medium text-emerald-700">Done</span>
+                                )}
                               </li>
                             ))}
                           </ul>
@@ -956,6 +960,11 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                 </>
               )}
 
+              <p className="text-xs text-slate-500 pt-1">
+                Story, worksheet, and quiz are generated with AI once per lesson and saved for you. Use{" "}
+                <span className="font-medium text-slate-700">New AI version</span> under a generated item to replace it with
+                fresh AI output.
+              </p>
               <div className="flex flex-wrap gap-2 pt-2">
                 <Button
                   onClick={() => handleGenerate("story")}
@@ -966,8 +975,9 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                 </Button>
                 <Button
                   onClick={() => handleGenerate("worksheet")}
-                  disabled={disableStudentAi}
+                  disabled={disableWorksheetAi}
                   variant="secondary"
+                  title={lecturesBlockWorksheet ? "Finish all lectures before generating a worksheet." : undefined}
                 >
                   {generatingType === "worksheet" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Generate Worksheet
@@ -1060,13 +1070,32 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                   {(["story", "worksheet", "quiz", "project", "debate", "research", "reflection"] as const).map((type) =>
                     generatedContent[type] ? (
                       <section key={type} className="rounded-lg border bg-amber-50 p-3">
-                        <h4 className="font-semibold text-amber-800 capitalize flex items-center gap-2">
-                          <Sparkles className="h-4 w-4" />
-                          Generated {type}
-                          {generatedContent[type]!.cached ? (
-                            <span className="text-xs font-normal text-amber-700">(cached)</span>
-                          ) : null}
-                        </h4>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <h4 className="font-semibold text-amber-800 capitalize flex flex-wrap items-center gap-2">
+                            <Sparkles className="h-4 w-4" />
+                            Generated {type}
+                            {generatedContent[type]!.cached ? (
+                              <span className="text-xs font-normal text-amber-700">(saved from last visit)</span>
+                            ) : null}
+                          </h4>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="shrink-0 border-amber-300 text-amber-900 hover:bg-amber-100"
+                            disabled={disableStudentAi || generatingType === type}
+                            onClick={() => handleGenerate(type, { forceRegenerate: true })}
+                          >
+                            {generatingType === type ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Regenerating…
+                              </>
+                            ) : (
+                              "New AI version"
+                            )}
+                          </Button>
+                        </div>
                         {renderGeneratedContent(type, generatedContent[type]!)}
                       </section>
                     ) : null

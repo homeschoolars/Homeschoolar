@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireRole } from "@/lib/auth-helpers"
+import { prisma } from "@/lib/prisma"
 import { createChildWithProfile } from "@/services/onboarding-service"
 import { serializeChild } from "@/lib/serializers"
 
@@ -36,7 +37,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     const body = childSchema.parse(await request.json())
-    const child = await createChildWithProfile({
+    const childRecord = await createChildWithProfile({
       parentId: id,
       eventUserId: session.user.id,
       child: {
@@ -55,6 +56,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         challenges: body.challenges ?? null,
       },
     })
+
+    const child = await prisma.child.findUnique({
+      where: { id: childRecord.id },
+      include: { profile: { select: { dateOfBirth: true } } },
+    })
+    if (!child) {
+      return NextResponse.json({ error: "Child not found after create" }, { status: 500 })
+    }
 
     return NextResponse.json({ child: serializeChild(child) })
   } catch (error) {

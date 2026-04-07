@@ -4,8 +4,8 @@ import { useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { FileDown, FileSpreadsheet, Sparkles } from "lucide-react"
-import type { Child, Subject, Progress, Assessment } from "@/lib/types"
-import { AssessmentPDFActions, CurriculumPDFActions, InsightsPDFActions } from "@/components/pdf/pdf-actions"
+import type { Child, Subject } from "@/lib/types"
+import { HolisticAssessmentPdfActions, CurriculumPDFActions, InsightsPDFActions } from "@/components/pdf/pdf-actions"
 import type { ActivityItem } from "./recent-activities"
 
 export type InsightsForReport = {
@@ -24,8 +24,6 @@ export type InsightsForReport = {
 
 interface ReportDownloadsProps {
   child: Child
-  progress: Progress[]
-  assessments: Assessment[]
   subjects: Subject[]
   curriculumAgeGroup: string
   insights?: InsightsForReport | null
@@ -40,8 +38,6 @@ function escapeCsv(s: string): string {
 
 export function ReportDownloads({
   child,
-  progress,
-  assessments,
   subjects,
   curriculumAgeGroup,
   insights,
@@ -98,16 +94,12 @@ export function ReportDownloads({
         <div>
           <p className="text-xs font-medium text-slate-600 mb-2">Other reports</p>
           <div className="flex flex-wrap gap-3">
-            <AssessmentPDFActions
-              child={child}
-              progress={progress}
-              assessments={assessments}
-              subjects={subjects}
-            />
+            <HolisticAssessmentPdfActions child={child} />
             <CurriculumPDFActions
               subjects={subjects}
               ageGroup={curriculumAgeGroup}
               childName={child.name}
+              learningClass={child.learning_class}
             />
           </div>
         </div>

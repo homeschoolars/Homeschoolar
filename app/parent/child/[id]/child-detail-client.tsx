@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress"
 import { BookOpen, TrendingUp, Calendar, CheckCircle, Clock, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import type { Child } from "@/lib/types"
+import { StudentPerformancePanel } from "@/components/parent/student-performance-panel"
 
 type ProgressItem = {
   id: string
@@ -81,12 +82,16 @@ export default function ChildDetailPageClient({
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-medium text-gray-600">Age Group</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">Class</CardTitle>
             </CardHeader>
             <CardContent>
-              <Badge className="text-lg">{child.age_group}</Badge>
+              <Badge className="text-lg">{child.learning_class}</Badge>
             </CardContent>
           </Card>
+        </div>
+
+        <div className="mb-6">
+          <StudentPerformancePanel studentId={child.id} />
         </div>
 
         {/* Progress by Subject */}

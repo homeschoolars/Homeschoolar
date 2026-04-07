@@ -14,11 +14,12 @@ export function AssessmentCompleteToast() {
     if (searchParams.get("assessmentComplete") !== "1") return
     fired.current = true
     const learnerType = searchParams.get("learnerType")?.trim() || "Your learner profile is ready."
+    const childId = searchParams.get("childId")?.trim()
     toast.success("Assessment complete", {
       description: learnerType,
       duration: 8000,
     })
-    router.replace("/parent")
+    router.replace(childId ? `/parent?childId=${encodeURIComponent(childId)}` : "/parent")
   }, [searchParams, router])
 
   return null

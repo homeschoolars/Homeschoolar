@@ -24,6 +24,7 @@ export function fail(error: string, status = 400, details?: unknown) {
 export function statusFromErrorMessage(message: string, fallback = 500) {
   if (message === "Unauthorized") return 401
   if (message === "Forbidden") return 403
+  if (message === "StudentDashboardLocked") return 403
   if (message === "NotFound") return 404
   if (message === "WorksheetsIncomplete" || message === "LecturesIncomplete" || message === "QuizRequired") return 409
   if (message.includes("limit") || message.includes("quota")) return 429

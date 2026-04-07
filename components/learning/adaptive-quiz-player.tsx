@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { apiFetch } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -19,8 +19,10 @@ export function AdaptiveQuizPlayer(props: {
   childId: string
   questions: AdaptiveQuizQuestion[]
   onSubmitted?: () => void
+  /** Countdown in seconds; when time hits zero the current score is submitted automatically. */
+  timeLimitSeconds?: number
 }) {
-  const { lessonId, childId, questions, onSubmitted } = props
+  const { lessonId, childId, questions, onSubmitted, timeLimitSeconds = 300 } = props
   const [idx, setIdx] = useState(0)
   const [picked, setPicked] = useState<string | null>(null)
   const [revealed, setRevealed] = useState(false)
@@ -29,6 +31,28 @@ export function AdaptiveQuizPlayer(props: {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submittedOk, setSubmittedOk] = useState(false)
+  const [secondsLeft, setSecondsLeft] = useState(timeLimitSeconds)
+  const [timedOut, setTimedOut] = useState(false)
+
+  useEffect(() => {
+    setSecondsLeft(timeLimitSeconds)
+    setTimedOut(false)
+  }, [lessonId, timeLimitSeconds])
+
+  useEffect(() => {
+    if (done || submittedOk || timeLimitSeconds <= 0) return
+    const id = window.setInterval(() => {
+      setSecondsLeft((s) => (s <= 1 ? 0 : s - 1))
+    }, 1000)
+    return () => window.clearInterval(id)
+  }, [done, submittedOk, timeLimitSeconds])
+
+  useEffect(() => {
+    if (timeLimitSeconds <= 0) return
+    if (secondsLeft > 0 || done || submittedOk) return
+    setTimedOut(true)
+    setDone(true)
+  }, [secondsLeft, done, submittedOk, timeLimitSeconds])
 
   const q = questions[idx]
 
@@ -51,7 +75,7 @@ export function AdaptiveQuizPlayer(props: {
     setRevealed(false)
   }
 
-  const submitProgress = async () => {
+  const submitProgress = useCallback(async () => {
     setSubmitting(true)
     setSubmitError(null)
     try {
@@ -76,7 +100,12 @@ export function AdaptiveQuizPlayer(props: {
     } finally {
       setSubmitting(false)
     }
-  }
+  }, [childId, lessonId, correctCount, questions.length, onSubmitted])
+
+  useEffect(() => {
+    if (!timedOut || submittedOk || submitting) return
+    void submitProgress()
+  }, [timedOut, submittedOk, submitting, submitProgress])
 
   if (!q) return null
 
@@ -94,6 +123,8 @@ export function AdaptiveQuizPlayer(props: {
         {submitError ? <p className="text-sm text-red-600">{submitError}</p> : null}
         {submittedOk ? (
           <p className="text-center text-sm font-medium text-green-700">Saved to your progress.</p>
+        ) : timedOut ? (
+          <p className="text-center text-sm text-slate-600">{submitting ? "Saving your quiz…" : submitError ?? "Saving…"}</p>
         ) : (
           <Button className="w-full bg-[#7F77DD] hover:bg-[#6C63D5]" onClick={() => void submitProgress()} disabled={submitting}>
             {submitting ? "Saving…" : "Save score to progress"}
@@ -106,6 +137,17 @@ export function AdaptiveQuizPlayer(props: {
   return (
     <div className="space-y-4 rounded-2xl border border-violet-200 bg-white p-4 shadow-sm">
       <LearningBrandHeader />
+      {timeLimitSeconds > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700">
+          <span>
+            Time left:{" "}
+            <span className="tabular-nums text-violet-800">
+              {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, "0")}
+            </span>
+          </span>
+          <span className="text-slate-500">Auto-submit at 0:00</span>
+        </div>
+      ) : null}
       <div className="space-y-1">
         <div className="flex justify-between text-xs font-medium text-slate-600">
           <span>

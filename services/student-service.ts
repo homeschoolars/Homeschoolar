@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { syncChildAgeGroupFromProfile } from "@/lib/child-age-sync"
 
 const DEFAULT_SUBJECTS = [
   { name: "Mathematics", description: "Core math skills", icon: "calculator", color: "#4F46E5", displayOrder: 1 },
@@ -23,11 +24,13 @@ async function ensureDefaultSubjects() {
 export async function findChildByLoginCode(loginCode: string) {
   return prisma.child.findUnique({
     where: { loginCode },
+    include: { profile: { select: { dateOfBirth: true } } },
   })
 }
 
 export async function getStudentDashboard(childId: string) {
   await ensureDefaultSubjects()
+  await syncChildAgeGroupFromProfile(childId)
   const [subjects, assignments, progress, child, pendingQuiz] = await Promise.all([
     prisma.subject.findMany({ orderBy: { displayOrder: "asc" } }),
     prisma.worksheetAssignment.findMany({
@@ -36,7 +39,10 @@ export async function getStudentDashboard(childId: string) {
       include: { worksheet: true },
     }),
     prisma.progress.findMany({ where: { childId } }),
-    prisma.child.findUnique({ where: { id: childId } }),
+    prisma.child.findUnique({
+      where: { id: childId },
+      include: { profile: { select: { dateOfBirth: true } } },
+    }),
     prisma.surpriseQuiz.findFirst({
       where: { childId, completedAt: null },
       orderBy: { createdAt: "desc" },

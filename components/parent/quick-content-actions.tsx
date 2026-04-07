@@ -13,12 +13,15 @@ export function QuickContentActions({
   childId,
   subjects,
   childAgeGroup,
+  childLearningClass,
   onWorksheetCreated,
   onQuizCreated,
 }: {
   childId: string
   subjects: Subject[]
   childAgeGroup?: string
+  /** Shown in UI hints; curriculum APIs still use `childAgeGroup`. */
+  childLearningClass?: string
   onWorksheetCreated?: () => void
   onQuizCreated?: () => void
 }) {
@@ -252,7 +255,7 @@ export function QuickContentActions({
         <div className="rounded-md border bg-slate-50 p-3">
           <p className="text-sm font-medium text-slate-700">Final Subject Exam</p>
           <p className="text-xs text-slate-500">
-            Unlocked when all units are completed for this subject{childAgeGroup ? ` (${childAgeGroup})` : ""}.
+            Unlocked when all units are completed for this subject{childLearningClass ? ` (${childLearningClass})` : ""}.
           </p>
           <Button className="mt-2" onClick={generateFinalExam} disabled={!subjectId || !allUnitsCompleted || examBusy}>
             {examBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

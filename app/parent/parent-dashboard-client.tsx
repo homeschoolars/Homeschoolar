@@ -1,6 +1,7 @@
 "use client"
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -48,7 +49,7 @@ import type {
 } from "@/lib/types"
 import { RecommendationsPanel } from "@/components/ai/recommendations-panel"
 import { CurriculumPlanCard } from "@/components/ai/curriculum-plan-card"
-import { CurriculumPDFActions, AssessmentPDFActions } from "@/components/pdf/pdf-actions"
+import { CurriculumPDFActions, HolisticAssessmentPdfActions } from "@/components/pdf/pdf-actions"
 import { RoadmapViewer } from "@/components/dashboards/parent/roadmap-viewer"
 import { WeeklyAIInsights } from "@/components/dashboards/parent/weekly-ai-insights"
 import { QuickContentActions } from "@/components/parent/quick-content-actions"
@@ -83,6 +84,13 @@ type CurriculumSubjectSummary = {
   units?: Array<{ id: string; title: string }>
 }
 
+type HolisticReportRow = {
+  id: string
+  createdAt: string
+  age: number
+  report: Record<string, unknown> | null
+}
+
 interface ParentDashboardClientProps {
   profile: Profile | null
   children: Child[]
@@ -96,6 +104,9 @@ export default function ParentDashboardClient({
   subjectsByAgeGroup,
   subscription,
 }: ParentDashboardClientProps) {
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
   const [children, setChildren] = useState<Child[]>(initialChildren)
   const [isAddingChild, setIsAddingChild] = useState(false)
   const [newChildName, setNewChildName] = useState("")
@@ -126,6 +137,8 @@ export default function ParentDashboardClient({
   const [orphanMessage, setOrphanMessage] = useState<string | null>(null)
   const [curriculumSubjects, setCurriculumSubjects] = useState<CurriculumSubjectSummary[]>([])
   const [curriculumLoading, setCurriculumLoading] = useState(false)
+  const [holisticReport, setHolisticReport] = useState<HolisticReportRow | null>(null)
+  const [holisticReportLoading, setHolisticReportLoading] = useState(false)
   const orphanInputRef = useRef<HTMLInputElement>(null)
 
   const selectedChild = children.find((c) => c.id === selectedChildId)
@@ -170,6 +183,44 @@ export default function ParentDashboardClient({
 
     loadCurriculumSubjects()
   }, [selectedChild?.age_group])
+
+  useEffect(() => {
+    if (!selectedChildId) {
+      setHolisticReport(null)
+      return
+    }
+    let cancelled = false
+    const loadReport = async () => {
+      setHolisticReportLoading(true)
+      try {
+        const response = await apiFetch(`/api/assessment/report?childId=${encodeURIComponent(selectedChildId)}`)
+        const data = (await response.json()) as { latest?: HolisticReportRow | null }
+        if (!cancelled) {
+          setHolisticReport(response.ok ? (data.latest ?? null) : null)
+        }
+      } catch {
+        if (!cancelled) setHolisticReport(null)
+      } finally {
+        if (!cancelled) setHolisticReportLoading(false)
+      }
+    }
+    void loadReport()
+    return () => {
+      cancelled = true
+    }
+  }, [selectedChildId])
+
+  useEffect(() => {
+    const focus = searchParams.get("focusAssessment")
+    const cid = searchParams.get("childId")
+    const id = focus ?? cid
+    if (!id) return
+    if (!children.some((c) => c.id === id)) return
+    setSelectedChildId(id)
+    if (pathname === "/parent") {
+      router.replace("/parent", { scroll: false })
+    }
+  }, [children, pathname, router, searchParams])
 
   const handleAddChild = async () => {
     if (!newChildName.trim() || !newChildDob || newChildLearningStyles.length === 0 || newChildLearnsBetterWith.length === 0)
@@ -698,7 +749,7 @@ export default function ParentDashboardClient({
                         </div>
                         <div>
                           <CardTitle className="text-lg tracking-tight">{child.name}</CardTitle>
-                          <CardDescription className="text-slate-400 font-medium">Age: {child.age_group} years</CardDescription>
+                          <CardDescription className="text-slate-400 font-medium">{child.learning_class}</CardDescription>
                         </div>
                       </div>
                     </CardHeader>
@@ -716,8 +767,12 @@ export default function ParentDashboardClient({
                             <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg text-xs">
                               <Check className="h-3.5 w-3.5" /> Completed
                             </span>
+                          ) : !child.first_student_login_at ? (
+                            <span className="font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg text-xs">
+                              Awaiting first sign-in
+                            </span>
                           ) : (
-                            <span className="font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg text-xs">Pending</span>
+                            <span className="font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg text-xs">Ready to run</span>
                           )}
                         </div>
                         <div className="space-y-1.5">
@@ -747,12 +802,7 @@ export default function ParentDashboardClient({
                             </Button>
                           )}
                           <div className="w-full sm:w-auto">
-                            <AssessmentPDFActions
-                              child={child}
-                              progress={[]}
-                              assessments={[]}
-                              subjects={subjectsByAgeGroup[child.age_group] ?? []}
-                            />
+                            <HolisticAssessmentPdfActions child={child} />
                           </div>
                         </div>
                       </div>
@@ -776,6 +826,71 @@ export default function ParentDashboardClient({
                 </CardContent>
               </Card>
             )}
+
+            {selectedChild ? (
+              <Card className="mt-6 border border-slate-200/70 bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg tracking-tight flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-violet-600" />
+                    Learning assessment report
+                  </CardTitle>
+                  <CardDescription>
+                    Holistic parent questionnaire and AI narrative. Unlocks after your child&apos;s first student sign-in.
+                    The full report and PDF stay here — students never see them.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {!selectedChild.first_student_login_at && !selectedChild.assessment_completed ? (
+                    <p className="text-sm text-slate-600 leading-relaxed">
+                      Have <span className="font-semibold">{selectedChild.name}</span> sign in once from the login page
+                      with their code. After that, you can start the assessment below.
+                    </p>
+                  ) : null}
+                  {holisticReportLoading ? (
+                    <p className="text-sm text-slate-500">Loading report…</p>
+                  ) : holisticReport?.report ? (
+                    <>
+                      {typeof holisticReport.report.learnerType === "string" ? (
+                        <p className="text-xs font-semibold uppercase tracking-wide text-violet-600/90">
+                          {holisticReport.report.learnerType}
+                        </p>
+                      ) : null}
+                      <p className="text-sm text-slate-700 leading-relaxed line-clamp-5">
+                        {(typeof holisticReport.report.overallSummary === "string" && holisticReport.report.overallSummary) ||
+                          (typeof holisticReport.report.parentMessage === "string" && holisticReport.report.parentMessage) ||
+                          "Your full report is available on the assessment page and in the PDF download."}
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        Report date:{" "}
+                        {new Date(holisticReport.createdAt).toLocaleDateString(undefined, {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-slate-600">
+                      No report saved yet. Run the learning assessment to generate a personalized summary.
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    {!selectedChild.first_student_login_at && !selectedChild.assessment_completed ? (
+                      <Button disabled variant="secondary" className="rounded-xl">
+                        Waiting for first student sign-in
+                      </Button>
+                    ) : (
+                      <Button asChild variant="default" className="rounded-xl bg-violet-600 hover:bg-violet-700">
+                        <Link href={`/assessment/${selectedChild.id}`}>
+                          {selectedChild.assessment_completed ? "Retake assessment" : "Start learning assessment"}
+                        </Link>
+                      </Button>
+                    )}
+                    <HolisticAssessmentPdfActions child={selectedChild} />
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
 
             {selectedChild && selectedChild.assessment_completed && hasActiveSubscription && (
               <div className="mt-6 space-y-6">
@@ -808,6 +923,7 @@ export default function ParentDashboardClient({
                     childId={selectedChild.id}
                     subjects={selectedChildSubjects}
                     childAgeGroup={selectedChild.age_group}
+                    childLearningClass={selectedChild.learning_class}
                   />
                 ) : (
                   <Card className="border border-dashed border-slate-300 rounded-2xl bg-white">
@@ -853,7 +969,7 @@ export default function ParentDashboardClient({
                     <SelectContent>
                       {children.map((child) => (
                         <SelectItem key={child.id} value={child.id}>
-                          {child.name} ({child.age_group} years)
+                          {child.name} — {child.learning_class}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -863,7 +979,7 @@ export default function ParentDashboardClient({
                 <Card className="lg:col-span-2 border-0 bg-gradient-to-br from-violet-50 to-indigo-50 rounded-2xl shadow-sm">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base tracking-tight text-slate-800">
-                      Curriculum for age {curriculumAgeGroup}
+                      Curriculum for {selectedChild?.learning_class ?? "this learner"}
                     </CardTitle>
                     <CardDescription>
                       Subjects and units are loaded from your uploaded curriculum for this child only.
@@ -894,7 +1010,7 @@ export default function ParentDashboardClient({
                       </div>
                     ) : (
                       <p className="text-sm text-gray-600">
-                        No curriculum subjects found for this age group yet.
+                        No curriculum subjects found for this class yet.
                       </p>
                     )}
                   </CardContent>
@@ -919,6 +1035,7 @@ export default function ParentDashboardClient({
                       childId={selectedChildId}
                       subjects={selectedChildSubjects}
                       childAgeGroup={selectedChild?.age_group}
+                      childLearningClass={selectedChild?.learning_class}
                       onWorksheetCreated={() => {
                         // Optional future enhancement: refresh parent-side assignment counters.
                       }}
@@ -966,13 +1083,14 @@ export default function ParentDashboardClient({
                       </div>
                       Curriculum Guide
                     </CardTitle>
-                    <CardDescription>Download the full curriculum for any age group</CardDescription>
+                    <CardDescription>Download the full curriculum for any class band</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <CurriculumPDFActions
                       subjects={selectedChildSubjects}
                       ageGroup={curriculumAgeGroup}
                       childName={selectedChild?.name}
+                      learningClass={selectedChild?.learning_class}
                     />
                   </CardContent>
                 </Card>
@@ -985,17 +1103,12 @@ export default function ParentDashboardClient({
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center">
                           <FileText className="w-4 h-4 text-white" />
                         </div>
-                        {child.name}&apos;s Report
+                        {child.name}&apos;s learning assessment
                       </CardTitle>
-                      <CardDescription>Assessment results and progress report</CardDescription>
+                      <CardDescription>Holistic learning assessment report (PDF)</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <AssessmentPDFActions
-                        child={child}
-                        progress={[]}
-                        assessments={[]}
-                        subjects={subjectsByAgeGroup[child.age_group] ?? []}
-                      />
+                      <HolisticAssessmentPdfActions child={child} />
                     </CardContent>
                   </Card>
                 ))}

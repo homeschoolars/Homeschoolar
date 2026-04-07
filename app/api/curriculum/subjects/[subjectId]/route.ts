@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server"
-import { requireRole } from "@/lib/auth-helpers"
+import { auth } from "@/auth"
+import { enforceParentOrStudentChildAccess, requireRole } from "@/lib/auth-helpers"
+import { ensureStudentCurriculumAgeGroupLink } from "@/lib/student-curriculum-link"
+import { prisma } from "@/lib/prisma"
 import {
   deleteCurriculumSubject,
   getCurriculumSubject,
@@ -16,10 +19,25 @@ export async function GET(
   try {
     const { subjectId } = await params
     const { searchParams } = new URL(req.url)
-    const ageGroup = searchParams.get("ageGroup")
+    const studentId = searchParams.get("studentId")
+    let ageGroup = searchParams.get("ageGroup")
+
+    if (studentId) {
+      const session = await auth()
+      await enforceParentOrStudentChildAccess({ childId: studentId, session, request: req })
+      await ensureStudentCurriculumAgeGroupLink(studentId)
+      const child = await prisma.child.findUnique({
+        where: { id: studentId },
+        select: { ageGroup: true },
+      })
+      if (!child) {
+        return NextResponse.json({ error: "Student not found" }, { status: 404 })
+      }
+      ageGroup = child.ageGroup
+    }
 
     if (!ageGroup) {
-      return NextResponse.json({ error: "ageGroup query param is required" }, { status: 400 })
+      return NextResponse.json({ error: "ageGroup or studentId query param is required" }, { status: 400 })
     }
 
     const subject = await getCurriculumSubject({
@@ -31,7 +49,12 @@ export async function GET(
       return NextResponse.json({ error: "Subject not found" }, { status: 404 })
     }
 
-    return NextResponse.json({ subject })
+    const level = await prisma.curriculumAgeGroup.findUnique({
+      where: { name: ageGroup },
+      select: { id: true, name: true, stageName: true },
+    })
+
+    return NextResponse.json({ subject, level })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to fetch subject"
     return NextResponse.json({ error: message }, { status: 500 })

@@ -3,6 +3,7 @@ import { enforceParentOrStudentChildAccess } from "@/lib/auth-helpers"
 import { fail, ok, statusFromErrorMessage } from "@/lib/api-response"
 import { submitLessonQuiz } from "@/services/progression"
 import { inferWeakAreaFromLesson, mergeWeakAreas } from "@/services/adaptive-outcome"
+import { recordTopicAttemptPercent } from "@/services/student-topic-analytics"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -41,6 +42,12 @@ export async function POST(request: Request) {
     } else if (pct < 50) {
       await inferWeakAreaFromLesson(body.childId, body.lessonId)
     }
+
+    await recordTopicAttemptPercent({
+      studentId: body.childId,
+      topicId: body.lessonId,
+      percentage: Math.round(pct),
+    })
 
     return ok(result)
   } catch (error) {

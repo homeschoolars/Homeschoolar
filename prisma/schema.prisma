@@ -100,12 +100,16 @@ model Child {
   parentId            String                  @map("parent_id")
   name                String
   ageGroup            AgeGroup                @map("age_group")
+  /// Matches `curriculum_age_groups.id` (same string key as `age_group` enum, e.g. AGE_8_9).
+  curriculumAgeGroupId String?               @map("curriculum_age_group_id")
   avatarUrl           String?                 @map("avatar_url")
   loginCode           String                  @unique @map("login_code")
   currentLevel        LearningLevel           @default(beginner) @map("current_level")
   learningStyle       String?                 @map("learning_style")
   interests           String[]
   assessmentCompleted Boolean                 @default(false) @map("assessment_completed")
+  /// First time the student successfully signed in with their login code (unlocks parent holistic assessment).
+  firstStudentLoginAt DateTime?               @map("first_student_login_at")
   lastQuizAt          DateTime?               @map("last_quiz_at")
   weakAreas           String[]                @default([]) @map("weak_areas")
   adaptiveScoreHistory Json                  @default("[]") @map("adaptive_score_history")
@@ -128,6 +132,7 @@ model Child {
   progress            Progress[]
   learningProfile     StudentLearningProfile?
   parent              User                    @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  curriculumAgeGroup  CurriculumAgeGroup?     @relation(fields: [curriculumAgeGroupId], references: [id], onDelete: SetNull)
   subscriptions       Subscription[]
   quizzes             SurpriseQuiz[]
   assignments         WorksheetAssignment[]
@@ -138,9 +143,12 @@ model Child {
   lectureProgress     StudentLectureProgress[]
   lessonWorksheetDones StudentLessonWorksheetDone[]
   assessmentReports   AssessmentReport[]
+  studentWorksheets   StudentWorksheet[]
+  topicAnalytics      StudentTopicAnalytics[]
 
   @@index([parentId])
   @@index([ageGroup])
+  @@index([curriculumAgeGroupId])
   @@map("students")
 }
 
@@ -261,6 +269,7 @@ model CurriculumAgeGroup {
   createdAt DateTime            @default(now()) @map("created_at")
   updatedAt DateTime            @updatedAt @map("updated_at")
   subjects  CurriculumSubject[]
+  students  Child[]
 
   @@map("curriculum_age_groups")
 }
@@ -480,9 +489,50 @@ model Worksheet {
   subject       Subject               @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   lesson        CurriculumLesson?     @relation(fields: [lessonId], references: [id], onDelete: SetNull)
   lessonCompletions StudentLessonWorksheetDone[]
+  studentRecords    StudentWorksheet[]
 
   @@index([lessonId])
   @@map("worksheets")
+}
+
+/// Graded worksheet attempts for analytics + parent reporting (AI feedback stored here).
+model StudentWorksheet {
+  id            String    @id @default(uuid())
+  studentId     String    @map("student_id")
+  subjectId     String?   @map("subject_id")
+  topicId       String?   @map("topic_id")
+  worksheetId   String    @map("worksheet_id")
+  assignmentId  String?   @map("assignment_id")
+  answersJson   Json      @default("[]") @map("answers_json")
+  score         Decimal?  @db.Decimal(10, 2)
+  percentage    Decimal?  @db.Decimal(5, 2)
+  feedback      String?   @db.Text
+  weakTopics    Json?     @map("weak_topics")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  student       Child     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  worksheet     Worksheet @relation(fields: [worksheetId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([topicId])
+  @@index([worksheetId])
+  @@map("student_worksheets")
+}
+
+/// Per-topic (lesson) aggregates for unlock logic and parent dashboard.
+model StudentTopicAnalytics {
+  id         String   @id @default(cuid())
+  studentId  String   @map("student_id")
+  topicId    String   @map("topic_id")
+  avgScore   Decimal  @default(0) @map("avg_score") @db.Decimal(5, 2)
+  attempts   Int      @default(0)
+  lastScore  Decimal? @map("last_score") @db.Decimal(5, 2)
+  weakFlag   Boolean  @default(false) @map("weak_flag")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  student    Child    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, topicId])
+  @@index([studentId, weakFlag])
+  @@map("student_analytics")
 }
 
 model WorksheetAssignment {

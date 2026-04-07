@@ -127,11 +127,12 @@ export async function POST(req: Request) {
 
     const child = await prisma.child.findFirst({
       where: { id: body.childId, parentId: session.user.id },
-      select: { id: true, name: true },
+      select: { id: true, name: true, assessmentCompleted: true },
     })
     if (!child) {
       return NextResponse.json({ error: "Child not found" }, { status: 404 })
     }
+    const isFirstAssessmentCompletion = !child.assessmentCompleted
 
     if (!isOpenAIConfigured()) {
       return NextResponse.json({ error: "OpenAI is not configured" }, { status: 503 })
@@ -180,6 +181,35 @@ export async function POST(req: Request) {
       where: { id: child.id },
       data: { assessmentCompleted: true },
     })
+
+    if (isFirstAssessmentCompletion) {
+      try {
+        const curriculumService = await import("@/services/curriculum-composer-service")
+        const curriculum = await curriculumService.generateAICurriculum(child.id, session.user.id)
+        await curriculumService.saveCurriculum(child.id, curriculum)
+      } catch (e) {
+        console.error("[assessment/report] curriculum generation failed", e)
+      }
+    }
+
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: session.user.id,
+          title: isFirstAssessmentCompletion
+            ? `Learning assessment ready: ${child.name}`
+            : `Learning assessment updated: ${child.name}`,
+          message: isFirstAssessmentCompletion
+            ? `The holistic report for ${child.name} is on your parent dashboard. Students do not see this report — read the summary and download the PDF there.`
+            : `A refreshed holistic report for ${child.name} is on your parent dashboard. Download the PDF from the dashboard.`,
+          type: "success",
+          actionUrl: `/parent?focusAssessment=${child.id}`,
+          actionLabel: "View on dashboard",
+        },
+      })
+    } catch (e) {
+      console.error("[assessment/report] notification create failed", e)
+    }
 
     return NextResponse.json({ report })
   } catch (error) {

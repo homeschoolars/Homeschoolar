@@ -23,6 +23,13 @@ import type {
   Assessment as DbAssessment,
 } from "@prisma/client"
 import { toApiAgeGroup } from "@/lib/age-group"
+import { calculateAgeYears } from "@/lib/onboarding-utils"
+import { getLearningClassFromAgeYears, getLearningClassLabelFromApiAgeGroup } from "@/lib/learning-class"
+
+/** Include `profile.dateOfBirth` when available so `learning_class` follows the child’s birthday. */
+export type ChildSerializeInput = DbChild & {
+  profile?: { dateOfBirth: Date | null } | null
+}
 
 export function serializeProfile(user: User): Profile {
   return {
@@ -37,12 +44,19 @@ export function serializeProfile(user: User): Profile {
   }
 }
 
-export function serializeChild(child: DbChild): Child {
+export function serializeChild(child: ChildSerializeInput): Child {
+  const apiAge = toApiAgeGroup(child.ageGroup)
+  const dob = child.profile?.dateOfBirth
+  const learning =
+    dob != null ? getLearningClassFromAgeYears(calculateAgeYears(dob)) : getLearningClassLabelFromApiAgeGroup(apiAge)
+
   return {
     id: child.id,
     parent_id: child.parentId,
     name: child.name,
-    age_group: toApiAgeGroup(child.ageGroup),
+    age_group: apiAge,
+    learning_class: learning.label,
+    learning_class_key: learning.key,
     avatar_url: child.avatarUrl ?? null,
     login_code: child.loginCode,
     current_level: child.currentLevel,
@@ -51,6 +65,7 @@ export function serializeChild(child: DbChild): Child {
     is_orphan: child.isOrphan,
     orphan_status: child.orphanStatus as Child["orphan_status"],
     assessment_completed: child.assessmentCompleted,
+    first_student_login_at: child.firstStudentLoginAt?.toISOString() ?? null,
     last_quiz_at: child.lastQuizAt?.toISOString() ?? null,
     created_at: child.createdAt.toISOString(),
     updated_at: child.updatedAt.toISOString(),
@@ -154,6 +169,8 @@ export function serializeNotification(notification: DbNotification): Notificatio
     type: notification.type,
     is_read: notification.isRead,
     created_at: notification.createdAt.toISOString(),
+    action_url: notification.actionUrl ?? null,
+    action_label: notification.actionLabel ?? null,
   }
 }
 

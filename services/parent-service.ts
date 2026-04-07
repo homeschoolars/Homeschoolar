@@ -1,10 +1,18 @@
 import { prisma } from "@/lib/prisma"
 import type { AgeGroup } from "@prisma/client"
+import { toApiAgeGroup } from "@/lib/age-group"
+import { syncAllChildrenAgeGroupsForParent } from "@/lib/child-age-sync"
 
 export async function getParentDashboardData(userId: string) {
+  await syncAllChildrenAgeGroupsForParent(userId)
+
   const [profile, children, allSubjects, subscription] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
-    prisma.child.findMany({ where: { parentId: userId }, orderBy: { createdAt: "asc" } }),
+    prisma.child.findMany({
+      where: { parentId: userId },
+      orderBy: { createdAt: "asc" },
+      include: { profile: { select: { dateOfBirth: true } } },
+    }),
     prisma.subject.findMany({ orderBy: { displayOrder: "asc" } }),
     prisma.subscription.findFirst({ where: { userId } }),
   ])
@@ -27,17 +35,18 @@ export async function getParentDashboardData(userId: string) {
   })
 
   const baseSubjectByName = new Map(allSubjects.map((subject) => [subject.name.trim().toLowerCase(), subject]))
-  const subjectsByAgeGroup = Object.fromEntries(ageGroups.map((age) => [age, [] as typeof allSubjects]))
+  const subjectsByAgeGroup = Object.fromEntries(ageGroups.map((age) => [toApiAgeGroup(age), [] as typeof allSubjects]))
 
   for (const curriculumSubject of curriculumSubjects) {
-    const ageGroupName = curriculumAgeGroupIdToName.get(curriculumSubject.ageGroupId)
-    if (!ageGroupName) continue
+    const prismaAgeName = curriculumAgeGroupIdToName.get(curriculumSubject.ageGroupId) as AgeGroup | undefined
+    if (!prismaAgeName) continue
+    const apiAgeKey = toApiAgeGroup(prismaAgeName)
 
     const resolvedBaseSubject =
       curriculumSubject.baseSubject ?? baseSubjectByName.get(curriculumSubject.name.trim().toLowerCase()) ?? null
     if (!resolvedBaseSubject) continue
 
-    const existing = subjectsByAgeGroup[ageGroupName]
+    const existing = subjectsByAgeGroup[apiAgeKey]
     if (!existing.some((subject) => subject.id === resolvedBaseSubject.id)) {
       existing.push(resolvedBaseSubject)
     }
@@ -45,9 +54,10 @@ export async function getParentDashboardData(userId: string) {
 
   // Fallback: if imported curriculum is missing mappings for an age group,
   // keep existing behavior by showing canonical subjects.
-  for (const ageGroupName of ageGroups) {
-    if (!subjectsByAgeGroup[ageGroupName] || subjectsByAgeGroup[ageGroupName].length === 0) {
-      subjectsByAgeGroup[ageGroupName] = [...allSubjects]
+  for (const ageGroupEnum of ageGroups) {
+    const apiKey = toApiAgeGroup(ageGroupEnum)
+    if (!subjectsByAgeGroup[apiKey] || subjectsByAgeGroup[apiKey].length === 0) {
+      subjectsByAgeGroup[apiKey] = [...allSubjects]
     }
   }
 

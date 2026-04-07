@@ -2,6 +2,7 @@ import { redirect, notFound } from "next/navigation"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { serializeChild } from "@/lib/serializers"
+import { syncChildAgeGroupFromProfile } from "@/lib/child-age-sync"
 import { enforceParentChildAccess } from "@/lib/auth-helpers"
 import ChildDetailPageClient from "./child-detail-client"
 
@@ -25,8 +26,11 @@ export default async function ChildDetailPage({
     notFound()
   }
 
+  await syncChildAgeGroupFromProfile(childId)
+
   const child = await prisma.child.findUnique({
     where: { id: childId },
+    include: { profile: { select: { dateOfBirth: true } } },
   })
 
   if (!child) {

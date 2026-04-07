@@ -31,7 +31,7 @@ export function ChildOverviewCard({
             <div>
               <h2 className="text-lg font-semibold text-slate-900">{child.name}</h2>
               <p className="text-sm text-slate-500">
-                Age {child.age_group} · {child.current_level}
+                {child.learning_class} · {child.current_level}
               </p>
             </div>
           </div>

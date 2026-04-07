@@ -83,7 +83,12 @@ export async function POST(
       answers: body.answers,
     })
 
-    return NextResponse.json(result)
+    return NextResponse.json({
+      ...result,
+      score: result.scoreNumeric,
+      percentage: result.percentage,
+      weak_topics: result.weak_topics,
+    })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to submit worksheet"
     return NextResponse.json({ error: message }, { status: 500 })

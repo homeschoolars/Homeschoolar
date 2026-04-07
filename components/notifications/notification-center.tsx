@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -10,6 +11,7 @@ import type { Notification } from "@/lib/types"
 import { apiFetch } from "@/lib/api-client"
 
 export function NotificationCenter() {
+  const router = useRouter()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -105,7 +107,13 @@ export function NotificationCenter() {
                   className={`p-3 hover:bg-gray-50 cursor-pointer transition-colors ${
                     !notification.is_read ? "bg-blue-50/50" : ""
                   }`}
-                  onClick={() => markAsRead(notification.id)}
+                  onClick={() => {
+                    markAsRead(notification.id)
+                    if (notification.action_url) {
+                      router.push(notification.action_url)
+                      setIsOpen(false)
+                    }
+                  }}
                 >
                   <div className="flex gap-3">
                     <div className="mt-0.5">{getIcon(notification.type)}</div>

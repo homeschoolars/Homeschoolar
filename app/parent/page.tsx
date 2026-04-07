@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { auth } from "@/auth"
 import { getParentDashboardData } from "@/services/parent-service"
@@ -20,12 +21,14 @@ export default async function ParentDashboard() {
   const mappedSubscription = subscription ? serializeSubscription(subscription) : null
 
   return (
-    <ParentDashboardClient
-      profile={mappedProfile}
-      // eslint-disable-next-line react/no-children-prop
-      children={mappedChildren}
-      subjectsByAgeGroup={mappedSubjectsByAgeGroup}
-      subscription={mappedSubscription}
-    />
+    <Suspense fallback={<div className="min-h-screen dashboard-parent-bg animate-pulse" />}>
+      <ParentDashboardClient
+        profile={mappedProfile}
+        // eslint-disable-next-line react/no-children-prop
+        children={mappedChildren}
+        subjectsByAgeGroup={mappedSubjectsByAgeGroup}
+        subscription={mappedSubscription}
+      />
+    </Suspense>
   )
 }

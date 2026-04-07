@@ -87,4 +87,12 @@ export async function enforceParentOrStudentChildAccess({
   if (!payload || payload.childId !== childId) {
     throw new Error("Forbidden")
   }
+
+  const studentChild = await prisma.child.findUnique({
+    where: { id: childId },
+    select: { assessmentCompleted: true },
+  })
+  if (!studentChild?.assessmentCompleted) {
+    throw new Error("StudentDashboardLocked")
+  }
 }

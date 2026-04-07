@@ -18,6 +18,8 @@ export function AssessmentSetup({
   onIncludeIslamic,
   onStart,
   disabled,
+  startHint,
+  assessedChildName,
 }: {
   childrenList: ChildOption[]
   childId: string
@@ -28,15 +30,22 @@ export function AssessmentSetup({
   onIncludeIslamic: (v: boolean) => void
   onStart: () => void
   disabled?: boolean
+  /** Extra context under the title (e.g. password gate, where the report appears). */
+  startHint?: string
+  assessedChildName?: string
 }) {
   return (
     <div className="mx-auto max-w-lg space-y-6 rounded-2xl border border-violet-200 bg-white p-6 shadow-sm">
       <div>
         <h1 className="text-2xl font-bold text-violet-900">Learning assessment</h1>
         <p className="mt-1 text-sm text-slate-600">
-          A holistic quiz to understand strengths, interests, and next steps. Younger children use parent observation
-          mode.
+          Age-based discovery questions (not re-generated each time). After you finish, we use AI to build your
+          personalised written report. Younger children use parent observation mode.
+          {assessedChildName ? (
+            <span className="block mt-2 font-medium text-violet-800">For {assessedChildName}</span>
+          ) : null}
         </p>
+        {startHint ? <p className="mt-3 text-xs text-slate-600 leading-relaxed border border-violet-100 bg-violet-50/60 rounded-xl px-3 py-2">{startHint}</p> : null}
       </div>
 
       {childrenList.length === 0 ? (

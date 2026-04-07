@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { DownloadButton } from "./download-button"
 import { ShareDialog } from "./share-dialog"
 import { Button } from "@/components/ui/button"
@@ -110,26 +111,74 @@ export function AssessmentPDFActions({ child, progress, assessments, subjects }:
   )
 }
 
+/** Parent holistic learning assessment (questionnaire + AI report in `assessment_reports`). */
+export function HolisticAssessmentPdfActions({ child }: { child: Child }) {
+  if (!child.assessment_completed) {
+    if (!child.first_student_login_at) {
+      return (
+        <p className="text-xs text-slate-500 leading-relaxed">
+          {child.name} needs to sign in once with their student code. Then you can open the{" "}
+          <Link href={`/assessment/${child.id}`} className="text-violet-600 underline-offset-2 hover:underline font-medium">
+            learning assessment
+          </Link>{" "}
+          and unlock the PDF after it&apos;s done.
+        </p>
+      )
+    }
+    return (
+      <p className="text-xs text-slate-500 leading-relaxed">
+        Complete the parent{" "}
+        <Link href={`/assessment/${child.id}`} className="text-violet-600 underline-offset-2 hover:underline font-medium">
+          learning assessment
+        </Link>{" "}
+        to unlock the PDF report.
+      </p>
+    )
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <DownloadButton
+        pdfType="holistic-learning-assessment"
+        data={{ childId: child.id }}
+        fileName={`${child.name.replace(/\s+/g, "-").toLowerCase()}-learning-assessment.pdf`}
+      >
+        Download learning assessment (PDF)
+      </DownloadButton>
+    </div>
+  )
+}
+
 interface CurriculumPDFActionsProps {
   subjects: Subject[]
   ageGroup: string
   childName?: string
+  learningClass?: string
 }
 
-export function CurriculumPDFActions({ subjects, ageGroup, childName }: CurriculumPDFActionsProps) {
+function curriculumPdfFileSlug(learningClass: string | undefined, ageGroup: string) {
+  if (learningClass?.trim()) {
+    return learningClass.replace(/\s+/g, "-").replace(/[^a-zA-Z0-9-]/g, "").toLowerCase()
+  }
+  return ageGroup.replace(/\//g, "-")
+}
+
+export function CurriculumPDFActions({ subjects, ageGroup, childName, learningClass }: CurriculumPDFActionsProps) {
+  const slug = curriculumPdfFileSlug(learningClass, ageGroup)
+  const titleSuffix = learningClass?.trim() ? learningClass : "Curriculum guide"
+
   return (
     <div className="flex items-center gap-2">
       <DownloadButton
         pdfType="curriculum"
-        data={{ subjects, ageGroup, childName }}
-        fileName={`curriculum-${ageGroup}-years.pdf`}
+        data={{ subjects, ageGroup, childName, learningClass }}
+        fileName={`curriculum-${slug}.pdf`}
       >
         Download Curriculum
       </DownloadButton>
       <ShareDialog
         pdfType="curriculum"
-        data={{ subjects, ageGroup, childName }}
-        title={`Curriculum Guide (${ageGroup} years)`}
+        data={{ subjects, ageGroup, childName, learningClass }}
+        title={`Curriculum — ${titleSuffix}`}
       />
     </div>
   )

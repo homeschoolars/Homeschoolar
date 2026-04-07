@@ -65,7 +65,7 @@ export function WelcomeBanner({
                   {child.current_level}
                 </span>
                 <span className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-medium text-white/95 border border-white/15 backdrop-blur-sm">
-                  Age {child.age_group}
+                  {child.learning_class}
                 </span>
               </div>
 

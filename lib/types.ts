@@ -26,6 +26,18 @@ export type LearningStyle = "visual" | "auditory" | "reading_writing" | "kinesth
 export type LearningMode = "games" | "stories" | "challenges" | "step_by_step"
 export type InterestSource = "preset" | "custom"
 
+/** One-year learning band (display). Curriculum APIs still use `AgeGroup` buckets. */
+export type LearningClassKey =
+  | "little_explorers"
+  | "mini_adventurers"
+  | "curious_minds"
+  | "young_investigators"
+  | "growing_learners"
+  | "knowledge_explorers"
+  | "knowledge_builders"
+  | "skill_sharpeners"
+  | "future_leaders"
+
 export interface Profile {
   id: string
   email: string
@@ -55,6 +67,9 @@ export interface Child {
   parent_id: string
   name: string
   age_group: AgeGroup
+  /** Display name derived from date of birth (e.g. Little Explorers). */
+  learning_class: string
+  learning_class_key: LearningClassKey
   avatar_url: string | null
   login_code: string
   current_level: LearningLevel
@@ -63,6 +78,8 @@ export interface Child {
   is_orphan: boolean
   orphan_status: OrphanStatus
   assessment_completed: boolean
+  /** ISO timestamp when the student first signed in with their code; unlocks parent holistic assessment. */
+  first_student_login_at: string | null
   last_quiz_at: string | null
   created_at: string
   updated_at: string
@@ -294,6 +311,8 @@ export interface Notification {
   type: "info" | "success" | "warning" | "achievement"
   is_read: boolean
   created_at: string
+  action_url?: string | null
+  action_label?: string | null
 }
 
 export interface Assessment {

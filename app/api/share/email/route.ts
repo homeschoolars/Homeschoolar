@@ -24,7 +24,12 @@ export async function POST(request: NextRequest) {
         break
       case "curriculum":
         buffer = await renderToBuffer(
-          CurriculumPDF({ subjects: data.subjects, ageGroup: data.ageGroup, childName: data.childName }),
+          CurriculumPDF({
+            subjects: data.subjects,
+            ageGroup: data.ageGroup,
+            childName: data.childName,
+            learningClass: data.learningClass,
+          }),
         )
         break
       case "assessment":

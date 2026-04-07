@@ -9,6 +9,7 @@ import { apiFetch } from "@/lib/api-client"
 import { Card, CardContent } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 
 type WorksheetQuestion = {
   id: string
@@ -36,7 +37,13 @@ export default function WorksheetPage({ params }: { params: Promise<{ id: string
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [result, setResult] = useState<{ score: number; maxScore: number; feedback: string } | null>(null)
+  const [result, setResult] = useState<{
+    score: number
+    maxScore: number
+    percentage?: number
+    feedback: string
+    weak_topics?: string[]
+  } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -79,9 +86,22 @@ export default function WorksheetPage({ params }: { params: Promise<{ id: string
           answers: entries,
         }),
       })
-      const data = (await res.json()) as { error?: string; score: number; maxScore: number; feedback: string }
+      const data = (await res.json()) as {
+        error?: string
+        score: number
+        maxScore: number
+        percentage?: number
+        feedback: string
+        weak_topics?: string[]
+      }
       if (!res.ok) throw new Error(data.error ?? "Failed to submit worksheet")
-      setResult({ score: data.score, maxScore: data.maxScore, feedback: data.feedback })
+      setResult({
+        score: data.score,
+        maxScore: data.maxScore,
+        percentage: data.percentage,
+        feedback: data.feedback,
+        weak_topics: data.weak_topics,
+      })
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to submit worksheet")
     } finally {
@@ -138,12 +158,33 @@ export default function WorksheetPage({ params }: { params: Promise<{ id: string
                       </div>
                     ))}
                   </RadioGroup>
-                ) : (
+                ) : q.type === "true_false" ? (
+                  <RadioGroup
+                    value={answers[q.id] ?? ""}
+                    onValueChange={(value) => setAnswers((prev) => ({ ...prev, [q.id]: value }))}
+                  >
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem id={`${q.id}-true`} value="True" />
+                      <Label htmlFor={`${q.id}-true`}>True</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem id={`${q.id}-false`} value="False" />
+                      <Label htmlFor={`${q.id}-false`}>False</Label>
+                    </div>
+                  </RadioGroup>
+                ) : q.type === "fill_blank" ? (
                   <input
                     className="w-full rounded-md border p-2"
                     value={answers[q.id] ?? ""}
                     onChange={(e) => setAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                    placeholder="Type your answer"
+                    placeholder="Fill in the blank"
+                  />
+                ) : (
+                  <Textarea
+                    className="min-h-[100px] w-full rounded-md border p-2"
+                    value={answers[q.id] ?? ""}
+                    onChange={(e) => setAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
+                    placeholder="Write your answer"
                   />
                 )}
               </CardContent>
@@ -162,8 +203,19 @@ export default function WorksheetPage({ params }: { params: Promise<{ id: string
               <CardContent className="pt-6">
                 <p className="font-bold text-violet-800">
                   Score: {result.score}/{result.maxScore}
+                  {result.percentage != null ? ` (${result.percentage}%)` : ""}
                 </p>
                 <p className="mt-2 text-slate-700">{result.feedback}</p>
+                {result.weak_topics && result.weak_topics.length > 0 ? (
+                  <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 p-3">
+                    <p className="text-sm font-semibold text-amber-900">Practice more</p>
+                    <ul className="mt-1 list-disc pl-5 text-sm text-amber-950 space-y-0.5">
+                      {result.weak_topics.map((t) => (
+                        <li key={t}>{t}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
           ) : null}

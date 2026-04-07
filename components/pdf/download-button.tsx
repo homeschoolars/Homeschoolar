@@ -8,7 +8,14 @@ import { Download, Loader2 } from "lucide-react"
 import { apiFetch } from "@/lib/api-client"
 
 interface DownloadButtonProps {
-  pdfType: "worksheet" | "answer-key" | "curriculum" | "assessment" | "recommendations" | "insights"
+  pdfType:
+    | "worksheet"
+    | "answer-key"
+    | "curriculum"
+    | "assessment"
+    | "holistic-learning-assessment"
+    | "recommendations"
+    | "insights"
   data: Record<string, unknown>
   fileName?: string
   variant?: "default" | "outline" | "ghost"
