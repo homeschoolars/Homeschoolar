@@ -16,10 +16,6 @@ export async function POST(req: Request) {
       age_group: string
     }
 
-    const session = await auth()
-    if (!session?.user?.id) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 })
-    }
     const quiz = await prisma.surpriseQuiz.findUnique({
       where: { id: quiz_id },
       select: { id: true, childId: true },
@@ -27,11 +23,24 @@ export async function POST(req: Request) {
     if (!quiz) {
       return Response.json({ error: "Quiz not found" }, { status: 404 })
     }
-    await enforceParentOrStudentChildAccess({
-      childId: quiz.childId,
-      session,
-      request: req,
-    })
+
+    const session = await auth()
+    try {
+      await enforceParentOrStudentChildAccess({
+        childId: quiz.childId,
+        session,
+        request: req,
+      })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Unauthorized"
+      if (msg === "Forbidden") {
+        return Response.json({ error: "Forbidden" }, { status: 403 })
+      }
+      if (msg === "StudentDashboardLocked") {
+        return Response.json({ error: "StudentDashboardLocked" }, { status: 403 })
+      }
+      return Response.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
     const result = await gradeQuiz({ quiz_id, answers, age_group })
     return Response.json(result)
