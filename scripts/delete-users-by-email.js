@@ -16,6 +16,8 @@ try {
 }
 
 const { PrismaClient } = require("@prisma/client")
+const { deleteUsersTransaction } = require("./lib/delete-users-core")
+
 const prisma = new PrismaClient()
 
 function expandEmailVariants(raw) {
@@ -26,92 +28,6 @@ function expandEmailVariants(raw) {
   // common typo
   if (e.endsWith("@gamil.com")) set.add(e.replace("@gamil.com", "@gmail.com"))
   return [...set]
-}
-
-async function deleteUsersTransaction(nonAdminIds, tokenIdentifiers) {
-  return prisma.$transaction(async (tx) => {
-    const children = await tx.child.findMany({
-      where: { parentId: { in: nonAdminIds } },
-      select: { id: true },
-    })
-    const childIds = children.map((c) => c.id)
-
-    const analytics = await tx.analyticsEvent.deleteMany({
-      where: {
-        OR: [{ userId: { in: nonAdminIds } }, ...(childIds.length ? [{ childId: { in: childIds } }] : [])],
-      },
-    })
-
-    const subs = await tx.subscription.findMany({
-      where: { userId: { in: nonAdminIds } },
-      select: { id: true },
-    })
-    const subIds = subs.map((s) => s.id)
-
-    const payTx = await tx.paymentTransaction.deleteMany({
-      where: {
-        OR: [{ userId: { in: nonAdminIds } }, ...(subIds.length ? [{ subscriptionId: { in: subIds } }] : [])],
-      },
-    })
-
-    const payments = await tx.payment.deleteMany({
-      where: {
-        OR: [
-          { userId: { in: nonAdminIds } },
-          ...(subIds.length ? [{ subscriptionId: { in: subIds } }] : []),
-          { verifiedBy: { in: nonAdminIds } },
-        ],
-      },
-    })
-
-    const subscriptions = await tx.subscription.deleteMany({
-      where: { userId: { in: nonAdminIds } },
-    })
-
-    const worksheets = await tx.worksheet.updateMany({
-      where: { createdBy: { in: nonAdminIds } },
-      data: { createdBy: null },
-    })
-
-    const posts = await tx.blogPost.updateMany({
-      where: { authorId: { in: nonAdminIds } },
-      data: { authorId: null },
-    })
-
-    const lectures = await tx.videoLecture.updateMany({
-      where: { createdBy: { in: nonAdminIds } },
-      data: { createdBy: null },
-    })
-
-    const orphans = await tx.orphanVerification.updateMany({
-      where: { reviewedByAdminId: { in: nonAdminIds } },
-      data: { reviewedByAdminId: null },
-    })
-
-    let tokens = { count: 0 }
-    if (tokenIdentifiers.length) {
-      tokens = await tx.verificationToken.deleteMany({
-        where: { identifier: { in: tokenIdentifiers } },
-      })
-    }
-
-    const users = await tx.user.deleteMany({
-      where: { id: { in: nonAdminIds } },
-    })
-
-    return {
-      analytics: analytics.count,
-      paymentTransactions: payTx.count,
-      payments: payments.count,
-      subscriptions: subscriptions.count,
-      worksheetsOrphaned: worksheets.count,
-      blogPostsDetached: posts.count,
-      videoLecturesDetached: lectures.count,
-      orphanReviewsCleared: orphans.count,
-      verificationTokens: tokens.count,
-      users: users.count,
-    }
-  })
 }
 
 async function main() {
@@ -172,7 +88,7 @@ async function main() {
     await new Promise((r) => setTimeout(r, 3000))
   }
 
-  const summary = await deleteUsersTransaction(nonAdminIds, tokenIds)
+  const summary = await deleteUsersTransaction(prisma, nonAdminIds, tokenIds)
   console.log("Deletion summary:")
   Object.entries(summary).forEach(([k, v]) => console.log(`  ${k}: ${v}`))
 }

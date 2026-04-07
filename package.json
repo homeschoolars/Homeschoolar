@@ -8,6 +8,9 @@
     "dev": "next dev",
     "lint": "eslint .",
     "postinstall": "node scripts/prisma-generate.js",
+    "db:delete-users": "node -r dotenv/config scripts/delete-users-by-email.js",
+    "db:remove-non-admins": "node -r dotenv/config scripts/remove-non-admin-users.js",
+    "db:wipe-all-users": "node -r dotenv/config scripts/wipe-all-users.js",
     "seed": "prisma db seed",
     "start": "next start"
   },
