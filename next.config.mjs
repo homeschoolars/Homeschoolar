@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Smaller/faster Cloud Run images: trace server deps into .next/standalone
+  output: process.env.DOCKER_BUILD === '1' ? 'standalone' : undefined,
   typescript: {
     // Only ignore build errors in development for faster iteration
     // In production, errors should be fixed

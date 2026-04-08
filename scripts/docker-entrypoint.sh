@@ -2,15 +2,12 @@
 set -e
 cd /app
 
-PORT="${PORT:-8080}"
+# Cloud Run sets PORT (usually 8080).
+export PORT="${PORT:-8080}"
 
-# Cloud Run sets PORT; listen on all interfaces (required for the platform probe).
-if [ "${SKIP_DB_MIGRATE_ON_START:-}" = "true" ]; then
-  echo "[entrypoint] SKIP_DB_MIGRATE_ON_START=true — skipping prisma migrate deploy"
-else
-  echo "[entrypoint] Running prisma migrate deploy..."
-  node node_modules/prisma/build/index.js migrate deploy
-fi
+# Next standalone server.js uses process.env.HOSTNAME for listen(). On Linux,
+# HOSTNAME is the container hostname (not 0.0.0.0), which breaks Cloud Run probes.
+export HOSTNAME="${HOSTNAME:-0.0.0.0}"
 
-echo "[entrypoint] Starting Next.js on 0.0.0.0:${PORT}"
-exec node node_modules/next/dist/bin/next start -H 0.0.0.0 -p "$PORT"
+echo "[entrypoint] Next standalone PORT=${PORT} HOSTNAME=${HOSTNAME}"
+exec node server.js
