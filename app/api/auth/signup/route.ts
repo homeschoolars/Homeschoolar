@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
+import { prisma } from "@/lib/prisma"
 import { createParentWithChildren } from "@/services/onboarding-service"
 import { createAndSendVerificationEmail } from "@/services/email-verification"
+import { submitOrphanVerification } from "@/services/orphan-verification-service"
 
 const parentSchema = z.object({
   full_name: z.string().min(1),
@@ -32,10 +34,43 @@ const childSchema = z.object({
   challenges: z.string().optional().nullable(),
 })
 
-const signupSchema = z.object({
-  parent: parentSchema,
-  children: z.array(childSchema).min(1),
+const orphanVerificationSchema = z.object({
+  document_type: z.enum(["death_certificate", "ngo_letter", "other"]),
+  document_name: z.string().min(1),
+  document_base64: z.string().min(1),
 })
+
+const signupSchema = z
+  .object({
+    parent: parentSchema,
+    children: z.array(childSchema).min(1),
+    orphan_verification: orphanVerificationSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.parent.relationship === "guardian") {
+      if (data.children.length !== 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "Guardian sign-up with orphan verification requires exactly one child. Add another account for additional children.",
+          path: ["children"],
+        })
+      }
+      if (!data.orphan_verification) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please upload orphan verification documentation (death certificate, NGO letter, or other official document).",
+          path: ["orphan_verification"],
+        })
+      }
+    } else if (data.orphan_verification) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Orphan verification is only for guardian sign-ups.",
+        path: ["orphan_verification"],
+      })
+    }
+  })
 
 export async function POST(request: Request) {
   try {
@@ -66,6 +101,31 @@ export async function POST(request: Request) {
         challenges: child.challenges ?? null,
       })),
     })
+
+    if (body.orphan_verification) {
+      const firstChild = await prisma.child.findFirst({
+        where: { parentId: user.id },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      })
+      if (!firstChild) {
+        await prisma.user.delete({ where: { id: user.id } }).catch(() => null)
+        return NextResponse.json({ error: "Child record missing after signup" }, { status: 500 })
+      }
+      try {
+        await submitOrphanVerification({
+          childId: firstChild.id,
+          parentId: user.id,
+          documentType: body.orphan_verification.document_type,
+          documentName: body.orphan_verification.document_name,
+          documentBase64: body.orphan_verification.document_base64,
+        })
+      } catch (orphanErr) {
+        await prisma.user.delete({ where: { id: user.id } }).catch(() => null)
+        const msg = orphanErr instanceof Error ? orphanErr.message : "Orphan verification failed"
+        return NextResponse.json({ error: msg }, { status: 400 })
+      }
+    }
 
     try {
       await createAndSendVerificationEmail(body.parent.email)

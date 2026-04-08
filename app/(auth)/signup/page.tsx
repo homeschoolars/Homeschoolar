@@ -6,12 +6,13 @@ import { useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Sparkles, Star, UserPlus, ChevronLeft, ChevronRight } from "lucide-react"
+import { Sparkles, Star, UserPlus, ChevronLeft, ChevronRight, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { apiFetch } from "@/lib/api-client"
 import {
@@ -58,7 +59,7 @@ type ChildArrayKey = "interestsPreset" | "learningStyles" | "learnsBetterWith"
 
 const defaultParent: ParentForm = {
   fullName: "",
-  relationship: "guardian",
+  relationship: "father",
   email: "",
   phone: "",
   country: "",
@@ -90,10 +91,14 @@ export default function SignupPage() {
   const [children, setChildren] = useState<ChildForm[]>([{ ...defaultChild }])
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [orphanDocType, setOrphanDocType] = useState<"death_certificate" | "ngo_letter" | "other">("ngo_letter")
+  const [orphanDocFile, setOrphanDocFile] = useState<File | null>(null)
   const router = useRouter()
 
+  const isGuardian = parent.relationship === "guardian"
+
   const canContinueParent = useMemo(() => {
-    return (
+    const base =
       parent.fullName.trim() &&
       parent.relationship &&
       parent.email.trim() &&
@@ -101,8 +106,11 @@ export default function SignupPage() {
       parent.timezone.trim() &&
       parent.password.length >= 6 &&
       parent.password === parent.confirmPassword
-    )
-  }, [parent])
+    if (parent.relationship === "guardian") {
+      return base && !!orphanDocFile
+    }
+    return base
+  }, [parent, orphanDocFile])
 
   const handleAddChild = () => {
     setChildren((prev) => [...prev, { ...defaultChild }])
@@ -147,8 +155,38 @@ export default function SignupPage() {
       return
     }
 
+    if (isGuardian) {
+      if (children.length !== 1) {
+        setError("Guardian sign-up with orphan verification requires exactly one child on this form.")
+        return
+      }
+      if (!orphanDocFile) {
+        setError("Please upload orphan verification documentation (PDF or image).")
+        return
+      }
+    }
+
     setIsLoading(true)
     try {
+      let orphanVerificationPayload: {
+        document_type: "death_certificate" | "ngo_letter" | "other"
+        document_name: string
+        document_base64: string
+      } | undefined
+      if (isGuardian && orphanDocFile) {
+        const document_base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result as string)
+          reader.onerror = () => reject(new Error("Failed to read document"))
+          reader.readAsDataURL(orphanDocFile)
+        })
+        orphanVerificationPayload = {
+          document_type: orphanDocType,
+          document_name: orphanDocFile.name,
+          document_base64,
+        }
+      }
+
       const response = await apiFetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -162,6 +200,7 @@ export default function SignupPage() {
             timezone: parent.timezone,
             password: parent.password,
           },
+          ...(orphanVerificationPayload ? { orphan_verification: orphanVerificationPayload } : {}),
           children: children.map((child) => ({
             full_name: child.fullName,
             date_of_birth: child.dateOfBirth,
@@ -261,12 +300,56 @@ export default function SignupPage() {
                       >
                         {parentRelationships.map((relationship) => (
                           <option key={relationship} value={relationship}>
-                            {relationship.replace("_", " ")}
+                            {relationship === "guardian"
+                              ? "Guardian (orphan verification required)"
+                              : relationship.replace("_", " ")}
                           </option>
                         ))}
                       </select>
                     </div>
                   </div>
+
+                  {isGuardian && (
+                    <div className="rounded-xl border-2 border-purple-200 bg-purple-50/80 p-4 space-y-3">
+                      <p className="text-sm font-semibold text-purple-900">Orphan verification</p>
+                      <p className="text-xs text-purple-800 leading-relaxed">
+                        Upload official documentation (death certificate, NGO letter, or other) for admin review. You
+                        must register <span className="font-semibold">exactly one child</span> on this form.
+                      </p>
+                      <div className="space-y-2">
+                        <Label>Document type</Label>
+                        <Select
+                          value={orphanDocType}
+                          onValueChange={(v) => setOrphanDocType(v as typeof orphanDocType)}
+                        >
+                          <SelectTrigger className="border-2 border-purple-200 bg-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="death_certificate">Death certificate</SelectItem>
+                            <SelectItem value="ngo_letter">NGO letter</SelectItem>
+                            <SelectItem value="other">Other official document</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="orphanDoc">Upload document</Label>
+                        <Input
+                          id="orphanDoc"
+                          type="file"
+                          accept="application/pdf,image/jpeg,image/png"
+                          className="border-2 border-purple-200 cursor-pointer bg-white"
+                          onChange={(e) => setOrphanDocFile(e.target.files?.[0] ?? null)}
+                        />
+                        {orphanDocFile && (
+                          <p className="text-xs text-purple-700 flex items-center gap-1">
+                            <Upload className="h-3.5 w-3.5 shrink-0" />
+                            {orphanDocFile.name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
@@ -582,9 +665,16 @@ export default function SignupPage() {
                     )
                   })}
 
-                  <Button type="button" variant="outline" onClick={handleAddChild} className="w-full">
-                    <UserPlus className="mr-2 h-4 w-4" /> Add another child
-                  </Button>
+                  {!isGuardian && (
+                    <Button type="button" variant="outline" onClick={handleAddChild} className="w-full">
+                      <UserPlus className="mr-2 h-4 w-4" /> Add another child
+                    </Button>
+                  )}
+                  {isGuardian && (
+                    <p className="text-xs text-purple-700 text-center">
+                      Guardian orphan sign-up is limited to one child on this registration.
+                    </p>
+                  )}
 
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <Button type="button" variant="ghost" onClick={() => setStep(0)}>

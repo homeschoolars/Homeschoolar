@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,7 +26,6 @@ import {
   Plus,
   Users,
   Star,
-  Check,
   CreditCard,
   TrendingUp,
   Calendar,
@@ -34,7 +33,6 @@ import {
   Sparkles,
   FileText,
   BarChart3,
-  Upload,
 } from "lucide-react"
 import type {
   Profile,
@@ -49,7 +47,7 @@ import type {
 } from "@/lib/types"
 import { RecommendationsPanel } from "@/components/ai/recommendations-panel"
 import { CurriculumPlanCard } from "@/components/ai/curriculum-plan-card"
-import { CurriculumPDFActions, HolisticAssessmentPdfActions } from "@/components/pdf/pdf-actions"
+import { CurriculumPDFActions } from "@/components/pdf/pdf-actions"
 import { RoadmapViewer } from "@/components/dashboards/parent/roadmap-viewer"
 import { WeeklyAIInsights } from "@/components/dashboards/parent/weekly-ai-insights"
 import { QuickContentActions } from "@/components/parent/quick-content-actions"
@@ -57,7 +55,6 @@ import { ParentCurriculumImport } from "@/components/parent/parent-curriculum-im
 import { LessonWorksheetAssigner } from "@/components/parent/lesson-worksheet-assigner"
 import { apiFetch } from "@/lib/api-client"
 import { ParentAppHeader } from "@/components/layout/parent-app-header"
-import { AssessmentCompleteToast } from "@/components/parent/assessment-complete-toast"
 import {
   attentionSpanOptions,
   interestPresets,
@@ -82,13 +79,6 @@ type CurriculumSubjectSummary = {
   id: string
   name: string
   units?: Array<{ id: string; title: string }>
-}
-
-type HolisticReportRow = {
-  id: string
-  createdAt: string
-  age: number
-  report: Record<string, unknown> | null
 }
 
 interface ParentDashboardClientProps {
@@ -129,17 +119,8 @@ export default function ParentDashboardClient({
   const [selectedChildId, setSelectedChildId] = useState<string | null>(
     initialChildren.length > 0 ? initialChildren[0].id : null,
   )
-  const [orphanDialogOpen, setOrphanDialogOpen] = useState(false)
-  const [orphanChildId, setOrphanChildId] = useState<string | null>(null)
-  const [orphanDocType, setOrphanDocType] = useState<"death_certificate" | "ngo_letter" | "other">("ngo_letter")
-  const [orphanDocFile, setOrphanDocFile] = useState<File | null>(null)
-  const [orphanSubmitting, setOrphanSubmitting] = useState(false)
-  const [orphanMessage, setOrphanMessage] = useState<string | null>(null)
   const [curriculumSubjects, setCurriculumSubjects] = useState<CurriculumSubjectSummary[]>([])
   const [curriculumLoading, setCurriculumLoading] = useState(false)
-  const [holisticReport, setHolisticReport] = useState<HolisticReportRow | null>(null)
-  const [holisticReportLoading, setHolisticReportLoading] = useState(false)
-  const orphanInputRef = useRef<HTMLInputElement>(null)
 
   const selectedChild = children.find((c) => c.id === selectedChildId)
   const curriculumAgeGroup = selectedChild?.age_group ?? "6-7"
@@ -183,32 +164,6 @@ export default function ParentDashboardClient({
 
     loadCurriculumSubjects()
   }, [selectedChild?.age_group])
-
-  useEffect(() => {
-    if (!selectedChildId) {
-      setHolisticReport(null)
-      return
-    }
-    let cancelled = false
-    const loadReport = async () => {
-      setHolisticReportLoading(true)
-      try {
-        const response = await apiFetch(`/api/assessment/report?childId=${encodeURIComponent(selectedChildId)}`)
-        const data = (await response.json()) as { latest?: HolisticReportRow | null }
-        if (!cancelled) {
-          setHolisticReport(response.ok ? (data.latest ?? null) : null)
-        }
-      } catch {
-        if (!cancelled) setHolisticReport(null)
-      } finally {
-        if (!cancelled) setHolisticReportLoading(false)
-      }
-    }
-    void loadReport()
-    return () => {
-      cancelled = true
-    }
-  }, [selectedChildId])
 
   useEffect(() => {
     const focus = searchParams.get("focusAssessment")
@@ -287,42 +242,6 @@ export default function ParentDashboardClient({
     setter(list.includes(value) ? list.filter((item) => item !== value) : [...list, value])
   }
 
-  const handleOrphanSubmit = async () => {
-    if (!orphanChildId || !orphanDocFile) return
-    setOrphanSubmitting(true)
-    setOrphanMessage(null)
-    try {
-      const fileBase64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = () => reject(new Error("Failed to read document"))
-        reader.readAsDataURL(orphanDocFile)
-      })
-
-      const response = await apiFetch("/api/orphan/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          childId: orphanChildId,
-          documentType: orphanDocType,
-          documentName: orphanDocFile.name,
-          documentBase64: fileBase64,
-        }),
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.error || "Submission failed")
-      }
-      setOrphanMessage("Document submitted. Awaiting admin review.")
-      setOrphanDocFile(null)
-      setOrphanDialogOpen(false)
-    } catch (error) {
-      setOrphanMessage(error instanceof Error ? error.message : "Submission failed")
-    } finally {
-      setOrphanSubmitting(false)
-    }
-  }
-
   const subscriptionStatus = subscription?.status || "none"
   const isTrial = subscription?.type === "trial"
   const isOrphan = subscription?.type === "orphan"
@@ -336,9 +255,6 @@ export default function ParentDashboardClient({
 
   return (
     <div className="min-h-screen dashboard-parent-bg">
-      <Suspense fallback={null}>
-        <AssessmentCompleteToast />
-      </Suspense>
       <ParentAppHeader active="dashboard" />
 
       <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-7xl">
@@ -688,50 +604,6 @@ export default function ParentDashboardClient({
               </Dialog>
             </div>
 
-            <Dialog open={orphanDialogOpen} onOpenChange={setOrphanDialogOpen}>
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Submit Orphan Verification</DialogTitle>
-                  <DialogDescription>Upload official or NGO documentation for review.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Document Type</Label>
-                    <Select value={orphanDocType} onValueChange={(v) => setOrphanDocType(v as typeof orphanDocType)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="death_certificate">Death Certificate</SelectItem>
-                        <SelectItem value="ngo_letter">NGO Letter</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Document Upload</Label>
-                    <Input
-                      ref={orphanInputRef}
-                      type="file"
-                      accept=".pdf,.png,.jpg,.jpeg"
-                      onChange={(e) => setOrphanDocFile(e.target.files?.[0] ?? null)}
-                    />
-                  </div>
-
-                  {orphanMessage && <p className="text-sm text-teal-600">{orphanMessage}</p>}
-
-                  <Button
-                    onClick={handleOrphanSubmit}
-                    disabled={!orphanChildId || !orphanDocFile || orphanSubmitting}
-                    className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 rounded-xl font-semibold"
-                  >
-                    {orphanSubmitting ? "Submitting..." : "Submit for Review"}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
             {children.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {children.map((child) => (
@@ -761,20 +633,6 @@ export default function ParentDashboardClient({
                             {child.login_code}
                           </code>
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-400 font-medium">Assessment</span>
-                          {child.assessment_completed ? (
-                            <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg text-xs">
-                              <Check className="h-3.5 w-3.5" /> Completed
-                            </span>
-                          ) : !child.first_student_login_at ? (
-                            <span className="font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg text-xs">
-                              Awaiting first sign-in
-                            </span>
-                          ) : (
-                            <span className="font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg text-xs">Ready to run</span>
-                          )}
-                        </div>
                         <div className="space-y-1.5">
                           <div className="flex justify-between text-sm">
                             <span className="text-slate-400 font-medium">Progress</span>
@@ -788,22 +646,6 @@ export default function ParentDashboardClient({
                               View Details <ChevronRight className="w-4 h-4 ml-1" />
                             </Link>
                           </Button>
-                          {child.orphan_status !== "verified" && (
-                            <Button
-                              variant="outline"
-                              className="min-w-[130px] flex-1 rounded-xl border-slate-200 hover:bg-violet-50 hover:border-violet-200 font-medium"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setOrphanChildId(child.id)
-                                setOrphanDialogOpen(true)
-                              }}
-                            >
-                              <Upload className="w-4 h-4 mr-1" /> Verify Orphan
-                            </Button>
-                          )}
-                          <div className="w-full sm:w-auto">
-                            <HolisticAssessmentPdfActions child={child} />
-                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -826,71 +668,6 @@ export default function ParentDashboardClient({
                 </CardContent>
               </Card>
             )}
-
-            {selectedChild ? (
-              <Card className="mt-6 border border-slate-200/70 bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg tracking-tight flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-violet-600" />
-                    Learning assessment report
-                  </CardTitle>
-                  <CardDescription>
-                    Holistic parent questionnaire and AI narrative. Unlocks after your child&apos;s first student sign-in.
-                    The full report and PDF stay here — students never see them.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {!selectedChild.first_student_login_at && !selectedChild.assessment_completed ? (
-                    <p className="text-sm text-slate-600 leading-relaxed">
-                      Have <span className="font-semibold">{selectedChild.name}</span> sign in once from the login page
-                      with their code. After that, you can start the assessment below.
-                    </p>
-                  ) : null}
-                  {holisticReportLoading ? (
-                    <p className="text-sm text-slate-500">Loading report…</p>
-                  ) : holisticReport?.report ? (
-                    <>
-                      {typeof holisticReport.report.learnerType === "string" ? (
-                        <p className="text-xs font-semibold uppercase tracking-wide text-violet-600/90">
-                          {holisticReport.report.learnerType}
-                        </p>
-                      ) : null}
-                      <p className="text-sm text-slate-700 leading-relaxed line-clamp-5">
-                        {(typeof holisticReport.report.overallSummary === "string" && holisticReport.report.overallSummary) ||
-                          (typeof holisticReport.report.parentMessage === "string" && holisticReport.report.parentMessage) ||
-                          "Your full report is available on the assessment page and in the PDF download."}
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        Report date:{" "}
-                        {new Date(holisticReport.createdAt).toLocaleDateString(undefined, {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-slate-600">
-                      No report saved yet. Run the learning assessment to generate a personalized summary.
-                    </p>
-                  )}
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    {!selectedChild.first_student_login_at && !selectedChild.assessment_completed ? (
-                      <Button disabled variant="secondary" className="rounded-xl">
-                        Waiting for first student sign-in
-                      </Button>
-                    ) : (
-                      <Button asChild variant="default" className="rounded-xl bg-violet-600 hover:bg-violet-700">
-                        <Link href={`/assessment/${selectedChild.id}`}>
-                          {selectedChild.assessment_completed ? "Retake assessment" : "Start learning assessment"}
-                        </Link>
-                      </Button>
-                    )}
-                    <HolisticAssessmentPdfActions child={selectedChild} />
-                  </div>
-                </CardContent>
-              </Card>
-            ) : null}
 
             {selectedChild && selectedChild.assessment_completed && hasActiveSubscription && (
               <div className="mt-6 space-y-6">
@@ -1094,24 +871,6 @@ export default function ParentDashboardClient({
                     />
                   </CardContent>
                 </Card>
-
-                {/* Assessment Reports */}
-                {children.map((child) => (
-                  <Card key={child.id} className="border-0 shadow-sm rounded-2xl bg-white hover:shadow-md transition-shadow">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 tracking-tight">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center">
-                          <FileText className="w-4 h-4 text-white" />
-                        </div>
-                        {child.name}&apos;s learning assessment
-                      </CardTitle>
-                      <CardDescription>Holistic learning assessment report (PDF)</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <HolisticAssessmentPdfActions child={child} />
-                    </CardContent>
-                  </Card>
-                ))}
               </div>
             ) : (
               <Card className="border border-dashed border-slate-300 rounded-2xl bg-white">
