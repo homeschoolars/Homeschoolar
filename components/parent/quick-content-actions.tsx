@@ -28,7 +28,7 @@ export function QuickContentActions({
   const [subjectId, setSubjectId] = useState("")
   const [units, setUnits] = useState<Array<{ unitId: string; title: string; isCompleted: boolean; totalLessons: number; completedLessons: number }>>([])
   const [unitId, setUnitId] = useState("")
-  const [busy, setBusy] = useState<"worksheet" | "quiz" | "story" | null>(null)
+  const [busy, setBusy] = useState<"worksheet" | "quiz" | "activity" | null>(null)
   const [examBusy, setExamBusy] = useState(false)
   const [latestExam, setLatestExam] = useState<{
     id: string
@@ -116,9 +116,9 @@ export function QuickContentActions({
     }
   }
 
-  const generateStory = async () => {
+  const generateActivityPack = async () => {
     if (!subjectId || !unitId || !canGenerateForUnit) return
-    setBusy("story")
+    setBusy("activity")
     setMessage(null)
     try {
       const res = await apiFetch(`/api/parent/generate-content`, {
@@ -128,14 +128,14 @@ export function QuickContentActions({
           studentId: childId,
           subjectId,
           unitId,
-          contentType: "story",
+          contentType: "activity",
         }),
       })
       const payload = (await res.json()) as { error?: string }
-      if (!res.ok) throw new Error(payload.error ?? "Failed to generate story")
-      setMessage("Story generated and shared to student dashboard.")
+      if (!res.ok) throw new Error(payload.error ?? "Failed to generate activities")
+      setMessage("Activities generated and shared to student dashboard.")
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Failed to generate story")
+      setMessage(e instanceof Error ? e.message : "Failed to generate activities")
     } finally {
       setBusy(null)
     }
@@ -247,9 +247,9 @@ export function QuickContentActions({
             {busy === "quiz" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Generate Quiz
           </Button>
-          <Button variant="outline" onClick={generateStory} disabled={!subjectId || !unitId || !canGenerateForUnit || busy !== null}>
-            {busy === "story" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Generate Story
+          <Button variant="outline" onClick={generateActivityPack} disabled={!subjectId || !unitId || !canGenerateForUnit || busy !== null}>
+            {busy === "activity" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Generate activities
           </Button>
         </div>
         <div className="rounded-md border bg-slate-50 p-3">

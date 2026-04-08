@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { Document, Page, Text, View, StyleSheet, Image, Font } from "@react-pdf/renderer"
-import type { AdaptiveQuizOutput, AdaptiveWorksheetOutput } from "@/services/adaptive-ai-validation"
+import type { AdaptiveActivityOutput, AdaptiveQuizOutput, AdaptiveWorksheetOutput } from "@/services/adaptive-ai-validation"
 
 Font.register({
   family: "Nunito",
@@ -52,8 +52,9 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
     minHeight: 22,
   },
-  storyParagraph: { fontSize: 13, lineHeight: 1.65, marginBottom: 12, color: "#374151" },
-  storyTitle: { fontSize: 20, fontWeight: 700, color: "#5b21b6", marginBottom: 16, textAlign: "center" },
+  bodyText: { fontSize: 11, lineHeight: 1.55, marginBottom: 8, color: "#374151" },
+  activityTitle: { fontSize: 18, fontWeight: 700, color: "#5b21b6", marginBottom: 12, textAlign: "center" },
+  listItem: { fontSize: 10, lineHeight: 1.5, marginBottom: 4, marginLeft: 8, color: "#374151" },
   footer: {
     position: "absolute",
     bottom: 28,
@@ -244,24 +245,38 @@ export function AdaptiveQuizPDFDocument(props: {
   )
 }
 
-export function AdaptiveStoryPDFDocument(props: {
+export function AdaptiveActivityPDFDocument(props: {
   branding: PdfBrandingProps
   studentName: string
   subject: string
   lessonTitle: string
-  story: string
+  activity: AdaptiveActivityOutput
 }) {
-  const { branding, studentName, subject, lessonTitle, story } = props
-  const paragraphs = story.split(/\n+/).map((p) => p.trim()).filter(Boolean)
+  const { branding, studentName, subject, lessonTitle, activity } = props
   return (
     <Document>
-      <MetaPage branding={branding} studentName={studentName} subject={subject} lessonTitle={lessonTitle} contentLabel="Story">
-        <Text style={styles.storyTitle}>Lesson story</Text>
-        {paragraphs.map((p, i) => (
-          <Text key={i} style={styles.storyParagraph}>
-            {p}
+      <MetaPage branding={branding} studentName={studentName} subject={subject} lessonTitle={lessonTitle} contentLabel="Activity">
+        <Text style={styles.activityTitle}>{activity.title}</Text>
+        <Text style={styles.sectionTitle}>Objective</Text>
+        <Text style={styles.bodyText}>{activity.objective}</Text>
+        <Text style={styles.sectionTitle}>Materials</Text>
+        {activity.materials.map((m, i) => (
+          <Text key={`m-${i}`} style={styles.listItem}>
+            • {m}
           </Text>
         ))}
+        <Text style={styles.sectionTitle}>Steps</Text>
+        {activity.steps.map((s, i) => (
+          <Text key={`s-${i}`} style={styles.listItem}>
+            {i + 1}. {s}
+          </Text>
+        ))}
+        {activity.parentTip ? (
+          <>
+            <Text style={styles.sectionTitle}>Parent tip</Text>
+            <Text style={styles.bodyText}>{activity.parentTip}</Text>
+          </>
+        ) : null}
       </MetaPage>
     </Document>
   )

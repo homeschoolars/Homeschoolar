@@ -7,7 +7,7 @@ import type { AdaptiveContentType } from "@/services/adaptive-ai-validation"
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
-const ALLOWED: AdaptiveContentType[] = ["quiz", "worksheet", "story"]
+const ALLOWED: AdaptiveContentType[] = ["quiz", "worksheet", "activity"]
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     if (!lessonId || !childId || !contentType || !ALLOWED.includes(contentType)) {
       return NextResponse.json(
-        { error: "lessonId, childId, and contentType (quiz|worksheet|story) are required" },
+        { error: "lessonId, childId, and contentType (quiz|worksheet|activity) are required" },
         { status: 400 },
       )
     }

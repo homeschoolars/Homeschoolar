@@ -421,6 +421,7 @@ export interface CurriculumPath {
 
 export type CurriculumPromptType =
   | "story"
+  | "activity"
   | "worksheet"
   | "quiz"
   | "project"

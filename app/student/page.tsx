@@ -39,7 +39,7 @@ type SharedGeneratedItem = {
   unitId: string | null
   subjectName: string
   unitTitle: string
-  contentType: "quiz" | "worksheet" | "story"
+  contentType: "quiz" | "worksheet" | "activity"
   content: string
   contentJson?: unknown
   createdAt: string

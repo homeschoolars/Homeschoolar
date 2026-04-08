@@ -6,7 +6,7 @@ import { renderAdaptiveContentPdf } from "@/services/adaptive-pdf-render"
 import type { AdaptiveContentType } from "@/services/adaptive-ai-validation"
 
 /**
- * Build a branded PDF for cached adaptive content (quiz | worksheet | story).
+ * Build a branded PDF for cached adaptive content (quiz | worksheet | activity).
  * Enforces lesson access for the student before reading stored JSON.
  */
 export async function generatePDF(params: {

@@ -1280,6 +1280,7 @@ enum BlogPostStatus {
 
 enum CurriculumPromptType {
   story
+  activity
   worksheet
   quiz
   project

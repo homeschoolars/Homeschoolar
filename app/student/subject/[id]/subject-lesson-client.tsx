@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiFetch } from "@/lib/api-client"
 import { getSiteBranding } from "@/lib/site-branding"
 import { AdaptiveQuizPlayer, type AdaptiveQuizQuestion } from "@/components/learning/adaptive-quiz-player"
-import { AdaptiveStoryReader } from "@/components/learning/adaptive-story-reader"
+import { AdaptiveActivityViewer } from "@/components/learning/adaptive-activity-viewer"
 import { AdaptiveWorksheetViewer, type WorksheetViewModel } from "@/components/learning/adaptive-worksheet-viewer"
 
 type CurriculumLesson = {
@@ -60,7 +60,7 @@ type GeneratedState = {
   json?: unknown
 }
 
-type GenerationType = "story" | "worksheet" | "quiz" | "project" | "debate" | "research" | "reflection"
+type GenerationType = "activity" | "worksheet" | "quiz" | "project" | "debate" | "research" | "reflection"
 
 type WorksheetActivityStructured =
   | { type: "mcq"; question: string; options: string[]; correctAnswer: string }
@@ -165,10 +165,27 @@ function isAdaptiveQuizJson(json: unknown): json is { questions: AdaptiveQuizQue
   })
 }
 
+function isAdaptiveActivityJson(json: unknown): json is {
+  title: string
+  objective: string
+  materials: string[]
+  steps: string[]
+  parentTip: string | null
+} {
+  if (!json || typeof json !== "object") return false
+  const o = json as Record<string, unknown>
+  if (typeof o.title !== "string" || typeof o.objective !== "string") return false
+  if (!Array.isArray(o.materials) || !Array.isArray(o.steps)) return false
+  if (!o.materials.every((x) => typeof x === "string")) return false
+  if (!o.steps.every((x) => typeof x === "string")) return false
+  if (o.parentTip != null && typeof o.parentTip !== "string") return false
+  return true
+}
+
 function LessonPdfLinks(props: {
   lessonId: string | null
   childId: string | null
-  contentType: "quiz" | "worksheet" | "story"
+  contentType: "quiz" | "worksheet" | "activity"
 }) {
   const { lessonId, childId, contentType } = props
   if (!lessonId || !childId) return null
@@ -210,7 +227,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
   const [error, setError] = useState<string | null>(null)
   const [generatingType, setGeneratingType] = useState<GenerationType | null>(null)
   const [generatedContent, setGeneratedContent] = useState<Record<GenerationType, GeneratedState | null>>({
-    story: null,
+    activity: null,
     worksheet: null,
     quiz: null,
     project: null,
@@ -224,7 +241,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
       unitId: string | null
       subjectName: string
       unitTitle: string
-      contentType: "quiz" | "worksheet" | "story"
+      contentType: "quiz" | "worksheet" | "activity"
       content: string
       contentJson?: unknown
       createdAt: string
@@ -650,16 +667,13 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
     const childId = getStudentChildId()
     const lessonId = selectedLessonId
 
-    if (type === "story" && generated.json && typeof generated.json === "object" && "story" in generated.json) {
-      const story = (generated.json as { story?: string }).story
-      if (typeof story === "string" && story.trim()) {
-        return (
-          <div className="mt-2 space-y-2">
-            <AdaptiveStoryReader story={story} />
-            <LessonPdfLinks lessonId={lessonId} childId={childId} contentType="story" />
-          </div>
-        )
-      }
+    if (type === "activity" && isAdaptiveActivityJson(generated.json)) {
+      return (
+        <div className="mt-2 space-y-2">
+          <AdaptiveActivityViewer activity={generated.json} />
+          <LessonPdfLinks lessonId={lessonId} childId={childId} contentType="activity" />
+        </div>
+      )
     }
 
     if (type === "worksheet" && isWorksheetContent(generated.json)) {
@@ -938,7 +952,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                     <p className="mt-1 text-slate-700 capitalize">{lesson.difficultyLevel ?? "foundation"}</p>
                   </section>
                   <section>
-                    <h3 className="font-semibold text-violet-800">Story</h3>
+                    <h3 className="font-semibold text-violet-800">Reading context</h3>
                     <p className="mt-1 text-slate-700">{lesson.content.storyText}</p>
                   </section>
                   <section>
@@ -961,17 +975,17 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
               )}
 
               <p className="text-xs text-slate-500 pt-1">
-                Story, worksheet, and quiz are generated with AI once per lesson and saved for you. Use{" "}
+                Activity, worksheet, and quiz are generated with AI once per lesson and saved for you. Use{" "}
                 <span className="font-medium text-slate-700">New AI version</span> under a generated item to replace it with
                 fresh AI output.
               </p>
               <div className="flex flex-wrap gap-2 pt-2">
                 <Button
-                  onClick={() => handleGenerate("story")}
+                  onClick={() => handleGenerate("activity")}
                   disabled={disableStudentAi}
                 >
-                  {generatingType === "story" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Generate Story
+                  {generatingType === "activity" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Generate activity
                 </Button>
                 <Button
                   onClick={() => handleGenerate("worksheet")}
@@ -1059,7 +1073,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                 ) : null}
               </div>
 
-              {(generatedContent.story ||
+              {(generatedContent.activity ||
                 generatedContent.worksheet ||
                 generatedContent.quiz ||
                 generatedContent.project ||
@@ -1067,7 +1081,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                 generatedContent.research ||
                 generatedContent.reflection) && (
                 <div className="space-y-4 pt-2">
-                  {(["story", "worksheet", "quiz", "project", "debate", "research", "reflection"] as const).map((type) =>
+                  {(["activity", "worksheet", "quiz", "project", "debate", "research", "reflection"] as const).map((type) =>
                     generatedContent[type] ? (
                       <section key={type} className="rounded-lg border bg-amber-50 p-3">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -1108,7 +1122,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Generated Worksheets, Quizzes & Stories</CardTitle>
+            <CardTitle>Generated worksheets, quizzes & activities</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {sharedContent.filter((item) => item.subjectName.toLowerCase() === (subject?.name ?? "").toLowerCase()).length === 0 ? (

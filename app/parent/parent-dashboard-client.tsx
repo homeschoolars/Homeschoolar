@@ -706,7 +706,7 @@ export default function ParentDashboardClient({
                   <Card className="border border-dashed border-slate-300 rounded-2xl bg-white">
                     <CardContent className="p-6 text-center">
                       <p className="text-sm text-slate-500">
-                        Worksheet, quiz, and story generation for this child is available after subscription activation.
+                        Worksheet, quiz, and activity generation for this child is available after subscription activation.
                       </p>
                       <Button asChild className="mt-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 rounded-xl font-semibold">
                         <Link href="/parent/subscription">Unlock AI Generation</Link>

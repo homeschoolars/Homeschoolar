@@ -1,12 +1,17 @@
 import "server-only"
 import { renderToBuffer } from "@react-pdf/renderer"
 import {
+  AdaptiveActivityPDFDocument,
   AdaptiveQuizPDFDocument,
-  AdaptiveStoryPDFDocument,
   AdaptiveWorksheetPDFDocument,
   type PdfBrandingProps,
 } from "@/components/pdf/adaptive-content-pdf"
-import type { AdaptiveContentType, AdaptiveQuizOutput, AdaptiveWorksheetOutput } from "@/services/adaptive-ai-validation"
+import type {
+  AdaptiveActivityOutput,
+  AdaptiveContentType,
+  AdaptiveQuizOutput,
+  AdaptiveWorksheetOutput,
+} from "@/services/adaptive-ai-validation"
 
 export async function renderAdaptiveContentPdf(params: {
   branding: PdfBrandingProps
@@ -36,7 +41,7 @@ export async function renderAdaptiveContentPdf(params: {
     })
     return Buffer.from(await renderToBuffer(doc))
   }
-  const story = typeof (contentJson as { story?: unknown })?.story === "string" ? (contentJson as { story: string }).story : ""
-  const doc = AdaptiveStoryPDFDocument({ branding, studentName, subject, lessonTitle, story })
+  const activity = contentJson as AdaptiveActivityOutput
+  const doc = AdaptiveActivityPDFDocument({ branding, studentName, subject, lessonTitle, activity })
   return Buffer.from(await renderToBuffer(doc))
 }

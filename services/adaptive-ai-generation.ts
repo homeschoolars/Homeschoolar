@@ -102,11 +102,7 @@ async function loadContexts(studentId: string, lessonId: string): Promise<{ less
   return { lesson: lessonCtx, student: studentCtx }
 }
 
-function stringifyAdaptiveContent(contentType: AdaptiveContentType, data: unknown): string {
-  if (contentType === "story") {
-    const s = data as { story?: string }
-    return s.story ?? ""
-  }
+function stringifyAdaptiveContent(_contentType: AdaptiveContentType, data: unknown): string {
   return JSON.stringify(data, null, 2)
 }
 

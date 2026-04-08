@@ -18,15 +18,18 @@ export async function POST(
     const { lessonId } = await params
     const decoded = decodeURIComponent(lessonId)
     const body = await safeParseRequestJson(req, {} as {
-      type: "story" | "worksheet" | "quiz" | "project" | "debate" | "research" | "reflection"
+      type: "story" | "activity" | "worksheet" | "quiz" | "project" | "debate" | "research" | "reflection"
       sessionKey?: string
       childId?: string
     })
 
-    if (!body?.type || !["story", "worksheet", "quiz", "project", "debate", "research", "reflection"].includes(body.type)) {
+    if (
+      !body?.type ||
+      !["story", "activity", "worksheet", "quiz", "project", "debate", "research", "reflection"].includes(body.type)
+    ) {
       return NextResponse.json(
-        { error: "type must be one of story, worksheet, quiz, project, debate, research, reflection" },
-        { status: 400 }
+        { error: "type must be one of story, activity, worksheet, quiz, project, debate, research, reflection" },
+        { status: 400 },
       )
     }
 

@@ -56,13 +56,19 @@ export const adaptiveWorksheetOutputSchema = z.object({
 export type AdaptiveWorksheetOutput = z.infer<typeof adaptiveWorksheetOutputSchema>
 export type AdaptiveWorksheetActivity = AdaptiveWorksheetOutput["activities"][number]
 
-export const adaptiveStoryOutputSchema = z.object({
-  story: z.string().min(40),
+/** Hands-on lesson activity: objective, materials, ordered steps, optional parent tip. */
+export const adaptiveActivityOutputSchema = z.object({
+  title: z.string().min(1),
+  objective: z.string().min(1),
+  materials: z.array(z.string().min(1)).min(1).max(12),
+  steps: z.array(z.string().min(1)).min(3).max(10),
+  /** Present for structured output compatibility; use null when not needed. */
+  parentTip: z.string().nullable(),
 })
 
-export type AdaptiveStoryOutput = z.infer<typeof adaptiveStoryOutputSchema>
+export type AdaptiveActivityOutput = z.infer<typeof adaptiveActivityOutputSchema>
 
-export type AdaptiveContentType = "quiz" | "worksheet" | "story"
+export type AdaptiveContentType = "quiz" | "worksheet" | "activity"
 
 function countFillBlanks(prompt: string): number {
   return (prompt.match(/_{3,}/g) ?? []).length
@@ -119,7 +125,7 @@ export function validateAIOutput(
     }
     return { ok: true, data: r.data }
   }
-  const r = adaptiveStoryOutputSchema.safeParse(data)
+  const r = adaptiveActivityOutputSchema.safeParse(data)
   if (!r.success) return { ok: false, error: r.error.message }
   return { ok: true, data: r.data }
 }
@@ -127,5 +133,5 @@ export function validateAIOutput(
 export function getZodSchemaForAdaptiveType(contentType: AdaptiveContentType) {
   if (contentType === "quiz") return adaptiveQuizOutputSchema
   if (contentType === "worksheet") return adaptiveWorksheetOutputSchema
-  return adaptiveStoryOutputSchema
+  return adaptiveActivityOutputSchema
 }

@@ -12,7 +12,7 @@ export async function POST(req: Request) {
 
     const body = await safeParseRequestJson(req, {} as {
       lessonId: string
-      type: "story" | "worksheet" | "quiz" | "project" | "debate" | "research" | "reflection"
+      type: "story" | "activity" | "worksheet" | "quiz" | "project" | "debate" | "research" | "reflection"
       sessionKey?: string
     })
 

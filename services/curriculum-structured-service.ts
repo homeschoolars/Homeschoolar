@@ -4,6 +4,7 @@ import { z } from "zod"
 import type { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { openai, isOpenAIConfigured } from "@/lib/openai"
+import { adaptiveActivityOutputSchema } from "@/services/adaptive-ai-validation"
 
 const quizJsonSchema = z.object({
   questions: z
@@ -31,6 +32,7 @@ const genericContentJsonSchema = z.object({
 
 export type CurriculumPromptKind =
   | "story"
+  | "activity"
   | "worksheet"
   | "quiz"
   | "project"
@@ -38,7 +40,16 @@ export type CurriculumPromptKind =
   | "research"
   | "reflection"
 
-const VALID_PROMPT_TYPES: CurriculumPromptKind[] = ["story", "worksheet", "quiz", "project", "debate", "research", "reflection"]
+const VALID_PROMPT_TYPES: CurriculumPromptKind[] = [
+  "story",
+  "activity",
+  "worksheet",
+  "quiz",
+  "project",
+  "debate",
+  "research",
+  "reflection",
+]
 
 type CurriculumContentInput = {
   storyText: string
@@ -686,10 +697,14 @@ function getFallbackGeneratedContent(
     storyText: string
     worksheetExample: string
     quizConcept: string
-  }
+    activityInstructions: string
+  },
 ) {
   if (promptType === "story") {
     return staticContent.storyText
+  }
+  if (promptType === "activity") {
+    return staticContent.activityInstructions || `Hands-on activity for "${lessonTitle}".`
   }
   if (promptType === "worksheet") {
     return `Worksheet concept for "${lessonTitle}":\n\n${staticContent.worksheetExample}`
@@ -712,6 +727,7 @@ function getFallbackGeneratedContent(
 function getSchemaForType(type: CurriculumPromptKind) {
   if (type === "quiz") return quizJsonSchema
   if (type === "worksheet") return worksheetJsonSchema
+  if (type === "activity") return adaptiveActivityOutputSchema
   return genericContentJsonSchema
 }
 
@@ -745,6 +761,22 @@ function fallbackStructuredJson(
       activities: [a1, a2],
     }
   }
+  if (type === "activity") {
+    return {
+      title: `${lessonTitle}: hands-on activity`,
+      objective:
+        staticContent.activityInstructions ||
+        `Explore the main ideas from ${lessonTitle} through a short hands-on task.`,
+      materials: ["Paper and pencil", "Everyday items from the lesson", "Clear workspace"],
+      steps: [
+        "Read the lesson topic together.",
+        "Gather materials and set up a workspace.",
+        "Complete a concrete task tied to the lesson (draw, sort, measure, or build).",
+        "Talk through what you noticed and what you learned.",
+      ],
+      parentTip: staticContent.parentTip?.trim() ? staticContent.parentTip : null,
+    }
+  }
   return {
     title: `${lessonTitle} ${type}`,
     content: getFallbackGeneratedContent(type, lessonTitle, staticContent),
@@ -762,6 +794,24 @@ function stringifyContentJson(type: CurriculumPromptKind, contentJson: unknown) 
           `Q${index + 1}. ${q.question}\n${q.options.map((option, optionIndex) => `  ${String.fromCharCode(65 + optionIndex)}. ${option}`).join("\n")}\nAnswer: ${q.correctAnswer}`,
       )
       .join("\n\n")
+  }
+  if (type === "activity") {
+    const parsed = adaptiveActivityOutputSchema.safeParse(contentJson)
+    if (!parsed.success) return JSON.stringify(contentJson, null, 2)
+    const a = parsed.data
+    const lines = [
+      a.title,
+      "",
+      `Objective: ${a.objective}`,
+      "",
+      "Materials:",
+      ...a.materials.map((m) => `• ${m}`),
+      "",
+      "Steps:",
+      ...a.steps.map((s, i) => `${i + 1}. ${s}`),
+    ]
+    if (a.parentTip) lines.push("", `Parent tip: ${a.parentTip}`)
+    return lines.join("\n")
   }
   return JSON.stringify(contentJson, null, 2)
 }
@@ -802,13 +852,13 @@ export async function generateStructuredLessonAsset({
   /** When set, cache and prompts are scoped to this student. */
   studentId?: string | null
 }) {
-  const adaptiveKinds: CurriculumPromptKind[] = ["quiz", "worksheet", "story"]
+  const adaptiveKinds: CurriculumPromptKind[] = ["quiz", "worksheet", "activity"]
   if (studentId && adaptiveKinds.includes(contentType)) {
     const { generateAIContent } = await import("@/services/adaptive-ai-generation")
     return generateAIContent({
       studentId,
       lessonId,
-      contentType: contentType as "quiz" | "worksheet" | "story",
+      contentType: contentType as "quiz" | "worksheet" | "activity",
       forceRegenerate,
     })
   }
@@ -871,7 +921,9 @@ export async function generateStructuredLessonAsset({
       ? "\n\nYou must output exactly 10 multiple-choice questions with 4 options each."
       : contentType === "worksheet"
         ? "\n\nYou must output exactly 2 or 3 distinct activities in the activities array."
-        : ""
+        : contentType === "activity"
+          ? "\n\nYou must output JSON with title, objective, materials (array), steps (4–8 strings), and parentTip (string or null)."
+          : ""
 
   if (!isOpenAIConfigured()) {
     contentJson = fallbackStructuredJson(contentType, lesson.title, {

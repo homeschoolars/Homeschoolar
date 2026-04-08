@@ -122,14 +122,21 @@ RULES:
 
   return `${common}
 
-TASK: Generate a short story JSON with shape:
-{ "story": string }
+TASK: Generate a hands-on lesson activity as JSON with shape:
+{
+  "title": string,
+  "objective": string,
+  "materials": string[],
+  "steps": string[],
+  "parentTip": string | null
+}
 
 RULES:
-- Retell/explain the lesson ideas through a simple story the child can follow.
-- Use paragraph breaks: separate paragraphs with a single newline character (\\n) between them.
-- Length about 120–280 words unless age is very young (then shorter sentences, fewer words).
-- Include a gentle moral or takeaway tied to the lesson.
-- No JSON inside the story string; avoid double quotes inside the story (use single quotes if needed).
+- title: short, inviting (e.g. "Build a …", "Explore …").
+- objective: one clear learning goal tied to the lesson (1–3 sentences).
+- materials: 3–8 common household or classroom items (no expensive gear); be specific.
+- steps: 4–8 numbered-style instructions as separate strings (clear, safe, age-appropriate).
+- parentTip: one sentence for the adult helper, or null if not needed.
+- Activity should be doable in 15–35 minutes; prefer doing/making/observing over passive reading.
 `
 }

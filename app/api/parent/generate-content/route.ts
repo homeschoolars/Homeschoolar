@@ -12,15 +12,15 @@ export async function POST(request: Request) {
       studentId?: string
       subjectId?: string
       unitId?: string
-      contentType?: "quiz" | "worksheet" | "story"
+      contentType?: "quiz" | "worksheet" | "activity"
       forceRegenerate?: boolean
     }
 
     if (!body.studentId || !body.subjectId || !body.unitId || !body.contentType) {
       return fail("studentId, subjectId, unitId and contentType are required", 400)
     }
-    if (!["quiz", "worksheet", "story"].includes(body.contentType)) {
-      return fail("contentType must be quiz, worksheet, or story", 400)
+    if (!["quiz", "worksheet", "activity"].includes(body.contentType)) {
+      return fail("contentType must be quiz, worksheet, or activity", 400)
     }
 
     const session = await auth()
