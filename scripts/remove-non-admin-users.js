@@ -7,6 +7,10 @@
  * Usage:
  *   node -r dotenv/config scripts/remove-non-admin-users.js --dry-run
  *   node -r dotenv/config scripts/remove-non-admin-users.js --force   # skip 5s countdown
+ *
+ * If your database has no row with role=admin, the script used to exit without deleting
+ * (typical when everyone is "parent"). To delete those accounts anyway:
+ *   node -r dotenv/config scripts/remove-non-admin-users.js --allow-no-admin --force
  */
 
 const path = require("path")
@@ -22,14 +26,27 @@ const { deleteUsersTransaction } = require("./lib/delete-users-core")
 
 const prisma = new PrismaClient()
 
+function redactedDbHint() {
+  const url = process.env.DATABASE_URL || ""
+  try {
+    const u = new URL(url.replace(/^postgresql:\/\//, "postgres://"))
+    return `${u.hostname}${u.pathname ? u.pathname.split("?")[0] : ""}`
+  } catch {
+    return url ? "(set; could not parse URL)" : "(DATABASE_URL not set)"
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2)
   const isDryRun = args.includes("--dry-run") || args.includes("-d")
   const force = args.includes("--force") || args.includes("-y")
+  const allowNoAdmin =
+    args.includes("--allow-no-admin") || args.includes("--allow-no-admin-users")
 
   console.log("=".repeat(60))
   console.log("Remove non-admin users (full data wipe for those accounts)")
   console.log("=".repeat(60))
+  console.log(`Database (host/path): ${redactedDbHint()}`)
   console.log()
 
   try {
@@ -39,15 +56,23 @@ async function main() {
     })
 
     if (adminUsers.length === 0) {
-      console.error("Refusing to run: no users with role=admin found. Promote an admin first.")
-      process.exit(1)
+      if (!allowNoAdmin) {
+        console.error("Refusing to run: no users with role=admin found.")
+        console.error("  Parent-only databases look like this — nothing would be \"preserved\".")
+        console.error("  Re-run with --allow-no-admin to delete every non-admin row (all parent/student users).")
+        process.exit(1)
+      }
+      console.warn("WARNING: No role=admin users. --allow-no-admin: will delete ALL users (every account).")
+      console.warn()
     }
 
-    console.log(`Preserving ${adminUsers.length} admin user(s):`)
-    adminUsers.forEach((u) => {
-      console.log(`  - ${u.email} (${u.name || "No name"})${u.adminRole ? ` [${u.adminRole}]` : ""}`)
-    })
-    console.log()
+    if (adminUsers.length > 0) {
+      console.log(`Preserving ${adminUsers.length} admin user(s):`)
+      adminUsers.forEach((u) => {
+        console.log(`  - ${u.email} (${u.name || "No name"})${u.adminRole ? ` [${u.adminRole}]` : ""}`)
+      })
+      console.log()
+    }
 
     const nonAdminUsers = await prisma.user.findMany({
       where: { role: { not: "admin" } },
