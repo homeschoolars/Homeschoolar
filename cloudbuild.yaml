@@ -1,3 +1,14 @@
+# Build image, then deploy with a startup probe that allows Next.js to boot.
+# Cloud Run requires failureThreshold × periodSeconds ≤ 240 (e.g. 24 × 10s = 240s).
+# Your revision used failureThreshold: 1 — the first failed TCP check aborted startup.
+#
+# Console-only fix: edit the service → YAML → startupProbe:
+#   periodSeconds: 10
+#   timeoutSeconds: 10
+#   failureThreshold: 24
+#   httpGet:
+#     path: /api/ready
+#     port: 8080
 steps:
   - name: gcr.io/kaniko-project/executor:latest
     args:
@@ -7,5 +18,23 @@ steps:
       - --cache-ttl=6h
       - --dockerfile=Dockerfile
       - --context=.
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        gcloud run deploy homeschoolar \
+          --project="$PROJECT_ID" \
+          --region=europe-west1 \
+          --image="europe-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/homeschoolar/homeschoolar:$COMMIT_SHA" \
+          --platform=managed \
+          --allow-unauthenticated \
+          --memory=1Gi \
+          --cpu=1 \
+          --cpu-boost \
+          --startup-probe=initialDelaySeconds=0,timeoutSeconds=10,periodSeconds=10,failureThreshold=24,httpGet.path=/api/ready,httpGet.port=8080 \
+          --quiet
+
 options:
   logging: CLOUD_LOGGING_ONLY
