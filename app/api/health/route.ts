@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
-import { Prisma } from "@prisma/client"
-import { getOpenAIConfigStatus } from "@/lib/openai-config"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
+
+/** Avoid top-level `import "@prisma/client"` here — loading the Prisma engine during module init can throw in standalone Docker before GET runs (generic HTML 500). */
 
 function sanitizeMessage(message: string): string {
   return message
@@ -13,76 +13,69 @@ function sanitizeMessage(message: string): string {
 }
 
 function dbErrorDetail(err: unknown): string {
-  if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    return sanitizeMessage(`${err.code}: ${err.message}`)
-  }
-  if (err instanceof Prisma.PrismaClientInitializationError) {
-    return sanitizeMessage(err.message)
-  }
   if (err instanceof Error) {
     return sanitizeMessage(err.message)
   }
+  if (typeof err === "object" && err !== null && "message" in err) {
+    return sanitizeMessage(String((err as { message: unknown }).message))
+  }
   return sanitizeMessage(String(err))
+}
+
+async function openaiFields() {
+  try {
+    const { getOpenAIConfigStatus } = await import("@/lib/openai-config")
+    const openai_status = getOpenAIConfigStatus()
+    return {
+      openai_status,
+      openai_configured: openai_status === "ok",
+    }
+  } catch (e) {
+    console.error("[health] openai status failed", e)
+    return { openai_status: "error" as const, openai_configured: false }
+  }
 }
 
 export async function GET(): Promise<Response> {
   try {
     const databaseUrlConfigured = Boolean(process.env.DATABASE_URL?.trim())
-
-    const body: Record<string, unknown> = {
-      ok: false,
-      database_url_configured: databaseUrlConfigured,
-      db: "unknown",
-      openai_configured: false,
-      openai_status: "missing" as const,
-    }
+    const openai = await openaiFields()
 
     if (!databaseUrlConfigured) {
-      body.db = "error"
-      body.db_detail = "DATABASE_URL is not set on this service."
-      try {
-        body.openai_status = getOpenAIConfigStatus()
-        body.openai_configured = body.openai_status === "ok"
-      } catch (e) {
-        console.error("[health] openai status failed", e)
-        body.openai_status = "error"
-      }
-      return NextResponse.json(body, { status: 503 })
+      return NextResponse.json(
+        {
+          ok: false,
+          database_url_configured: false,
+          db: "error",
+          db_detail: "DATABASE_URL is not set on this service.",
+          ...openai,
+        },
+        { status: 503 },
+      )
     }
 
     const { prisma } = await import("@/lib/prisma")
     await prisma.$queryRaw`SELECT 1`
 
-    body.ok = true
-    body.db = "connected"
-    try {
-      const openai = getOpenAIConfigStatus()
-      body.openai_status = openai
-      body.openai_configured = openai === "ok"
-    } catch (e) {
-      console.error("[health] openai status failed", e)
-      body.openai_status = "error"
-    }
-
-    return NextResponse.json(body, { status: 200 })
+    return NextResponse.json(
+      {
+        ok: true,
+        database_url_configured: true,
+        db: "connected",
+        ...openai,
+      },
+      { status: 200 },
+    )
   } catch (error) {
     console.error("[health] check failed", error)
-
-    let openai_status: ReturnType<typeof getOpenAIConfigStatus> | "error" = "missing"
-    try {
-      openai_status = getOpenAIConfigStatus()
-    } catch {
-      openai_status = "error"
-    }
-
+    const openai = await openaiFields()
     return NextResponse.json(
       {
         ok: false,
         database_url_configured: Boolean(process.env.DATABASE_URL?.trim()),
         db: "error",
         db_detail: dbErrorDetail(error),
-        openai_configured: openai_status === "ok",
-        openai_status,
+        ...openai,
       },
       { status: 503 },
     )
