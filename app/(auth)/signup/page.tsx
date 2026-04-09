@@ -112,6 +112,17 @@ export default function SignupPage() {
     return base
   }, [parent, orphanDocFile])
 
+  /** Server only accepts children aged 4–13 (deriveAgeGroup); block submit early with a clear message. */
+  const childrenAgeEligible = useMemo(() => {
+    return children.every((child) => {
+      if (!child.dateOfBirth.trim()) return false
+      const dob = new Date(child.dateOfBirth)
+      if (Number.isNaN(dob.getTime())) return false
+      const years = calculateAgeYears(dob)
+      return deriveAgeGroup(years) !== null
+    })
+  }, [children])
+
   const handleAddChild = () => {
     setChildren((prev) => [...prev, { ...defaultChild }])
   }
@@ -152,6 +163,13 @@ export default function SignupPage() {
 
     if (children.some((child) => child.learningStyles.length === 0 || child.learnsBetterWith.length === 0)) {
       setError("Please select learning styles and learning preferences for each child.")
+      return
+    }
+
+    if (!childrenAgeEligible) {
+      setError(
+        "Each child must be between 4 and 13 years old. Please fix the date of birth — younger or older ages cannot register here.",
+      )
       return
     }
 
@@ -501,8 +519,16 @@ export default function SignupPage() {
                                 required
                               />
                               {ageYears !== null && (
-                                <p className="text-xs text-purple-600">
-                                  Age {ageYears} {ageGroup ? `• Group ${ageGroup}` : ""}
+                                <p
+                                  className={
+                                    ageGroup
+                                      ? "text-xs text-purple-600"
+                                      : "text-xs font-medium text-red-600"
+                                  }
+                                >
+                                  {ageGroup
+                                    ? `Age ${ageYears} • Group ${ageGroup}`
+                                    : `Age ${ageYears} — programs are only for children aged 4–13. Change the date of birth.`}
                                 </p>
                               )}
                             </div>
@@ -697,7 +723,7 @@ export default function SignupPage() {
                     </Button>
                     <Button
                       type="submit"
-                      disabled={isLoading}
+                      disabled={isLoading || !childrenAgeEligible}
                       className="bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 text-white font-semibold"
                     >
                       {isLoading ? (
