@@ -14,7 +14,10 @@ COPY . .
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm build \
-  && rm -rf .next/cache
+  && rm -rf .next/cache \
+  && mkdir -p .next/standalone/node_modules \
+  && cp -rL node_modules/.prisma .next/standalone/node_modules/.prisma \
+  && cp -rL node_modules/@prisma/client .next/standalone/node_modules/@prisma/client
 
 FROM node:20-bookworm-slim AS runner
 WORKDIR /app
