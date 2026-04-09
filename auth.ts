@@ -1,23 +1,12 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
-import { PrismaAdapter } from "@auth/prisma-adapter"
-import { getPrisma } from "@/lib/prisma"
 import { findUserByEmail, verifyPassword } from "@/services/auth-service"
 
-const isBuildTime =
-  process.env.NEXT_PHASE === "phase-production-build" ||
-  process.env.NEXT_PHASE === "phase-development-build"
-
-const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim())
-
-// Build: no adapter. Runtime: only attach Prisma when DATABASE_URL is set — otherwise
-// getPrisma() throws at module load and the Node process exits before Next listens on PORT
-// (Cloud Run: "failed to start and listen on the port ... PORT=8080").
-const adapter =
-  isBuildTime || !hasDatabaseUrl ? undefined : PrismaAdapter(getPrisma())
+// JWT sessions + Credentials only: no database adapter (Auth.js does not require one in this setup).
+// Avoids PrismaAdapter(getPrisma()) at module load, which could initialize the Prisma engine before
+// Next binds PORT and makes Cloud Run report "failed to start and listen on PORT=8080".
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter,
   /** Required on Cloud Run / Docker where Auth.js cannot infer a trusted host from platform env. */
   trustHost: true,
   session: { strategy: "jwt" },
