@@ -9,7 +9,20 @@ const parentSchema = z.object({
   full_name: z.string().min(1),
   relationship: z.enum(["father", "mother", "guardian", "other"]),
   email: z.string().email(),
-  phone: z.string().min(6).optional().nullable(),
+  // Optional: empty / whitespace counts as "not provided". If user enters a number, require min length.
+  phone: z
+    .string()
+    .max(50)
+    .optional()
+    .nullable()
+    .transform((s) => {
+      if (s == null || s === undefined) return null
+      const t = s.trim()
+      return t.length === 0 ? null : t
+    })
+    .refine((s) => s === null || s.length >= 6, {
+      message: "Phone must be at least 6 characters or leave blank",
+    }),
   country: z.string().min(1),
   timezone: z.string().min(1),
   password: z.string().min(6),
@@ -135,6 +148,14 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ userId: user.id, email: body.parent.email })
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      const issue = error.issues[0]
+      const path = issue.path.length ? `${issue.path.join(".")}: ` : ""
+      return NextResponse.json(
+        { error: `${path}${issue.message}` },
+        { status: 400 },
+      )
+    }
     const message = error instanceof Error ? error.message : "Failed to sign up"
     return NextResponse.json({ error: message }, { status: 400 })
   }

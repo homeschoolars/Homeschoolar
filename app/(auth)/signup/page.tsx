@@ -195,7 +195,11 @@ export default function SignupPage() {
             full_name: parent.fullName,
             relationship: parent.relationship,
             email: parent.email,
-            phone: parent.phone || null,
+            // Short partial numbers fail server validation; omit unless long enough.
+            phone: (() => {
+              const t = parent.phone.trim()
+              return t.length >= 6 ? t : null
+            })(),
             country: parent.country,
             timezone: parent.timezone,
             password: parent.password,
@@ -221,7 +225,17 @@ export default function SignupPage() {
           })),
         }),
       })
-      const data = await response.json()
+      const text = await response.text()
+      let data: { error?: string; email?: string }
+      try {
+        data = text ? (JSON.parse(text) as typeof data) : {}
+      } catch {
+        throw new Error(
+          response.ok
+            ? "Invalid response from server"
+            : `Sign up failed (${response.status}). Try again or contact support.`,
+        )
+      }
       if (!response.ok) {
         throw new Error(data.error || "Registration failed")
       }
