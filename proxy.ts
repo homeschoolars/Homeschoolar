@@ -1,20 +1,16 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { getToken } from "next-auth/jwt"
+
+const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
 
 /**
- * Next.js Proxy for blocking bot/scanner traffic
- * 
- * This proxy runs before all requests and blocks:
- * - WordPress scanner probes (/wp-admin/*, /wp-includes/*, etc.)
- * - Common vulnerability scanners (.env, .git, phpmyadmin, etc.)
- * - Bot traffic patterns
- * 
- * Returns 404 immediately without processing to reduce log noise and server load.
+ * Next.js Proxy: bot/scanner blocking + session-based redirects (onboarding, role).
+ * API and static assets are excluded via matcher.
  */
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Block common WordPress scanner paths - return 404 immediately without processing
   const wordPressPaths = [
     /^\/wp-admin/,
     /^\/wp-includes/,
@@ -41,7 +37,6 @@ export function proxy(request: NextRequest) {
     /^\/wp-json\/wp\/v2\/users/,
   ]
 
-  // Check if the path matches any WordPress scanner pattern
   if (wordPressPaths.some((pattern) => pattern.test(pathname))) {
     return new NextResponse(null, {
       status: 404,
@@ -52,7 +47,6 @@ export function proxy(request: NextRequest) {
     })
   }
 
-  // Block other common scanner/bot paths
   const scannerPaths = [
     /^\/\.env/,
     /^\/\.git/,
@@ -82,7 +76,6 @@ export function proxy(request: NextRequest) {
     })
   }
 
-  // Block common bot user agents (optional - can be aggressive)
   const userAgent = request.headers.get("user-agent")?.toLowerCase() || ""
   const botPatterns = [
     /^curl\//i,
@@ -96,12 +89,10 @@ export function proxy(request: NextRequest) {
     /^spider/i,
   ]
 
-  // Only block bots on non-API routes to avoid false positives
   if (!pathname.startsWith("/api/") && botPatterns.some((pattern) => pattern.test(userAgent))) {
-    // Allow legitimate bots (Google, Bing, etc.) but block scanners
     const allowedBots = ["googlebot", "bingbot", "slurp", "duckduckbot", "baiduspider", "yandexbot"]
     const isAllowedBot = allowedBots.some((bot) => userAgent.includes(bot))
-    
+
     if (!isAllowedBot) {
       return new NextResponse(null, {
         status: 403,
@@ -113,21 +104,49 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  // Continue with normal request processing
+  if (
+    pathname.startsWith("/_next/") ||
+    pathname.startsWith("/favicon") ||
+    /\.(ico|png|jpg|jpeg|svg|webp|gif|woff2?)$/i.test(pathname)
+  ) {
+    return NextResponse.next()
+  }
+
+  if (!secret) {
+    return NextResponse.next()
+  }
+
+  const token = await getToken({ req: request, secret })
+  if (!token) {
+    return NextResponse.next()
+  }
+
+  const role = token.role as string | undefined
+  const onboardingComplete = token.onboardingComplete as boolean | null | undefined
+
+  if (role === "admin") {
+    return NextResponse.next()
+  }
+
+  if (role === "student" && pathname.startsWith("/parent/children/")) {
+    return NextResponse.redirect(new URL("/student", request.url))
+  }
+
+  if (role === "parent" && onboardingComplete === false) {
+    if (!pathname.startsWith("/register") && pathname !== "/login" && pathname !== "/signup") {
+      return NextResponse.redirect(new URL("/register", request.url))
+    }
+  }
+
+  if (pathname.startsWith("/register") && role === "parent" && onboardingComplete !== false) {
+    return NextResponse.redirect(new URL("/parent/dashboard", request.url))
+  }
+
   return NextResponse.next()
 }
 
-// Configure which routes this proxy should run on
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes - we want to process these)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public files (public folder)
-     */
     "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)).*)",
   ],
 }
