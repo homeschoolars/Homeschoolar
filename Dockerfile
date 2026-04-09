@@ -14,8 +14,7 @@ COPY . .
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm build \
-  && rm -rf .next/cache \
-  && pnpm prune --prod
+  && rm -rf .next/cache
 
 FROM node:20-bookworm-slim AS runner
 WORKDIR /app
