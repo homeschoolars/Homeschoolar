@@ -2,24 +2,22 @@
 set -e
 cd /app
 
-# Cloud Run injects PORT (default 8080). Next.js also reads PORT via the CLI; we pass -p explicitly.
+# Cloud Run injects PORT (default 8080).
 PORT="${PORT:-8080}"
 export PORT
 export TMPDIR="${TMPDIR:-/tmp}"
 
-# pnpm's node_modules/.bin/next is a shell shim that can embed NODE_PATH from the build machine;
-# run Next's CLI with node directly to avoid a broken shim blocking startup.
+# Cloud Run sets HOSTNAME to the revision/instance id. The standalone server uses HOSTNAME for
+# listen(); a non-DNS name causes getaddrinfo ENOTFOUND and the process never binds PORT (TCP
+# health checks fail). Force the bind address for the Node child process.
+export HOSTNAME=0.0.0.0
+
 unset NODE_PATH
 
-# Cloud Run sets HOSTNAME to the instance id; some stacks treat HOSTNAME as the bind address.
-unset HOSTNAME
-
-NEXT_CLI="./node_modules/next/dist/bin/next"
-if [ ! -f "$NEXT_CLI" ]; then
-  echo "[entrypoint] ERROR: $NEXT_CLI missing — image build or copy may be wrong."
+if [ ! -f ./server.js ]; then
+  echo "[entrypoint] ERROR: ./server.js missing — build with output: \"standalone\" and copy .next/standalone (see Dockerfile)."
   exit 1
 fi
 
-# Bind 0.0.0.0 so platform health checks can reach the process (not localhost-only).
-echo "[entrypoint] node $(node -v) next start PORT=${PORT} cwd=$(pwd)"
-exec node "$NEXT_CLI" start -p "$PORT" -H 0.0.0.0
+echo "[entrypoint] standalone node $(node -v) PORT=${PORT} HOSTNAME=${HOSTNAME} pwd=$(pwd)"
+exec node server.js

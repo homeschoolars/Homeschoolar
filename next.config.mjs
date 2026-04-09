@@ -1,7 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Docker/Cloud Run uses `next start` + full node_modules (see Dockerfile). Do not use
-  // output: 'standalone' — Next 16 standalone repeatedly failed to open PORT on Cloud Run.
+  // Standalone output for Docker/Cloud Run — run `node server.js` (see Dockerfile + docker-entrypoint).
+  // Cloud Run sets HOSTNAME to a revision id; standalone uses it for listen() unless entrypoint sets 0.0.0.0.
+  output: "standalone",
+  outputFileTracingIncludes: {
+    // Prisma query engine + generated client are not always picked up by file tracing.
+    "/**": ["./node_modules/.prisma/**/*", "./node_modules/@prisma/client/**/*"],
+  },
   typescript: {
     // Only ignore build errors in development for faster iteration
     // In production, errors should be fixed

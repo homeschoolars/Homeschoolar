@@ -31,8 +31,10 @@ RUN apt-get update -y \
 COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Full tree + production node_modules — `next start` (see entrypoint). Standalone was failing on Cloud Run.
-COPY --from=builder --chown=nodejs:nodejs /app /app
+# Standalone trace (next.config output: "standalone") — smaller runtime tree than full node_modules.
+COPY --from=builder --chown=nodejs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nodejs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nodejs:nodejs /app/public ./public
 
 RUN rm -f /app/.env /app/.env.local /app/.env.production /app/.env.development 2>/dev/null || true
 
