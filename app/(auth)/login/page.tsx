@@ -37,6 +37,15 @@ function LoginContent() {
       setError("Verification link expired or invalid. Enter your email and use “Resend verification” below.")
       setNeedsVerification(true)
     }
+    if (err === "CredentialsSignin") {
+      setError("Invalid email or password.")
+    }
+    if (err === "Configuration") {
+      setError("Sign-in is not configured correctly on the server. If this persists, contact support.")
+    }
+    if (err === "AccessDenied") {
+      setError("Access was denied. Try again or use a different account.")
+    }
   }, [searchParams])
 
   const handleParentLogin = async (e: React.FormEvent) => {
@@ -111,7 +120,16 @@ function LoginContent() {
         body: JSON.stringify({ loginCode: studentCode.toUpperCase().trim() }),
       })
 
-      const data = await response.json()
+      const raw = await response.text()
+      let data: { error?: string; success?: boolean; child?: unknown }
+      try {
+        data = raw ? (JSON.parse(raw) as typeof data) : {}
+      } catch {
+        setError(
+          "The server returned an unexpected response. If you manage this deployment, verify AUTH_SECRET and DATABASE_URL on Cloud Run.",
+        )
+        return
+      }
 
       if (!response.ok) {
         throw new Error(data.error || "Invalid student code")

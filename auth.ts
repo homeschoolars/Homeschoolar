@@ -2,11 +2,14 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { findUserByEmail, verifyPassword } from "@/services/auth-service"
 
+const authSecret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
+
 // JWT sessions + Credentials only: no database adapter (Auth.js does not require one in this setup).
 // Avoids PrismaAdapter(getPrisma()) at module load, which could initialize the Prisma engine before
 // Next binds PORT and makes Cloud Run report "failed to start and listen on PORT=8080".
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: authSecret,
   /** Required on Cloud Run / Docker where Auth.js cannot infer a trusted host from platform env. */
   trustHost: true,
   session: { strategy: "jwt" },
