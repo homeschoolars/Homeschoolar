@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { toCurriculumAgeGroupName } from "@/lib/age-group"
 
 /** Ensures `students.curriculum_age_group_id` matches the Prisma `age_group` enum name (e.g. AGE_8_9). */
 export async function ensureStudentCurriculumAgeGroupLink(studentId: string): Promise<void> {
@@ -8,7 +9,7 @@ export async function ensureStudentCurriculumAgeGroupLink(studentId: string): Pr
   })
   if (!child) return
   const ag = await prisma.curriculumAgeGroup.findUnique({
-    where: { name: child.ageGroup },
+    where: { name: toCurriculumAgeGroupName(child.ageGroup) },
     select: { id: true },
   })
   if (ag && child.curriculumAgeGroupId !== ag.id) {

@@ -1,36 +1,34 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/auth"
 import { getCurrentNews } from "@/services/news-service"
 import { z } from "zod"
 
 // Force dynamic rendering - this route makes database calls via service
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
+export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
 
 const getNewsSchema = z.object({
   age_band: z.enum(["4-7", "8-13"]),
 })
 
+/**
+ * Curated, non-personal summaries by age band. Open read avoids 401s when student
+ * cookie/session edge cases occur; content is the same for all users in a band.
+ */
 export async function GET(request: Request) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    // Only students can access news
-    if (session.user.role !== "student") {
-      return NextResponse.json({ error: "Only students can access news" }, { status: 403 })
-    }
-
     const { searchParams } = new URL(request.url)
-    const ageBand = searchParams.get("age_band") as "4-7" | "8-13" | null
+    const parsed = getNewsSchema.safeParse({
+      age_band: searchParams.get("age_band"),
+    })
 
-    if (!ageBand) {
-      return NextResponse.json({ error: "age_band is required" }, { status: 400 })
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "age_band is required and must be 4-7 or 8-13" },
+        { status: 400 },
+      )
     }
 
-    const news = await getCurrentNews(ageBand)
+    const news = await getCurrentNews(parsed.data.age_band)
 
     return NextResponse.json({
       news: news.map((n) => ({

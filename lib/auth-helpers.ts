@@ -52,7 +52,7 @@ export async function enforceParentChildAccess(childId: string, session: Session
   }
 }
 
-function readCookie(request: Request, cookieName: string) {
+export function readRequestCookie(request: Request, cookieName: string) {
   const cookieHeader = request.headers.get("cookie")
   if (!cookieHeader) return null
   const chunks = cookieHeader.split(";")
@@ -79,7 +79,7 @@ export async function enforceParentOrStudentChildAccess({
     return
   }
 
-  const token = readCookie(request, STUDENT_SESSION_COOKIE)
+  const token = readRequestCookie(request, STUDENT_SESSION_COOKIE)
   if (!token) {
     throw new Error("Unauthorized")
   }

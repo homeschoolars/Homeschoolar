@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -167,6 +167,9 @@ export function SurpriseQuizModal({ quiz, ageGroup, onComplete, onClose }: Surpr
     return (
       <Dialog open onOpenChange={onClose}>
         <DialogContent className="max-w-md">
+          <DialogDescription className="sr-only">
+            Your surprise quiz results and encouragement message.
+          </DialogDescription>
           <div className="mb-2 flex justify-center">
             <Image src="/homeschoolars-logo-v2.png" alt="HomeSchoolar logo" width={120} height={40} className="h-9 w-auto" />
           </div>
@@ -220,6 +223,9 @@ export function SurpriseQuizModal({ quiz, ageGroup, onComplete, onClose }: Surpr
   return (
     <Dialog open onOpenChange={() => {}}>
       <DialogContent className="max-w-lg" onPointerDownOutside={(e) => e.preventDefault()}>
+        <DialogDescription className="sr-only">
+          Timed surprise quiz. Select an answer for each question before time runs out.
+        </DialogDescription>
         <div className="mb-2 flex justify-center">
           <Image src="/homeschoolars-logo-v2.png" alt="HomeSchoolar logo" width={120} height={40} className="h-9 w-auto" />
         </div>

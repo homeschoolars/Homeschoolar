@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { calculateAgeYears, deriveAgeGroup } from "@/lib/onboarding-utils"
-import { toPrismaAgeGroup } from "@/lib/age-group"
+import { toPrismaAgeGroup, toCurriculumAgeGroupName } from "@/lib/age-group"
 
 /** Keeps `Child.ageGroup` aligned with date of birth as birthdays pass. */
 export async function syncChildAgeGroupFromProfile(childId: string): Promise<void> {
@@ -15,7 +15,7 @@ export async function syncChildAgeGroupFromProfile(childId: string): Promise<voi
   const next = toPrismaAgeGroup(api)
   if (next !== row.ageGroup) {
     const ag = await prisma.curriculumAgeGroup.findUnique({
-      where: { name: next },
+      where: { name: toCurriculumAgeGroupName(next) },
       select: { id: true },
     })
     await prisma.child.update({

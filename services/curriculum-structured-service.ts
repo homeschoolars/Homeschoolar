@@ -3,6 +3,7 @@ import { generateObject } from "ai"
 import { z } from "zod"
 import type { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
+import { toCurriculumAgeGroupName } from "@/lib/age-group"
 import { openai, isOpenAIConfigured } from "@/lib/openai"
 import { adaptiveActivityOutputSchema } from "@/services/adaptive-ai-validation"
 
@@ -124,6 +125,8 @@ function tokenizeName(value: string) {
 const SUBJECT_ALIASES: Record<string, string[]> = {
   mathematics: ["math", "mathematics", "numeracy", "numbers", "algebra", "geometry"],
   "art creativity": ["art", "creative", "creativity", "craft", "drawing", "music"],
+  // normalizeName turns "&" into "and"
+  "art and creativity": ["art", "creative", "creativity", "craft", "drawing", "music"],
   "physical education": ["physical", "education", "sports", "fitness", "movement", "pe", "health"],
   "financial literacy": ["financial", "finance", "money", "budget", "entrepreneurship", "business"],
   "life skills": ["life", "skills", "self", "development", "manners", "etiquettes", "communication"],
@@ -147,7 +150,11 @@ function scoreSubjectNameMatch(baseName: string, candidateName: string) {
     if (candidateTokens.has(token)) overlapScore += 15
   }
 
-  const aliasTokens = SUBJECT_ALIASES[normalizedBase]?.map((item) => normalizeName(item)) ?? []
+  const aliasEntry =
+    SUBJECT_ALIASES[normalizedBase] ??
+    SUBJECT_ALIASES[normalizedBase.replace(/\band\b/g, "").replace(/\s+/g, " ").trim()] ??
+    []
+  const aliasTokens = aliasEntry.map((item) => normalizeName(item))
   let aliasScore = 0
   for (const alias of aliasTokens) {
     if (!alias) continue
@@ -331,8 +338,9 @@ export async function importCurriculumForAgeGroup(params: {
 }
 
 export async function getCurriculumByAgeGroup(ageGroup: string) {
+  const name = toCurriculumAgeGroupName(ageGroup)
   return prisma.curriculumAgeGroup.findUnique({
-    where: { name: ageGroup },
+    where: { name },
     include: {
       subjects: {
         orderBy: { displayOrder: "asc" },
@@ -352,8 +360,9 @@ export async function getCurriculumByAgeGroup(ageGroup: string) {
 }
 
 export async function listCurriculumSubjects(ageGroup: string) {
+  const name = toCurriculumAgeGroupName(ageGroup)
   const age = await prisma.curriculumAgeGroup.findUnique({
-    where: { name: ageGroup },
+    where: { name },
     select: { id: true },
   })
   if (!age) return null
@@ -376,8 +385,9 @@ export async function getCurriculumSubject({
   ageGroup: string
   subjectId: string
 }) {
+  const name = toCurriculumAgeGroupName(ageGroup)
   const age = await prisma.curriculumAgeGroup.findUnique({
-    where: { name: ageGroup },
+    where: { name },
     select: { id: true },
   })
   if (!age) return null
@@ -450,7 +460,7 @@ export async function getCurriculumSubject({
     .sort((a, b) => b.score - a.score)
 
   // Require a minimum confidence to avoid routing to unrelated subjects.
-  if ((ranked[0]?.score ?? 0) < 18) return null
+  if ((ranked[0]?.score ?? 0) < 14) return null
   return ranked[0].subject
 }
 
@@ -528,7 +538,7 @@ export async function createCurriculumSubject(input: {
   baseSubjectId?: string | null
 }) {
   const age = await prisma.curriculumAgeGroup.findUnique({
-    where: { name: input.ageGroup },
+    where: { name: toCurriculumAgeGroupName(input.ageGroup) },
     select: { id: true },
   })
   if (!age) throw new Error("Age group not found")

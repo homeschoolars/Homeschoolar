@@ -4,6 +4,7 @@ import { enforceParentOrStudentChildAccess } from "@/lib/auth-helpers"
 import { ensureStudentCurriculumAgeGroupLink } from "@/lib/student-curriculum-link"
 import { prisma } from "@/lib/prisma"
 import { listCurriculumSubjects } from "@/services/curriculum-structured-service"
+import { toCurriculumAgeGroupName } from "@/lib/age-group"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -45,7 +46,7 @@ export async function GET(req: Request) {
     } else if (age) {
       ageKey = age
       const row = await prisma.curriculumAgeGroup.findUnique({
-        where: { name: age },
+        where: { name: toCurriculumAgeGroupName(age) },
         select: { id: true, name: true, stageName: true },
       })
       if (row) {

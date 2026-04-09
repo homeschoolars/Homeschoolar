@@ -8,6 +8,7 @@ import {
   getCurriculumSubject,
   updateCurriculumSubject,
 } from "@/services/curriculum-structured-service"
+import { toCurriculumAgeGroupName } from "@/lib/age-group"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -40,8 +41,10 @@ export async function GET(
       return NextResponse.json({ error: "ageGroup or studentId query param is required" }, { status: 400 })
     }
 
+    const curriculumAgeName = toCurriculumAgeGroupName(ageGroup)
+
     const subject = await getCurriculumSubject({
-      ageGroup,
+      ageGroup: curriculumAgeName,
       subjectId: decodeURIComponent(subjectId),
     })
 
@@ -50,7 +53,7 @@ export async function GET(
     }
 
     const level = await prisma.curriculumAgeGroup.findUnique({
-      where: { name: ageGroup },
+      where: { name: curriculumAgeName },
       select: { id: true, name: true, stageName: true },
     })
 

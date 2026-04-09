@@ -392,7 +392,7 @@ export default function StudentDashboard() {
               <h3 className="text-xl font-bold text-slate-900 mb-2 font-[family-name:var(--font-heading)]">No worksheets yet</h3>
               <p className="text-slate-600 max-w-md mx-auto">Ask your parent to assign activities, or explore subjects below.</p>
               <Button asChild className="mt-5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-lg shadow-violet-500/25">
-                <Link href="/student/subjects">Explore subjects</Link>
+                <Link href="/student">Explore subjects</Link>
               </Button>
             </CardContent>
           </Card>
