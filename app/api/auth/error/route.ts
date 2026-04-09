@@ -7,8 +7,11 @@ import { NextResponse } from "next/server"
  */
 export function GET(request: Request) {
   const url = new URL(request.url)
-  const code = url.searchParams.get("error") ?? "Configuration"
   const login = new URL("/login", url.origin)
-  login.searchParams.set("error", code)
+  const code = url.searchParams.get("error")
+  // Only forward Auth.js error codes; avoid defaulting to "Configuration" (misleading when no code was sent).
+  if (code) {
+    login.searchParams.set("error", code)
+  }
   return NextResponse.redirect(login)
 }
