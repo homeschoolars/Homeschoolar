@@ -13,10 +13,22 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+# prisma generate validates datasource URL; no DB connection is made during generate.
+ENV DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/postgres?schema=public"
 RUN pnpm build \
   && rm -rf .next/cache \
-  && mkdir -p .next/standalone/node_modules \
-  && cp -rL node_modules/.prisma .next/standalone/node_modules/.prisma \
+  && pnpm exec prisma generate
+# pnpm may place .prisma under node_modules/.prisma or nested under @prisma/client; standalone trace still omits it.
+RUN mkdir -p .next/standalone/node_modules \
+  && if [ -d node_modules/.prisma ]; then \
+       cp -rL node_modules/.prisma .next/standalone/node_modules/.prisma; \
+     elif [ -d node_modules/@prisma/client/node_modules/.prisma ]; then \
+       cp -rL node_modules/@prisma/client/node_modules/.prisma .next/standalone/node_modules/.prisma; \
+     else \
+       P="$(find node_modules -type d -name .prisma 2>/dev/null | head -n1)"; \
+       if [ -z "$P" ]; then echo "ERROR: no .prisma directory after prisma generate"; ls -la node_modules | head -40; exit 1; fi; \
+       cp -rL "$P" .next/standalone/node_modules/.prisma; \
+     fi \
   && cp -rL node_modules/@prisma/client .next/standalone/node_modules/@prisma/client
 
 FROM node:20-bookworm-slim AS runner
