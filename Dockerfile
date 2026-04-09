@@ -36,7 +36,11 @@ COPY --from=builder --chown=nodejs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nodejs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nodejs:nodejs /app/public ./public
 
-RUN rm -f /app/.env /app/.env.local /app/.env.production /app/.env.development 2>/dev/null || true
+# Bootstrap HOSTNAME before Next's generated server.js reads process.env (see scripts/cloud-run-server.cjs).
+COPY scripts/cloud-run-server.cjs /app/cloud-run-server.cjs
+
+RUN rm -f /app/.env /app/.env.local /app/.env.production /app/.env.development 2>/dev/null || true \
+  && chown nodejs:nodejs /app/cloud-run-server.cjs
 
 USER nodejs
 EXPOSE 8080
