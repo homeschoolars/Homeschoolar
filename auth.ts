@@ -8,11 +8,18 @@ const isBuildTime =
   process.env.NEXT_PHASE === "phase-production-build" ||
   process.env.NEXT_PHASE === "phase-development-build"
 
-// Avoid initializing Prisma during build to prevent static evaluation errors.
-const adapter = isBuildTime ? undefined : PrismaAdapter(getPrisma())
+const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim())
+
+// Build: no adapter. Runtime: only attach Prisma when DATABASE_URL is set — otherwise
+// getPrisma() throws at module load and the Node process exits before Next listens on PORT
+// (Cloud Run: "failed to start and listen on the port ... PORT=8080").
+const adapter =
+  isBuildTime || !hasDatabaseUrl ? undefined : PrismaAdapter(getPrisma())
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter,
+  /** Required on Cloud Run / Docker where Auth.js cannot infer a trusted host from platform env. */
+  trustHost: true,
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",

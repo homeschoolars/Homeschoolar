@@ -24,7 +24,7 @@ steps:
           --image="europe-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/homeschoolar/homeschoolar:$COMMIT_SHA" \
           --platform=managed \
           --allow-unauthenticated \
-          --memory=1Gi \
+          --memory=2Gi \
           --cpu=1 \
           --cpu-boost \
           --startup-probe=initialDelaySeconds=15,timeoutSeconds=5,periodSeconds=5,failureThreshold=48,tcpSocket.port=8080 \
