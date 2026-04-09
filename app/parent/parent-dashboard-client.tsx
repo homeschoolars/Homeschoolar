@@ -55,6 +55,7 @@ import { ParentCurriculumImport } from "@/components/parent/parent-curriculum-im
 import { LessonWorksheetAssigner } from "@/components/parent/lesson-worksheet-assigner"
 import { apiFetch } from "@/lib/api-client"
 import { ParentAppHeader } from "@/components/layout/parent-app-header"
+import { GuardianVerificationBanner } from "@/components/parent/guardian-verification-banner"
 import {
   attentionSpanOptions,
   interestPresets,
@@ -86,6 +87,12 @@ interface ParentDashboardClientProps {
   children: Child[]
   subjectsByAgeGroup: Record<string, Subject[]>
   subscription: Subscription | null
+  guardianOnboarding: {
+    familyRole: string | null
+    fatherStatus: string | null
+    guardianVerificationStatus: string
+    eligibleForFreeEducation: boolean
+  } | null
 }
 
 export default function ParentDashboardClient({
@@ -93,6 +100,7 @@ export default function ParentDashboardClient({
   children: initialChildren,
   subjectsByAgeGroup,
   subscription,
+  guardianOnboarding,
 }: ParentDashboardClientProps) {
   const searchParams = useSearchParams()
   const pathname = usePathname()
@@ -267,6 +275,16 @@ export default function ParentDashboardClient({
             Manage profiles, AI tools, and progress — all in one calm, focused workspace.
           </p>
         </div>
+
+        {guardianOnboarding ? (
+          <GuardianVerificationBanner
+            familyRole={guardianOnboarding.familyRole}
+            fatherStatus={guardianOnboarding.fatherStatus}
+            guardianVerificationStatus={guardianOnboarding.guardianVerificationStatus}
+            eligibleForFreeEducation={guardianOnboarding.eligibleForFreeEducation}
+            subscriptionIsOrphan={isOrphan}
+          />
+        ) : null}
 
         {hasActiveSubscription ? (
           <div className="mb-8 rounded-2xl bg-gradient-to-br from-violet-600 via-indigo-600 to-fuchsia-700 p-[1px] shadow-lg shadow-violet-500/20">

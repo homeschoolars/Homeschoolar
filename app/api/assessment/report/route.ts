@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma"
 import { openai, isOpenAIConfigured } from "@/lib/openai"
 import { buildPrompt, SYSTEM_PROMPT, type PromptScores } from "@/lib/assessment/prompts"
 import { withRetry, isRateLimitError } from "@/lib/openai-retry"
+import { stripHiddenFromStoredJson } from "@/lib/assessment/sanitize-report"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -96,7 +97,14 @@ export async function GET(req: Request) {
       },
     })
 
-    return NextResponse.json({ latest })
+    const sanitized = latest
+      ? {
+          ...latest,
+          report: stripHiddenFromStoredJson(latest.report),
+        }
+      : null
+
+    return NextResponse.json({ latest: sanitized })
   } catch (error) {
     console.error("[assessment/report GET]", error)
     const message = error instanceof Error ? error.message : "Failed to load report"

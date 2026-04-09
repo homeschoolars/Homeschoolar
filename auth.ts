@@ -29,7 +29,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!user?.passwordHash) return null
         const normalizedEmail = user.email.toLowerCase()
         const isLocalDemoAccount = normalizedEmail.endsWith("@homeschooler.local")
-        if (!user.emailVerified && !isLocalDemoAccount) return null
+        const inNewOnboarding = user.onboardingComplete === false
+        if (!user.emailVerified && !isLocalDemoAccount && !inNewOnboarding) return null
 
         const valid = await verifyPassword(credentials.password, user.passwordHash)
         if (!valid) return null
@@ -41,16 +42,43 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           image: user.image ?? undefined,
           role: user.role,
           adminRole: user.adminRole ?? undefined,
+          onboardingComplete: user.onboardingComplete,
+          guardianVerificationStatus: user.guardianVerificationStatus,
+          eligibleForFreeEducation: user.eligibleForFreeEducation,
         }
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id
         token.role = (user as { role?: string }).role ?? "parent"
         token.adminRole = (user as { adminRole?: string }).adminRole
+        const u = user as {
+          onboardingComplete?: boolean | null
+          guardianVerificationStatus?: string
+          eligibleForFreeEducation?: boolean
+        }
+        token.onboardingComplete = u.onboardingComplete
+        token.guardianVerificationStatus = u.guardianVerificationStatus
+        token.eligibleForFreeEducation = u.eligibleForFreeEducation
+      }
+      if (trigger === "update" && session?.user) {
+        const su = session.user as {
+          onboardingComplete?: boolean | null
+          guardianVerificationStatus?: string
+          eligibleForFreeEducation?: boolean
+        }
+        if (typeof su.onboardingComplete !== "undefined") {
+          token.onboardingComplete = su.onboardingComplete
+        }
+        if (typeof su.guardianVerificationStatus !== "undefined") {
+          token.guardianVerificationStatus = su.guardianVerificationStatus
+        }
+        if (typeof su.eligibleForFreeEducation !== "undefined") {
+          token.eligibleForFreeEducation = su.eligibleForFreeEducation
+        }
       }
       return token
     },
@@ -59,6 +87,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string
         session.user.role = (token.role as string) ?? "parent"
         session.user.adminRole = token.adminRole as string | undefined
+        session.user.onboardingComplete = token.onboardingComplete as boolean | null | undefined
+        session.user.guardianVerificationStatus = token.guardianVerificationStatus as string | undefined
+        session.user.eligibleForFreeEducation = token.eligibleForFreeEducation as boolean | undefined
       }
       return session
     },

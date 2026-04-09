@@ -13,6 +13,12 @@ import { getSiteBranding } from "@/lib/site-branding"
 import { AdaptiveQuizPlayer, type AdaptiveQuizQuestion } from "@/components/learning/adaptive-quiz-player"
 import { AdaptiveActivityViewer } from "@/components/learning/adaptive-activity-viewer"
 import { AdaptiveWorksheetViewer, type WorksheetViewModel } from "@/components/learning/adaptive-worksheet-viewer"
+import { CurriculumResourcesEmbed } from "@/components/curriculum/curriculum-resources-embed"
+
+function ageNumericFromBand(band: string): number {
+  const m: Record<string, number> = { "4-5": 5, "6-7": 7, "8-9": 9, "10-11": 11, "12-13": 13 }
+  return m[band] ?? 8
+}
 
 type CurriculumLesson = {
   id: string
@@ -973,6 +979,15 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                   </section>
                 </>
               )}
+
+              {!lessonLoading && lesson && !lesson.locked && subject && studentId ? (
+                <CurriculumResourcesEmbed
+                  childId={studentId}
+                  age={ageNumericFromBand(internalAgeBand)}
+                  subjectName={subject.name}
+                  topicTitle={lesson.title}
+                />
+              ) : null}
 
               <p className="text-xs text-slate-500 pt-1">
                 Activity, worksheet, and quiz are generated with AI once per lesson and saved for you. Use{" "}

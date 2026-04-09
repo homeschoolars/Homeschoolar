@@ -20,6 +20,15 @@ export default async function ParentDashboard() {
   )
   const mappedSubscription = subscription ? serializeSubscription(subscription) : null
 
+  const guardianOnboarding = profile
+    ? {
+        familyRole: profile.familyRole,
+        fatherStatus: profile.fatherStatus,
+        guardianVerificationStatus: profile.guardianVerificationStatus,
+        eligibleForFreeEducation: profile.eligibleForFreeEducation,
+      }
+    : null
+
   return (
     <Suspense fallback={<div className="min-h-screen dashboard-parent-bg animate-pulse" />}>
       <ParentDashboardClient
@@ -28,6 +37,7 @@ export default async function ParentDashboard() {
         children={mappedChildren}
         subjectsByAgeGroup={mappedSubjectsByAgeGroup}
         subscription={mappedSubscription}
+        guardianOnboarding={guardianOnboarding}
       />
     </Suspense>
   )

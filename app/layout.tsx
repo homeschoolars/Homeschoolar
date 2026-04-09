@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Inter, Nunito, Fredoka } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@/components/theme-provider"
+import { SessionProvider } from "@/components/providers/session-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { getDefaultPageTitle, getSiteBranding, getSiteDescription } from "@/lib/site-branding"
 import "./globals.css"
@@ -40,8 +41,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} ${nunito.variable} ${fredoka.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
-          {children}
-          <Toaster richColors position="top-right" />
+          <SessionProvider>
+            {children}
+            <Toaster richColors position="top-right" />
+          </SessionProvider>
         </ThemeProvider>
         {enableVercelAnalytics ? <Analytics /> : null}
       </body>

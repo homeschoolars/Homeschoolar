@@ -8,36 +8,62 @@ datasource db {
 }
 
 model User {
-  id                  String                  @id @default(uuid())
-  email               String                  @unique
-  emailVerified       DateTime?               @map("email_verified")
-  name                String?                 @map("full_name")
-  role                UserRole                @default(parent)
-  image               String?                 @map("avatar_url")
-  passwordHash        String?                 @map("password_hash")
-  createdAt           DateTime                @default(now()) @map("created_at")
-  updatedAt           DateTime                @default(now()) @map("updated_at")
-  adminRole           AdminRole?              @map("admin_role")
-  accounts            Account[]
-  adminAuditLogs      AdminAuditLog[]
-  analytics           AnalyticsEvent[]
-  blogPosts           BlogPost[]
-  preferences         NotificationPreference?
-  notifications       Notification[]
-  orphanReviews       OrphanVerification[]    @relation("OrphanReviewedBy")
-  orphanSubmissions   OrphanVerification[]    @relation("OrphanSubmittedBy")
-  parentProfile       Parent?
-  paymentTransactions PaymentTransaction[]
-  payments            Payment[]
-  verifiedPayments    Payment[]               @relation("PaymentVerifier")
-  sessions            Session[]
-  children            Child[]
-  subscriptions       Subscription?
-  videoLectures       VideoLecture[]          @relation("VideoLectureCreator")
-  assignedWorksheets  WorksheetAssignment[]   @relation("WorksheetAssigner")
-  createdWorksheets   Worksheet[]             @relation("WorksheetCreator")
+  id                           String                        @id @default(uuid())
+  email                        String                        @unique
+  emailVerified                DateTime?                     @map("email_verified")
+  name                         String?                       @map("full_name")
+  role                         UserRole                      @default(parent)
+  image                        String?                       @map("avatar_url")
+  passwordHash                 String?                       @map("password_hash")
+  createdAt                    DateTime                      @default(now()) @map("created_at")
+  updatedAt                    DateTime                      @default(now()) @map("updated_at")
+  adminRole                    AdminRole?                    @map("admin_role")
+  /// Multi-step onboarding (new flow). null = legacy account (treated as complete).
+  onboardingComplete           Boolean?                      @map("onboarding_complete")
+  onboardingPhone              String?                       @map("onboarding_phone")
+  onboardingCountry            String?                       @map("onboarding_country")
+  onboardingReligionLabel      String?                       @map("onboarding_religion_label")
+  /// "parent" | "guardian" — household role in onboarding UI (not the same as UserRole).
+  familyRole                   String?                       @map("family_role")
+  fatherStatus                 String?                       @map("father_status")
+  /// none | pending | verified | rejected
+  guardianVerificationStatus   String                        @default("none") @map("guardian_verification_status")
+  deathCertificateUrl          String?                       @map("death_certificate_url")
+  eligibleForFreeEducation     Boolean                       @default(false) @map("eligible_for_free_education")
+  accounts                     Account[]
+  adminAuditLogs               AdminAuditLog[]
+  analytics                    AnalyticsEvent[]
+  blogPosts                    BlogPost[]
+  preferences                  NotificationPreference?
+  notifications                Notification[]
+  orphanReviews                OrphanVerification[]          @relation("OrphanReviewedBy")
+  orphanSubmissions            OrphanVerification[]          @relation("OrphanSubmittedBy")
+  parentProfile                Parent?
+  paymentTransactions          PaymentTransaction[]
+  payments                     Payment[]
+  verifiedPayments             Payment[]                     @relation("PaymentVerifier")
+  sessions                     Session[]
+  children                     Child[]
+  subscriptions                Subscription?
+  guardianVerificationDocument GuardianVerificationDocument?
+  videoLectures                VideoLecture[]                @relation("VideoLectureCreator")
+  assignedWorksheets           WorksheetAssignment[]         @relation("WorksheetAssigner")
+  createdWorksheets            Worksheet[]                   @relation("WorksheetCreator")
 
   @@map("profiles")
+}
+
+/// Death certificate bytes for guardian free-education verification (admin review).
+model GuardianVerificationDocument {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  mimeType  String   @map("mime_type")
+  fileName  String   @map("file_name")
+  data      Bytes    @map("data")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("guardian_verification_documents")
 }
 
 model Parent {
@@ -96,55 +122,59 @@ model VerificationToken {
 }
 
 model Child {
-  id                  String                  @id @default(uuid())
-  parentId            String                  @map("parent_id")
-  name                String
-  ageGroup            AgeGroup                @map("age_group")
+  id                   String                       @id @default(uuid())
+  parentId             String                       @map("parent_id")
+  name                 String
+  ageGroup             AgeGroup                     @map("age_group")
   /// Matches `curriculum_age_groups.id` (same string key as `age_group` enum, e.g. AGE_8_9).
-  curriculumAgeGroupId String?               @map("curriculum_age_group_id")
-  avatarUrl           String?                 @map("avatar_url")
-  loginCode           String                  @unique @map("login_code")
-  currentLevel        LearningLevel           @default(beginner) @map("current_level")
-  learningStyle       String?                 @map("learning_style")
-  interests           String[]
-  assessmentCompleted Boolean                 @default(false) @map("assessment_completed")
+  curriculumAgeGroupId String?                      @map("curriculum_age_group_id")
+  avatarUrl            String?                      @map("avatar_url")
+  loginCode            String                       @unique @map("login_code")
+  currentLevel         LearningLevel                @default(beginner) @map("current_level")
+  learningStyle        String?                      @map("learning_style")
+  interests            String[]
+  learningGoals        String?                      @map("learning_goals")
+  assessmentCompleted  Boolean                      @default(false) @map("assessment_completed")
+  /// AI holistic assessment tier (1–5). Server-side only — never expose to student or parent clients.
+  aiAssessmentDifficultyTier Int?                 @map("ai_assessment_difficulty_tier")
   /// First time the student successfully signed in with their login code (unlocks parent holistic assessment).
-  firstStudentLoginAt DateTime?               @map("first_student_login_at")
-  lastQuizAt          DateTime?               @map("last_quiz_at")
-  weakAreas           String[]                @default([]) @map("weak_areas")
-  adaptiveScoreHistory Json                  @default("[]") @map("adaptive_score_history")
-  createdAt           DateTime                @default(now()) @map("created_at")
-  updatedAt           DateTime                @default(now()) @map("updated_at")
-  isOrphan            Boolean                 @default(false) @map("is_orphan")
-  orphanStatus        OrphanStatus            @default(rejected) @map("orphan_status")
-  recommendations     AIRecommendation[]
-  analytics           AnalyticsEvent[]
-  assessments         Assessment[]
-  behavioralMemory    BehavioralMemory?
-  interestsV2         ChildInterest[]
-  profile             ChildProfile?
-  curriculumPaths     CurriculumPath[]
-  initialAssessments  InitialAssessment[]
-  learningMemory      LearningMemory[]
-  preferences         LearningPreference?
-  roadmaps            LearningRoadmap[]
-  orphanVerifications OrphanVerification[]
-  progress            Progress[]
-  learningProfile     StudentLearningProfile?
-  parent              User                    @relation(fields: [parentId], references: [id], onDelete: Cascade)
-  curriculumAgeGroup  CurriculumAgeGroup?     @relation(fields: [curriculumAgeGroupId], references: [id], onDelete: SetNull)
-  subscriptions       Subscription[]
-  quizzes             SurpriseQuiz[]
-  assignments         WorksheetAssignment[]
-  submissions         WorksheetSubmission[]
-  lessonProgress      StudentLessonProgress[]
-  generatedContents   CurriculumGeneratedContent[]
-  subjectExams        SubjectExam[]
-  lectureProgress     StudentLectureProgress[]
+  firstStudentLoginAt  DateTime?                    @map("first_student_login_at")
+  lastQuizAt           DateTime?                    @map("last_quiz_at")
+  weakAreas            String[]                     @default([]) @map("weak_areas")
+  adaptiveScoreHistory Json                         @default("[]") @map("adaptive_score_history")
+  createdAt            DateTime                     @default(now()) @map("created_at")
+  updatedAt            DateTime                     @default(now()) @map("updated_at")
+  isOrphan             Boolean                      @default(false) @map("is_orphan")
+  orphanStatus         OrphanStatus                 @default(rejected) @map("orphan_status")
+  recommendations      AIRecommendation[]
+  analytics            AnalyticsEvent[]
+  assessments          Assessment[]
+  behavioralMemory     BehavioralMemory?
+  interestsV2          ChildInterest[]
+  profile              ChildProfile?
+  curriculumPaths      CurriculumPath[]
+  initialAssessments   InitialAssessment[]
+  learningMemory       LearningMemory[]
+  preferences          LearningPreference?
+  roadmaps             LearningRoadmap[]
+  orphanVerifications  OrphanVerification[]
+  progress             Progress[]
+  learningProfile      StudentLearningProfile?
+  parent               User                         @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  curriculumAgeGroup   CurriculumAgeGroup?          @relation(fields: [curriculumAgeGroupId], references: [id], onDelete: SetNull)
+  subscriptions        Subscription[]
+  quizzes              SurpriseQuiz[]
+  assignments          WorksheetAssignment[]
+  submissions          WorksheetSubmission[]
+  lessonProgress       StudentLessonProgress[]
+  generatedContents    CurriculumGeneratedContent[]
+  subjectExams         SubjectExam[]
+  lectureProgress      StudentLectureProgress[]
   lessonWorksheetDones StudentLessonWorksheetDone[]
-  assessmentReports   AssessmentReport[]
-  studentWorksheets   StudentWorksheet[]
-  topicAnalytics      StudentTopicAnalytics[]
+  assessmentReports    AssessmentReport[]
+  assessmentSessions   AssessmentSession[]
+  studentWorksheets    StudentWorksheet[]
+  topicAnalytics       StudentTopicAnalytics[]
 
   @@index([parentId])
   @@index([ageGroup])
@@ -229,11 +259,47 @@ model AssessmentReport {
   learnerType     String   @map("learner_type")
   interestProfile String   @map("interest_profile")
   aptitudeProfile String   @map("aptitude_profile")
+  /// parent_question_bank | ai_holistic
+  assessmentKind  String   @default("parent_question_bank") @map("assessment_kind")
+  holisticQuizData Json?   @map("holistic_quiz_data")
+  holisticAnswers  Json?   @map("holistic_answers")
+  difficultyTier   Int?    @map("difficulty_tier")
+  iqEstimateScore  Int?    @map("iq_estimate_score")
+  eqEstimateScore  Int?    @map("eq_estimate_score")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@index([childId])
   @@map("assessment_reports")
+}
+
+/// Single in-progress AI-generated holistic quiz per child (reuse until submitted or stale).
+model AssessmentSession {
+  id        String   @id @default(cuid())
+  childId   String   @map("child_id")
+  child     Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  quizData  Json     @map("quiz_data")
+  status    String   @default("in_progress")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([childId])
+  @@index([childId, status])
+  @@map("assessment_sessions")
+}
+
+model CurriculumResource {
+  id           String   @id @default(cuid())
+  age          Int
+  subject      String
+  topic        String
+  resourceType String   @map("resource_type")
+  title        String
+  url          String
+  fileSize     Int?     @map("file_size")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([age, subject, topic])
+  @@map("curriculum_resources")
 }
 
 model Subject {
@@ -260,34 +326,34 @@ model Subject {
 }
 
 model CurriculumAgeGroup {
-  id        String              @id @default(uuid())
-  name      String              @unique
-  ageMin    Int                 @default(4) @map("age_min")
-  ageMax    Int                 @default(5) @map("age_max")
-  orderIndex Int                @default(0) @map("order_index")
-  stageName String              @default("Foundation") @map("stage_name")
-  createdAt DateTime            @default(now()) @map("created_at")
-  updatedAt DateTime            @updatedAt @map("updated_at")
-  subjects  CurriculumSubject[]
-  students  Child[]
+  id         String              @id @default(uuid())
+  name       String              @unique
+  ageMin     Int                 @default(4) @map("age_min")
+  ageMax     Int                 @default(5) @map("age_max")
+  orderIndex Int                 @default(0) @map("order_index")
+  stageName  String              @default("Foundation") @map("stage_name")
+  createdAt  DateTime            @default(now()) @map("created_at")
+  updatedAt  DateTime            @updatedAt @map("updated_at")
+  subjects   CurriculumSubject[]
+  students   Child[]
 
   @@map("curriculum_age_groups")
 }
 
 model CurriculumSubject {
-  id          String              @id @default(uuid())
-  name        String
-  slug        String
-  category    CurriculumSubjectCategory @default(CORE)
-  ageGroupId  String              @map("age_group_id")
-  baseSubjectId String?           @map("base_subject_id")
-  orderIndex  Int                 @default(0) @map("order_index")
-  displayOrder Int                @default(0) @map("display_order")
-  createdAt   DateTime            @default(now()) @map("created_at")
-  updatedAt   DateTime            @updatedAt @map("updated_at")
-  ageGroup    CurriculumAgeGroup  @relation(fields: [ageGroupId], references: [id], onDelete: Cascade)
-  baseSubject Subject?            @relation(fields: [baseSubjectId], references: [id], onDelete: SetNull)
-  units       CurriculumUnit[]
+  id            String                    @id @default(uuid())
+  name          String
+  slug          String
+  category      CurriculumSubjectCategory @default(CORE)
+  ageGroupId    String                    @map("age_group_id")
+  baseSubjectId String?                   @map("base_subject_id")
+  orderIndex    Int                       @default(0) @map("order_index")
+  displayOrder  Int                       @default(0) @map("display_order")
+  createdAt     DateTime                  @default(now()) @map("created_at")
+  updatedAt     DateTime                  @updatedAt @map("updated_at")
+  ageGroup      CurriculumAgeGroup        @relation(fields: [ageGroupId], references: [id], onDelete: Cascade)
+  baseSubject   Subject?                  @relation(fields: [baseSubjectId], references: [id], onDelete: SetNull)
+  units         CurriculumUnit[]
 
   @@unique([ageGroupId, slug])
   @@index([baseSubjectId])
@@ -295,16 +361,16 @@ model CurriculumSubject {
 }
 
 model CurriculumUnit {
-  id          String             @id @default(uuid())
-  title       String
-  slug        String
-  subjectId   String             @map("subject_id")
-  orderIndex  Int                @default(0) @map("order_index")
-  displayOrder Int               @default(0) @map("display_order")
-  createdAt   DateTime           @default(now()) @map("created_at")
-  updatedAt   DateTime           @updatedAt @map("updated_at")
-  subject     CurriculumSubject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  lessons     CurriculumLesson[]
+  id                String                       @id @default(uuid())
+  title             String
+  slug              String
+  subjectId         String                       @map("subject_id")
+  orderIndex        Int                          @default(0) @map("order_index")
+  displayOrder      Int                          @default(0) @map("display_order")
+  createdAt         DateTime                     @default(now()) @map("created_at")
+  updatedAt         DateTime                     @updatedAt @map("updated_at")
+  subject           CurriculumSubject            @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  lessons           CurriculumLesson[]
   generatedContents CurriculumGeneratedContent[]
 
   @@unique([subjectId, slug])
@@ -312,38 +378,38 @@ model CurriculumUnit {
 }
 
 model CurriculumLesson {
-  id          String                     @id @default(uuid())
-  title       String
-  slug        String
-  unitId      String                     @map("unit_id")
-  difficultyLevel String                 @default("foundation") @map("difficulty_level")
-  orderIndex  Int                        @default(0) @map("order_index")
-  displayOrder Int                       @default(0) @map("display_order")
-  requiredWorksheetCount Int             @default(2) @map("required_worksheet_count")
-  createdAt   DateTime                   @default(now()) @map("created_at")
-  updatedAt   DateTime                   @updatedAt @map("updated_at")
-  unit        CurriculumUnit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  content     CurriculumContent?
-  aiPrompts   CurriculumAIPrompt[]
-  generations CurriculumGeneratedContent[]
-  studentProgress StudentLessonProgress[]
-  lectures    CurriculumLecture[]
-  worksheets  Worksheet[]
-  worksheetCompletions StudentLessonWorksheetDone[]
+  id                     String                       @id @default(uuid())
+  title                  String
+  slug                   String
+  unitId                 String                       @map("unit_id")
+  difficultyLevel        String                       @default("foundation") @map("difficulty_level")
+  orderIndex             Int                          @default(0) @map("order_index")
+  displayOrder           Int                          @default(0) @map("display_order")
+  requiredWorksheetCount Int                          @default(2) @map("required_worksheet_count")
+  createdAt              DateTime                     @default(now()) @map("created_at")
+  updatedAt              DateTime                     @updatedAt @map("updated_at")
+  unit                   CurriculumUnit               @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  content                CurriculumContent?
+  aiPrompts              CurriculumAIPrompt[]
+  generations            CurriculumGeneratedContent[]
+  studentProgress        StudentLessonProgress[]
+  lectures               CurriculumLecture[]
+  worksheets             Worksheet[]
+  worksheetCompletions   StudentLessonWorksheetDone[]
 
   @@unique([unitId, slug])
   @@map("curriculum_lessons")
 }
 
 model CurriculumLecture {
-  id          String   @id @default(uuid())
-  lessonId    String   @map("lesson_id")
-  orderIndex  Int      @default(0) @map("order_index")
+  id          String                   @id @default(uuid())
+  lessonId    String                   @map("lesson_id")
+  orderIndex  Int                      @default(0) @map("order_index")
   title       String
-  contentJson Json     @default("{}") @map("content_json")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  lesson      CurriculumLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  contentJson Json                     @default("{}") @map("content_json")
+  createdAt   DateTime                 @default(now()) @map("created_at")
+  updatedAt   DateTime                 @updatedAt @map("updated_at")
+  lesson      CurriculumLesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   progress    StudentLectureProgress[]
 
   @@index([lessonId, orderIndex])
@@ -351,11 +417,11 @@ model CurriculumLecture {
 }
 
 model StudentLectureProgress {
-  id          String   @id @default(cuid())
-  studentId   String   @map("student_id")
-  lectureId   String   @map("lecture_id")
-  completedAt DateTime @default(now()) @map("completed_at")
-  student     Child    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id          String            @id @default(cuid())
+  studentId   String            @map("student_id")
+  lectureId   String            @map("lecture_id")
+  completedAt DateTime          @default(now()) @map("completed_at")
+  student     Child             @relation(fields: [studentId], references: [id], onDelete: Cascade)
   lecture     CurriculumLecture @relation(fields: [lectureId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, lectureId])
@@ -364,17 +430,17 @@ model StudentLectureProgress {
 }
 
 model StudentLessonWorksheetDone {
-  id           String   @id @default(cuid())
-  studentId    String   @map("student_id")
-  lessonId     String   @map("lesson_id")
-  worksheetId  String   @map("worksheet_id")
-  submissionId String?  @map("submission_id")
-  score        Decimal  @map("score") @db.Decimal(5, 2)
-  maxScore     Decimal  @map("max_score") @db.Decimal(5, 2)
-  createdAt    DateTime @default(now()) @map("created_at")
-  student      Child    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id           String           @id @default(cuid())
+  studentId    String           @map("student_id")
+  lessonId     String           @map("lesson_id")
+  worksheetId  String           @map("worksheet_id")
+  submissionId String?          @map("submission_id")
+  score        Decimal          @map("score") @db.Decimal(5, 2)
+  maxScore     Decimal          @map("max_score") @db.Decimal(5, 2)
+  createdAt    DateTime         @default(now()) @map("created_at")
+  student      Child            @relation(fields: [studentId], references: [id], onDelete: Cascade)
   lesson       CurriculumLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  worksheet    Worksheet @relation(fields: [worksheetId], references: [id], onDelete: Cascade)
+  worksheet    Worksheet        @relation(fields: [worksheetId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, worksheetId])
   @@index([studentId, lessonId])
@@ -410,39 +476,39 @@ model CurriculumAIPrompt {
 }
 
 model CurriculumGeneratedContent {
-  id             String               @id @default(uuid())
-  lessonId       String               @map("lesson_id")
-  unitId         String?              @map("unit_id")
-  studentId      String?              @map("student_id")
+  id             String                     @id @default(uuid())
+  lessonId       String                     @map("lesson_id")
+  unitId         String?                    @map("unit_id")
+  studentId      String?                    @map("student_id")
   type           CurriculumPromptType
-  sessionKey     String               @default("global") @map("session_key")
+  sessionKey     String                     @default("global") @map("session_key")
   visibility     GeneratedContentVisibility @default(private)
-  generatedBy    GeneratedContentSource @default(system) @map("generated_by")
+  generatedBy    GeneratedContentSource     @default(system) @map("generated_by")
   content        String
-  contentJson    Json?                @map("content_json")
-  promptSnapshot String               @map("prompt_snapshot")
-  model          String               @default("gpt-4o-mini")
-  createdAt      DateTime             @default(now()) @map("created_at")
-  updatedAt      DateTime             @updatedAt @map("updated_at")
-  lesson         CurriculumLesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  unit           CurriculumUnit?      @relation(fields: [unitId], references: [id], onDelete: SetNull)
-  student        Child?               @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  contentJson    Json?                      @map("content_json")
+  promptSnapshot String                     @map("prompt_snapshot")
+  model          String                     @default("gpt-4o-mini")
+  createdAt      DateTime                   @default(now()) @map("created_at")
+  updatedAt      DateTime                   @updatedAt @map("updated_at")
+  lesson         CurriculumLesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  unit           CurriculumUnit?            @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  student        Child?                     @relation(fields: [studentId], references: [id], onDelete: SetNull)
 
   @@unique([lessonId, type, sessionKey])
   @@map("curriculum_generated_contents")
 }
 
 model SubjectExam {
-  id             String   @id @default(cuid())
-  studentId      String   @map("student_id")
-  subjectId      String   @map("subject_id")
-  examJson       Json     @map("exam_json")
-  score          Decimal? @db.Decimal(5, 2)
-  completedAt    DateTime? @map("completed_at")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  student        Child    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  subject        Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  studentId   String    @map("student_id")
+  subjectId   String    @map("subject_id")
+  examJson    Json      @map("exam_json")
+  score       Decimal?  @db.Decimal(5, 2)
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  student     Child     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject     Subject   @relation(fields: [subjectId], references: [id], onDelete: Cascade)
 
   @@index([studentId, subjectId])
   @@map("subject_exams")
@@ -467,27 +533,27 @@ model StudentLessonProgress {
 }
 
 model Worksheet {
-  id            String                @id @default(uuid())
-  title         String
-  description   String?
-  subjectId     String                @map("subject_id")
-  ageGroup      AgeGroup              @map("age_group")
-  difficulty    Difficulty            @default(medium)
-  questions     Json                  @default("[]")
-  answerKey     Json?                 @map("answer_key")
-  explanations  Json?                 @map("explanations")
-  aiPrompt      String?               @map("ai_prompt")
-  isAiGenerated Boolean               @default(false) @map("is_ai_generated")
-  isApproved    Boolean               @default(false) @map("is_approved")
-  createdBy     String?               @map("created_by")
-  lessonId      String?               @map("lesson_id")
-  createdAt     DateTime              @default(now()) @map("created_at")
-  updatedAt     DateTime              @default(now()) @map("updated_at")
-  analytics     AnalyticsEvent[]
-  assignments   WorksheetAssignment[]
-  creator       User?                 @relation("WorksheetCreator", fields: [createdBy], references: [id])
-  subject       Subject               @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  lesson        CurriculumLesson?     @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  id                String                       @id @default(uuid())
+  title             String
+  description       String?
+  subjectId         String                       @map("subject_id")
+  ageGroup          AgeGroup                     @map("age_group")
+  difficulty        Difficulty                   @default(medium)
+  questions         Json                         @default("[]")
+  answerKey         Json?                        @map("answer_key")
+  explanations      Json?                        @map("explanations")
+  aiPrompt          String?                      @map("ai_prompt")
+  isAiGenerated     Boolean                      @default(false) @map("is_ai_generated")
+  isApproved        Boolean                      @default(false) @map("is_approved")
+  createdBy         String?                      @map("created_by")
+  lessonId          String?                      @map("lesson_id")
+  createdAt         DateTime                     @default(now()) @map("created_at")
+  updatedAt         DateTime                     @default(now()) @map("updated_at")
+  analytics         AnalyticsEvent[]
+  assignments       WorksheetAssignment[]
+  creator           User?                        @relation("WorksheetCreator", fields: [createdBy], references: [id])
+  subject           Subject                      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  lesson            CurriculumLesson?            @relation(fields: [lessonId], references: [id], onDelete: SetNull)
   lessonCompletions StudentLessonWorksheetDone[]
   studentRecords    StudentWorksheet[]
 
@@ -497,20 +563,20 @@ model Worksheet {
 
 /// Graded worksheet attempts for analytics + parent reporting (AI feedback stored here).
 model StudentWorksheet {
-  id            String    @id @default(uuid())
-  studentId     String    @map("student_id")
-  subjectId     String?   @map("subject_id")
-  topicId       String?   @map("topic_id")
-  worksheetId   String    @map("worksheet_id")
-  assignmentId  String?   @map("assignment_id")
-  answersJson   Json      @default("[]") @map("answers_json")
-  score         Decimal?  @db.Decimal(10, 2)
-  percentage    Decimal?  @db.Decimal(5, 2)
-  feedback      String?   @db.Text
-  weakTopics    Json?     @map("weak_topics")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  student       Child     @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  worksheet     Worksheet @relation(fields: [worksheetId], references: [id], onDelete: Cascade)
+  id           String    @id @default(uuid())
+  studentId    String    @map("student_id")
+  subjectId    String?   @map("subject_id")
+  topicId      String?   @map("topic_id")
+  worksheetId  String    @map("worksheet_id")
+  assignmentId String?   @map("assignment_id")
+  answersJson  Json      @default("[]") @map("answers_json")
+  score        Decimal?  @db.Decimal(10, 2)
+  percentage   Decimal?  @db.Decimal(5, 2)
+  feedback     String?   @db.Text
+  weakTopics   Json?     @map("weak_topics")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  student      Child     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  worksheet    Worksheet @relation(fields: [worksheetId], references: [id], onDelete: Cascade)
 
   @@index([studentId])
   @@index([topicId])
@@ -520,15 +586,15 @@ model StudentWorksheet {
 
 /// Per-topic (lesson) aggregates for unlock logic and parent dashboard.
 model StudentTopicAnalytics {
-  id         String   @id @default(cuid())
-  studentId  String   @map("student_id")
-  topicId    String   @map("topic_id")
-  avgScore   Decimal  @default(0) @map("avg_score") @db.Decimal(5, 2)
-  attempts   Int      @default(0)
-  lastScore  Decimal? @map("last_score") @db.Decimal(5, 2)
-  weakFlag   Boolean  @default(false) @map("weak_flag")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-  student    Child    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  studentId String   @map("student_id")
+  topicId   String   @map("topic_id")
+  avgScore  Decimal  @default(0) @map("avg_score") @db.Decimal(5, 2)
+  attempts  Int      @default(0)
+  lastScore Decimal? @map("last_score") @db.Decimal(5, 2)
+  weakFlag  Boolean  @default(false) @map("weak_flag")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  student   Child    @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, topicId])
   @@index([studentId, weakFlag])
