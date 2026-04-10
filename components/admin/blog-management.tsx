@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import {
   Card,
   CardContent,
@@ -46,8 +46,11 @@ import {
   ExternalLink,
   FolderOpen,
   Loader2,
+  Upload,
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
+import { toast } from "sonner"
+import { normalizeBlogImageUrl } from "@/lib/blog-image-url"
 
 type Category = {
   id: string
@@ -91,6 +94,8 @@ export function BlogManagement() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [imageUploading, setImageUploading] = useState(false)
+  const featuredFileRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState({
     title: "",
     slug: "",
@@ -175,6 +180,32 @@ export function BlogManagement() {
     setDialogOpen(true)
   }
 
+  const uploadFeaturedImage = async (file: File) => {
+    setImageUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      const res = await apiFetch("/api/admin/blog/upload", {
+        method: "POST",
+        body: fd,
+      })
+      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string }
+      if (!res.ok) {
+        toast.error(data.error ?? "Image upload failed")
+        return
+      }
+      if (data.url) {
+        setForm((f) => ({ ...f, featured_image: data.url! }))
+        toast.success("Image uploaded — save the post to keep it")
+      }
+    } catch {
+      toast.error("Image upload failed")
+    } finally {
+      setImageUploading(false)
+      if (featuredFileRef.current) featuredFileRef.current.value = ""
+    }
+  }
+
   const save = async () => {
     if (!form.title.trim() || !form.category_id) return
     setSaving(true)
@@ -185,7 +216,7 @@ export function BlogManagement() {
         content: form.content,
         excerpt: form.excerpt.trim() || undefined,
         category_id: form.category_id,
-        featured_image: form.featured_image.trim() || undefined,
+        featured_image: form.featured_image.trim() || null,
         status: form.status,
         published_at: form.published_at || undefined,
         meta_title: form.meta_title.trim() || undefined,
@@ -200,6 +231,9 @@ export function BlogManagement() {
         if (res.ok) {
           setDialogOpen(false)
           load()
+        } else {
+          const err = (await res.json().catch(() => ({}))) as { error?: string }
+          toast.error(err.error ?? "Could not save post")
         }
       } else {
         const res = await apiFetch("/api/admin/blog", {
@@ -210,10 +244,13 @@ export function BlogManagement() {
         if (res.ok) {
           setDialogOpen(false)
           load()
+        } else {
+          const err = (await res.json().catch(() => ({}))) as { error?: string }
+          toast.error(err.error ?? "Could not save post")
         }
       }
     } catch {
-      // ignore
+      toast.error("Could not save post")
     } finally {
       setSaving(false)
     }
@@ -429,15 +466,63 @@ export function BlogManagement() {
                 placeholder="Short summary"
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="featured" className="col-span-1">Featured image URL</Label>
-              <Input
-                id="featured"
-                value={form.featured_image}
-                onChange={(e) => setForm((f) => ({ ...f, featured_image: e.target.value }))}
-                className="col-span-3 border-slate-200"
-                placeholder="https://..."
-              />
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="featured" className="col-span-1 pt-2">
+                Featured image
+              </Label>
+              <div className="col-span-3 space-y-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <Input
+                    id="featured"
+                    value={form.featured_image}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, featured_image: e.target.value }))
+                    }
+                    className="border-slate-200 sm:min-w-0 sm:flex-1"
+                    placeholder="https://… or /uploads/blog/… after upload"
+                  />
+                  <input
+                    ref={featuredFileRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      if (f) void uploadFeaturedImage(f)
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="shrink-0 border-slate-200"
+                    disabled={imageUploading}
+                    onClick={() => featuredFileRef.current?.click()}
+                  >
+                    {imageUploading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Paste any image URL (https), or upload JPEG/PNG/GIF/WebP (max 8MB). Images in Markdown use{" "}
+                  <code className="rounded bg-slate-100 px-1">![alt](url)</code>.
+                </p>
+                {normalizeBlogImageUrl(form.featured_image) ? (
+                  <div className="relative mt-2 aspect-video max-h-40 w-full max-w-md overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                    <img
+                      src={normalizeBlogImageUrl(form.featured_image)!}
+                      alt="Preview"
+                      className="h-full w-full object-contain"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                ) : null}
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label className="col-span-1">Status</Label>

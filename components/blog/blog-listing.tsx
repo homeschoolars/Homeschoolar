@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
-import Image from "next/image"
+import { BlogImageFill } from "@/components/blog/blog-image"
 import { Search, Calendar, User, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -157,12 +157,11 @@ export function BlogListing({ initialData, categories }: BlogListingProps) {
                 <div className="grid sm:grid-cols-2 gap-0">
                   <div className="relative aspect-video sm:aspect-auto sm:min-h-[280px]">
                     {featured.featured_image ? (
-                      <Image
+                      <BlogImageFill
                         src={featured.featured_image}
                         alt=""
-                        fill
                         className="object-cover"
-                        sizes="(max-width: 640px) 100vw, 50vw"
+                        priority
                       />
                     ) : (
                       <div className="absolute inset-0 bg-slate-200" />
@@ -210,13 +209,7 @@ export function BlogListing({ initialData, categories }: BlogListingProps) {
                   <article className="h-full overflow-hidden rounded-xl border border-slate-200 bg-white transition-shadow hover:shadow-md">
                     <div className="relative aspect-video">
                       {p.featured_image ? (
-                        <Image
-                          src={p.featured_image}
-                          alt=""
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        />
+                        <BlogImageFill src={p.featured_image} alt="" className="object-cover" />
                       ) : (
                         <div className="absolute inset-0 bg-slate-100" />
                       )}

@@ -70,7 +70,7 @@ export async function PATCH(
       content?: string
       excerpt?: string
       category_id?: string
-      featured_image?: string
+      featured_image?: string | null
       status?: "draft" | "published"
       published_at?: string | null
       meta_title?: string | null
@@ -104,7 +104,12 @@ export async function PATCH(
       if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 400 })
       updates.categoryId = body.category_id
     }
-    if (body.featured_image != null) updates.featuredImage = body.featured_image.trim() || null
+    if (body.featured_image !== undefined) {
+      updates.featuredImage =
+        body.featured_image === null || body.featured_image === ""
+          ? null
+          : String(body.featured_image).trim() || null
+    }
     if (body.status != null) updates.status = body.status
     if (body.published_at !== undefined) {
       updates.publishedAt = body.published_at ? new Date(body.published_at) : null

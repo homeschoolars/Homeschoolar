@@ -2,8 +2,9 @@
 
 import { useRef } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import ReactMarkdown from "react-markdown"
+import { BlogImageFill } from "@/components/blog/blog-image"
+import { normalizeBlogImageUrl } from "@/lib/blog-image-url"
 import { Calendar, User, Clock, Facebook, Twitter, Linkedin } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 
@@ -101,20 +102,18 @@ export function BlogPostDetail({ post, related, canonicalUrl }: BlogPostDetailPr
 
         {post.featured_image && (
           <div className="relative aspect-video mb-10 overflow-hidden rounded-xl">
-            <Image
+            <BlogImageFill
               src={post.featured_image}
               alt=""
-              fill
               className="object-cover"
               priority
-              sizes="(max-width: 768px) 100vw, 672px"
             />
           </div>
         )}
 
         <div className="grid gap-10 lg:grid-cols-[1fr_200px]">
           <div className="min-w-0">
-            <div className="blog-content [&_h1]:mt-8 [&_h1]:mb-4 [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:text-slate-900 [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-slate-900 [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-slate-800 [&_p]:mb-4 [&_p]:text-slate-700 [&_p]:leading-relaxed [&_a]:text-teal-600 [&_a]:underline [&_a:hover]:text-teal-700 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:mb-4 [&_li]:mb-1 [&_img]:rounded-lg [&_img]:my-4">
+            <div className="blog-content [&_h1]:mt-8 [&_h1]:mb-4 [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:text-slate-900 [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-slate-900 [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-slate-800 [&_p]:mb-4 [&_p]:text-slate-700 [&_p]:leading-relaxed [&_a]:text-teal-600 [&_a]:underline [&_a:hover]:text-teal-700 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:mb-4 [&_li]:mb-1 [&_img]:rounded-lg [&_img]:my-4 [&_img]:max-w-full [&_img]:h-auto">
               <ReactMarkdown
                 components={{
                   h1: ({ node, ...p }) => {
@@ -128,6 +127,21 @@ export function BlogPostDetail({ post, related, canonicalUrl }: BlogPostDetailPr
                   h3: ({ node, ...p }) => {
                     const id = getNextHeadingId()
                     return <h3 id={id} className="scroll-mt-24" {...p} />
+                  },
+                  img: ({ node: _n, src, alt, ...rest }) => {
+                    const href =
+                      typeof src === "string" ? normalizeBlogImageUrl(src) : null
+                    if (!href) return null
+                    return (
+                      // eslint-disable-next-line @next/next/no-img-element -- markdown allows any image URL
+                      <img
+                        src={href}
+                        alt={alt ?? ""}
+                        referrerPolicy="no-referrer"
+                        decoding="async"
+                        {...rest}
+                      />
+                    )
                   },
                 }}
               >
@@ -198,12 +212,10 @@ export function BlogPostDetail({ post, related, canonicalUrl }: BlogPostDetailPr
                 <Link key={r.id} href={`/blog/${r.slug}`} className="group flex gap-4">
                   <div className="relative h-24 w-32 shrink-0 overflow-hidden rounded-lg bg-slate-100">
                     {r.featured_image ? (
-                      <Image
+                      <BlogImageFill
                         src={r.featured_image}
                         alt=""
-                        fill
                         className="object-cover group-hover:opacity-90"
-                        sizes="128px"
                       />
                     ) : null}
                   </div>

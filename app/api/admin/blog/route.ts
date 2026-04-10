@@ -77,7 +77,7 @@ export async function POST(request: Request) {
       content: string
       excerpt?: string
       category_id: string
-      featured_image?: string
+      featured_image?: string | null
       status?: "draft" | "published"
       published_at?: string
       meta_title?: string
@@ -112,7 +112,11 @@ export async function POST(request: Request) {
         excerpt: body.excerpt?.trim() || null,
         categoryId: body.category_id,
         authorId: session.user.id,
-        featuredImage: body.featured_image?.trim() || null,
+        featuredImage: (() => {
+          const v = body.featured_image
+          if (v === undefined || v === null || v === "") return null
+          return String(v).trim() || null
+        })(),
         status: (body.status as "draft" | "published") || "draft",
         publishedAt,
         metaTitle: body.meta_title?.trim() || null,
