@@ -8,6 +8,7 @@ import { enforceSubscriptionAccess } from "@/services/subscription-access"
 import { STATIC_PROFILE_SYSTEM_PROMPT } from "@/lib/static-prompts"
 import { hashStudentData, shouldRegenerateProfile, TOKEN_LIMITS } from "@/lib/openai-cache"
 import { withRetry, isSchemaValidationError, isRateLimitError } from "@/lib/openai-retry"
+import { holisticReportAsPromptAssessments } from "@/lib/assessment/holistic-report-as-prompt-assessments"
 
 /**
  * Production-safe JSON Schema for OpenAI Structured Outputs
@@ -206,6 +207,10 @@ export async function generateStudentLearningProfile(
         orderBy: { createdAt: "desc" },
         take: 20,
       },
+      assessmentReports: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
       learningMemory: {
         include: { subject: true },
       },
@@ -218,9 +223,10 @@ export async function generateStudentLearningProfile(
     throw new Error("Student or profile not found. Please ensure the student profile is complete.")
   }
 
-  // Backend validation: Check if assessment data exists BEFORE calling OpenAI
-  const completedAssessments = student.assessments.filter(a => a.status === "completed")
-  if (completedAssessments.length === 0) {
+  // Backend validation: per-subject completed rows OR holistic AssessmentReport (parent quiz / AI holistic)
+  const completedAssessments = student.assessments.filter((a) => a.status === "completed")
+  const latestHolistic = student.assessmentReports[0] ?? null
+  if (completedAssessments.length === 0 && !latestHolistic) {
     throw new Error(
       "Assessment data is missing. " +
       "Please complete at least one assessment for this student before generating a learning profile. " +
@@ -237,13 +243,18 @@ export async function generateStudentLearningProfile(
     orderBy: { displayOrder: "asc" },
   })
 
-  // Prepare assessment data
-  const assessments = student.assessments.map((a) => ({
-    subject: a.subject?.name ?? "Unknown",
-    score: a.score,
-    strengths: a.assessmentResult?.strengths,
-    weaknesses: a.assessmentResult?.weaknesses,
-  }))
+  // Prepare assessment data (per-subject table and/or holistic report)
+  const assessments =
+    completedAssessments.length > 0
+      ? completedAssessments.map((a) => ({
+          subject: a.subject?.name ?? "Unknown",
+          score: a.score,
+          strengths: a.assessmentResult?.strengths,
+          weaknesses: a.assessmentResult?.weaknesses,
+        }))
+      : latestHolistic
+        ? holisticReportAsPromptAssessments(latestHolistic)
+        : []
 
   // Prepare learning memory data
   const learningMemory = student.learningMemory.map((m) => ({

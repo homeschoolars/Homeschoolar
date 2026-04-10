@@ -281,6 +281,10 @@ export async function generateLearningRoadmap(
         },
         take: 1, // Just need to check if any exist
       },
+      assessmentReports: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
     },
   })
 
@@ -289,12 +293,12 @@ export async function generateLearningRoadmap(
     throw new Error("Student or profile not found. Please ensure the student profile is complete.")
   }
 
-  // Backend validation: Check if assessment data exists BEFORE calling OpenAI
-  // Return HTTP 400 equivalent error - do NOT call OpenAI if data is missing
-  const hasCompletedAssessment = student.assessmentCompleted
-  const completedAssessments = student.assessments || []
-  
-  if (!hasCompletedAssessment || completedAssessments.length === 0) {
+  // Backend validation: per-subject completed assessments OR holistic AssessmentReport
+  // (parent questionnaire / student AI quiz write AssessmentReport, not always `assessments` rows)
+  const completedAssessments = student.assessments ?? []
+  const hasHolisticReport = (student.assessmentReports?.length ?? 0) > 0
+
+  if (completedAssessments.length === 0 && !hasHolisticReport) {
     throw new Error(
       "Assessment data is missing. " +
       "Please complete at least one assessment for this student before generating a roadmap. " +

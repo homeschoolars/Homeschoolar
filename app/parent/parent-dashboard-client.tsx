@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,6 +33,9 @@ import {
   Sparkles,
   FileText,
   BarChart3,
+  Copy,
+  Check,
+  ClipboardList,
 } from "lucide-react"
 import type {
   Profile,
@@ -65,6 +68,8 @@ import {
   screenToleranceOptions,
 } from "@/lib/onboarding-options"
 import { calculateAgeYears, deriveAgeGroup } from "@/lib/onboarding-utils"
+import { Badge } from "@/components/ui/badge"
+import { toast } from "sonner"
 
 const ParentOverview = dynamic(
   () => import("@/components/dashboards/parent/parent-overview").then((m) => m.ParentOverview),
@@ -129,6 +134,42 @@ export default function ParentDashboardClient({
   )
   const [curriculumSubjects, setCurriculumSubjects] = useState<CurriculumSubjectSummary[]>([])
   const [curriculumLoading, setCurriculumLoading] = useState(false)
+  const [copiedLoginChildId, setCopiedLoginChildId] = useState<string | null>(null)
+
+  const refreshChildren = useCallback(async () => {
+    try {
+      const res = await apiFetch("/api/children")
+      if (!res.ok) return
+      const data = (await res.json()) as { children?: Child[] }
+      if (Array.isArray(data.children)) setChildren(data.children)
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  useEffect(() => {
+    void refreshChildren()
+  }, [refreshChildren])
+
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === "visible") void refreshChildren()
+    }
+    document.addEventListener("visibilitychange", onVis)
+    return () => document.removeEventListener("visibilitychange", onVis)
+  }, [refreshChildren])
+
+  const copyLoginCode = async (e: React.MouseEvent, code: string, childId: string) => {
+    e.stopPropagation()
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopiedLoginChildId(childId)
+      toast.success("Login code copied to clipboard")
+      window.setTimeout(() => setCopiedLoginChildId((id) => (id === childId ? null : id)), 2000)
+    } catch {
+      toast.error("Could not copy — select the code and copy manually")
+    }
+  }
 
   const selectedChild = children.find((c) => c.id === selectedChildId)
   const curriculumAgeGroup = selectedChild?.age_group ?? "6-7"
@@ -218,8 +259,9 @@ export default function ParentDashboardClient({
         throw new Error(data.error || "Failed to add child")
       }
 
-      setChildren([...children, data.child])
-      if (!selectedChildId) setSelectedChildId(data.child.id)
+      setChildren([...children, data.child as Child])
+      if (!selectedChildId) setSelectedChildId((data.child as Child).id)
+      void refreshChildren()
       setNewChildName("")
       setNewChildDob("")
       setNewChildGender("prefer_not_say")
@@ -645,12 +687,34 @@ export default function ParentDashboardClient({
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-400 font-medium">Login Code</span>
-                          <code className="rounded-lg bg-violet-50 px-2.5 py-1 font-mono text-xs font-bold text-violet-700 border border-violet-100">
-                            {child.login_code}
-                          </code>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {child.assessment_completed ? (
+                            <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-0">
+                              Assessment complete
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-slate-600">
+                              Assessment pending
+                            </Badge>
+                          )}
                         </div>
+                        <div className="flex items-center justify-between gap-2 text-sm">
+                          <span className="text-slate-400 font-medium shrink-0">Login code</span>
+                          <button
+                            type="button"
+                            onClick={(e) => copyLoginCode(e, child.login_code, child.id)}
+                            className="group flex items-center gap-2 rounded-lg border border-violet-100 bg-violet-50 px-2.5 py-1.5 font-mono text-xs font-bold text-violet-700 transition hover:bg-violet-100 hover:border-violet-200"
+                            title="Click to copy"
+                          >
+                            <span>{child.login_code}</span>
+                            {copiedLoginChildId === child.id ? (
+                              <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" aria-hidden />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 shrink-0" aria-hidden />
+                            )}
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-slate-500 leading-snug">Tap the code to copy it for your child&apos;s sign-in.</p>
                         <div className="space-y-1.5">
                           <div className="flex justify-between text-sm">
                             <span className="text-slate-400 font-medium">Progress</span>
@@ -658,12 +722,26 @@ export default function ParentDashboardClient({
                           </div>
                           <Progress value={0} className="h-2 rounded-full" />
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 pt-2">
-                          <Button variant="outline" className="min-w-[130px] flex-1 rounded-xl border-slate-200 hover:bg-violet-50 hover:border-violet-200 hover:text-violet-700 font-medium" asChild>
-                            <Link href={`/parent/child/${child.id}`}>
+                        <div className="flex flex-col gap-2 pt-2">
+                          <Button variant="outline" className="w-full rounded-xl border-slate-200 hover:bg-violet-50 hover:border-violet-200 hover:text-violet-700 font-medium" asChild>
+                            <Link href={`/parent/child/${child.id}`} onClick={(e) => e.stopPropagation()}>
                               View Details <ChevronRight className="w-4 h-4 ml-1" />
                             </Link>
                           </Button>
+                          {child.assessment_completed ? (
+                            <Button variant="outline" className="w-full rounded-xl border-teal-200 text-teal-800 hover:bg-teal-50" asChild>
+                              <Link href={`/parent/children/${child.id}/report`} onClick={(e) => e.stopPropagation()}>
+                                <ClipboardList className="w-4 h-4 mr-2" />
+                                Learning assessment report
+                              </Link>
+                            </Button>
+                          ) : (
+                            <Button variant="secondary" className="w-full rounded-xl" asChild>
+                              <Link href={`/assessment/${child.id}`} onClick={(e) => e.stopPropagation()}>
+                                Complete assessment
+                              </Link>
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </CardContent>

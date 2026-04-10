@@ -83,21 +83,27 @@ export function ParentProgressCharts({
             <CardDescription>Average scores over time</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={progressChartConfig} className="h-[240px] w-full">
-              <LineChart data={progressData} margin={{ left: 12, right: 12 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200" />
-                <XAxis dataKey="week" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Line
-                  type="monotone"
-                  dataKey="score"
-                  stroke="var(--color-score)"
-                  strokeWidth={2}
-                  dot={{ fill: "var(--color-score)", r: 3 }}
-                />
-              </LineChart>
-            </ChartContainer>
+            {progressData.length === 0 ? (
+              <p className="flex h-[240px] items-center justify-center text-center text-sm text-slate-500">
+                No score history yet. Completed worksheets and quizzes will appear here.
+              </p>
+            ) : (
+              <ChartContainer config={progressChartConfig} className="h-[240px] w-full">
+                <LineChart data={progressData} margin={{ left: 12, right: 12 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200" />
+                  <XAxis dataKey="week" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Line
+                    type="monotone"
+                    dataKey="score"
+                    stroke="var(--color-score)"
+                    strokeWidth={2}
+                    dot={{ fill: "var(--color-score)", r: 3 }}
+                  />
+                </LineChart>
+              </ChartContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -107,16 +113,22 @@ export function ParentProgressCharts({
             <CardDescription>Worksheets and quizzes this week</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={activityChartConfig} className="h-[240px] w-full">
-              <BarChart data={activityWithTotal} margin={{ left: 12, right: 12 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200" />
-                <XAxis dataKey="day" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="worksheets" fill="var(--color-worksheets)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="quizzes" fill="var(--color-quizzes)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
+            {activityWithTotal.length === 0 ? (
+              <p className="flex h-[240px] items-center justify-center text-center text-sm text-slate-500">
+                No activity for this week yet.
+              </p>
+            ) : (
+              <ChartContainer config={activityChartConfig} className="h-[240px] w-full">
+                <BarChart data={activityWithTotal} margin={{ left: 12, right: 12 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200" />
+                  <XAxis dataKey="day" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                  <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="worksheets" fill="var(--color-worksheets)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="quizzes" fill="var(--color-quizzes)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ChartContainer>
+            )}
           </CardContent>
         </Card>
       </div>

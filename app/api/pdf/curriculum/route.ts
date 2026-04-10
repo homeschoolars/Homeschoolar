@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from "next/server"
 import { renderToBuffer } from "@react-pdf/renderer"
 import { CurriculumPDF } from "@/components/pdf/pdf-templates"
 
+export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
+
 export async function POST(request: NextRequest) {
   try {
     const { subjects, ageGroup, childName, learningClass } = await request.json()

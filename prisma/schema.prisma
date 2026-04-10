@@ -397,9 +397,29 @@ model CurriculumLesson {
   lectures               CurriculumLecture[]
   worksheets             Worksheet[]
   worksheetCompletions   StudentLessonWorksheetDone[]
+  videos                 Video[]
 
   @@unique([unitId, slug])
   @@map("curriculum_lessons")
+}
+
+/// YouTube video attached to a curriculum lesson (metadata from YouTube Data API v3).
+model Video {
+  id          String           @id @default(cuid())
+  /// YouTube watch/embed id (11 chars typically).
+  videoId     String           @map("youtube_video_id")
+  title       String
+  description String?          @db.Text
+  thumbnail   String?
+  /// Human-readable length, e.g. "10:30".
+  duration    String?
+  lessonId    String           @map("lesson_id")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  lesson      CurriculumLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, videoId])
+  @@index([lessonId])
+  @@map("lesson_videos")
 }
 
 model CurriculumLecture {

@@ -37,6 +37,8 @@ export default async function ChildDetailPage({
     notFound()
   }
 
+  const assessmentReportCount = await prisma.assessmentReport.count({ where: { childId } })
+
   // Fetch related data separately
   const [progressData, assignmentsData] = await Promise.all([
     prisma.progress.findMany({
@@ -84,5 +86,12 @@ export default async function ChildDetailPage({
 
   const mappedChild = serializeChild(child)
 
-  return <ChildDetailPageClient child={mappedChild} progress={progress} assignments={assignments} />
+  return (
+    <ChildDetailPageClient
+      child={mappedChild}
+      progress={progress}
+      assignments={assignments}
+      hasLearningAssessmentReport={assessmentReportCount > 0}
+    />
+  )
 }

@@ -1,11 +1,23 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { BookOpen, TrendingUp, Calendar, CheckCircle, Clock, ArrowLeft } from "lucide-react"
+import {
+  BookOpen,
+  TrendingUp,
+  Calendar,
+  CheckCircle,
+  Clock,
+  ArrowLeft,
+  Copy,
+  Check,
+  ClipboardList,
+} from "lucide-react"
 import Link from "next/link"
+import { toast } from "sonner"
 import type { Child } from "@/lib/types"
 import { StudentPerformancePanel } from "@/components/parent/student-performance-panel"
 
@@ -34,13 +46,28 @@ interface ChildDetailPageClientProps {
   child: Child
   progress: ProgressItem[]
   assignments: Assignment[]
+  hasLearningAssessmentReport: boolean
 }
 
 export default function ChildDetailPageClient({
   child,
   progress,
   assignments,
+  hasLearningAssessmentReport,
 }: ChildDetailPageClientProps) {
+  const [codeCopied, setCodeCopied] = useState(false)
+
+  const copyLoginCode = async () => {
+    try {
+      await navigator.clipboard.writeText(child.login_code)
+      setCodeCopied(true)
+      toast.success("Login code copied")
+      window.setTimeout(() => setCodeCopied(false), 2000)
+    } catch {
+      toast.error("Could not copy — select the code and copy manually")
+    }
+  }
+
   const totalWorksheets = progress.reduce((sum, p) => sum + p.completedWorksheets, 0)
   const averageScore =
     progress.length > 0
@@ -89,6 +116,45 @@ export default function ChildDetailPageClient({
             </CardContent>
           </Card>
         </div>
+
+        <Card className="mb-6 border-violet-200 bg-gradient-to-br from-violet-50/80 to-white">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">Student sign-in &amp; assessment</CardTitle>
+            <CardDescription>Share the login code with your child. Open the learning report after the assessment.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm text-slate-600">Login code</span>
+              <button
+                type="button"
+                onClick={() => void copyLoginCode()}
+                className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-white px-4 py-2 font-mono text-sm font-bold text-violet-800 shadow-sm transition hover:bg-violet-50"
+              >
+                {child.login_code}
+                {codeCopied ? (
+                  <Check className="h-4 w-4 text-emerald-600" aria-hidden />
+                ) : (
+                  <Copy className="h-4 w-4 text-violet-500" aria-hidden />
+                )}
+              </button>
+              <span className="text-xs text-slate-500">Click to copy</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {hasLearningAssessmentReport ? (
+                <Button asChild className="rounded-xl bg-[#7F77DD] hover:bg-[#6d65c9]">
+                  <Link href={`/parent/children/${child.id}/report`}>
+                    <ClipboardList className="w-4 h-4 mr-2" />
+                    View learning assessment report
+                  </Link>
+                </Button>
+              ) : (
+                <Button asChild variant="secondary" className="rounded-xl">
+                  <Link href={`/assessment/${child.id}`}>Complete learning assessment</Link>
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="mb-6">
           <StudentPerformancePanel studentId={child.id} />

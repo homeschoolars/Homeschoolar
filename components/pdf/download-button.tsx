@@ -6,6 +6,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Download, Loader2 } from "lucide-react"
 import { apiFetch } from "@/lib/api-client"
+import { toast } from "sonner"
 
 interface DownloadButtonProps {
   pdfType:
@@ -44,7 +45,11 @@ export function DownloadButton({
         body: JSON.stringify(data),
       })
 
-      if (!response.ok) throw new Error("Failed to generate PDF")
+      if (!response.ok) {
+        const errJson = (await response.json().catch(() => null)) as { error?: string } | null
+        const msg = errJson?.error ?? `Could not generate PDF (${response.status})`
+        throw new Error(msg)
+      }
 
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
@@ -57,6 +62,7 @@ export function DownloadButton({
       document.body.removeChild(a)
     } catch (error) {
       console.error("Error downloading PDF:", error)
+      toast.error(error instanceof Error ? error.message : "Could not download PDF")
     } finally {
       setIsLoading(false)
     }

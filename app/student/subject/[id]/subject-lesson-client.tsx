@@ -14,6 +14,7 @@ import { AdaptiveQuizPlayer, type AdaptiveQuizQuestion } from "@/components/lear
 import { AdaptiveActivityViewer } from "@/components/learning/adaptive-activity-viewer"
 import { AdaptiveWorksheetViewer, type WorksheetViewModel } from "@/components/learning/adaptive-worksheet-viewer"
 import { CurriculumResourcesEmbed } from "@/components/curriculum/curriculum-resources-embed"
+import { LessonVideosEmbed } from "@/components/curriculum/lesson-videos-embed"
 
 function ageNumericFromBand(band: string): number {
   const m: Record<string, number> = { "4-5": 5, "6-7": 7, "8-9": 9, "10-11": 11, "12-13": 13 }
@@ -986,6 +987,16 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                   age={ageNumericFromBand(internalAgeBand)}
                   subjectName={subject.name}
                   topicTitle={lesson.title}
+                />
+              ) : null}
+
+              {selectedLessonId && studentId ? (
+                <LessonVideosEmbed
+                  lessonId={selectedLessonId}
+                  childId={studentId}
+                  lessonUnlocked={Boolean(
+                    !lessonLoading && lesson && lessonProgress?.canAccess && !lesson.locked,
+                  )}
                 />
               ) : null}
 

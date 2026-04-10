@@ -1,23 +1,25 @@
-"use client"
-
-import { Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer"
+import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer"
 import type { Worksheet, Child, Subject, Progress, AIRecommendation, Assessment, AgeGroup } from "@/lib/types"
 import { getLearningClassFromAgeYears, getLearningClassLabelFromApiAgeGroup } from "@/lib/learning-class"
 
-// Register fonts
-Font.register({
-  family: "Nunito",
-  fonts: [
-    { src: "https://fonts.gstatic.com/s/nunito/v25/XRXV3I6Li01BKofINeaBTMnFcQ.woff2", fontWeight: 400 },
-    { src: "https://fonts.gstatic.com/s/nunito/v25/XRXW3I6Li01BKofA6sOpNeaB.woff2", fontWeight: 700 },
-  ],
-})
+/** Safe string for <Text> — avoids crashes when JSON has non-strings (react-pdf requires string/number children). */
+function pdfText(value: unknown): string {
+  if (value == null) return ""
+  if (typeof value === "string") return value
+  if (typeof value === "number" && Number.isFinite(value)) return String(value)
+  if (typeof value === "boolean") return value ? "Yes" : "No"
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return ""
+  }
+}
 
-// Colorful kid-friendly styles
+// Built-in PDF fonts only (no network) — remote WOFF2 from gstatic often fails on Cloud Run / locked-down hosts.
 const styles = StyleSheet.create({
   page: {
     padding: 40,
-    fontFamily: "Nunito",
+    fontFamily: "Helvetica",
     backgroundColor: "#FDF4FF",
   },
   header: {
@@ -28,7 +30,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 700,
+    fontFamily: "Helvetica-Bold",
     color: "#FFFFFF",
     textAlign: "center",
   },
@@ -54,7 +56,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: 700,
+    fontFamily: "Helvetica-Bold",
     color: "#7C3AED",
     marginBottom: 10,
     paddingBottom: 5,
@@ -71,7 +73,7 @@ const styles = StyleSheet.create({
   },
   questionNumber: {
     fontSize: 12,
-    fontWeight: 700,
+    fontFamily: "Helvetica-Bold",
     color: "#8B5CF6",
     marginBottom: 4,
   },
@@ -123,7 +125,7 @@ const styles = StyleSheet.create({
   },
   infoValue: {
     fontSize: 10,
-    fontWeight: 700,
+    fontFamily: "Helvetica-Bold",
     color: "#1F2937",
   },
   badge: {
@@ -135,11 +137,11 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 9,
     color: "#7C3AED",
-    fontWeight: 700,
+    fontFamily: "Helvetica-Bold",
   },
   answerKeyAnswer: {
     fontSize: 11,
-    fontWeight: 700,
+    fontFamily: "Helvetica-Bold",
     color: "#059669",
     marginBottom: 4,
   },
@@ -173,7 +175,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 24,
-    fontWeight: 700,
+    fontFamily: "Helvetica-Bold",
     color: "#7C3AED",
   },
   statLabel: {
@@ -190,7 +192,7 @@ const styles = StyleSheet.create({
   },
   recommendationTitle: {
     fontSize: 12,
-    fontWeight: 700,
+    fontFamily: "Helvetica-Bold",
     color: "#92400E",
     marginBottom: 4,
   },
@@ -207,7 +209,7 @@ const styles = StyleSheet.create({
   tableHeaderCell: {
     flex: 1,
     fontSize: 10,
-    fontWeight: 700,
+    fontFamily: "Helvetica-Bold",
     color: "#FFFFFF",
   },
   tableRow: {
@@ -379,7 +381,14 @@ export function CurriculumPDF({
           <Text style={styles.sectionTitle}>Subjects Overview</Text>
           {subjects.map((subject, index) => (
             <View key={subject.id} style={styles.statsCard}>
-              <Text style={{ fontSize: 14, fontWeight: 700, color: subject.color || "#8B5CF6", marginBottom: 4 }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontFamily: "Helvetica-Bold",
+                  color: subject.color || "#8B5CF6",
+                  marginBottom: 4,
+                }}
+              >
                 {index + 1}. {subject.name}
               </Text>
               <Text style={{ fontSize: 10, color: "#6B7280" }}>
@@ -519,9 +528,7 @@ export function RecommendationsPDF({
               </Text>
               {rec.description && <Text style={styles.recommendationDesc}>{rec.description}</Text>}
               {rec.reason && (
-                <Text style={{ fontSize: 9, color: "#92400E", marginTop: 4, fontStyle: "italic" }}>
-                  Why: {rec.reason}
-                </Text>
+                <Text style={{ fontSize: 9, color: "#92400E", marginTop: 4 }}>Why: {pdfText(rec.reason)}</Text>
               )}
             </View>
           ))}
@@ -605,20 +612,26 @@ export function InsightsReportPDF({ childName, insights, summary }: InsightsRepo
             <Text style={styles.sectionTitle}>Key takeaways</Text>
             {celebrate && (
               <View style={{ marginBottom: 8, padding: 10, backgroundColor: "#ECFDF5", borderRadius: 6 }}>
-                <Text style={{ fontSize: 10, fontWeight: 700, color: "#065F46", marginBottom: 4 }}>Celebrate</Text>
-                <Text style={{ fontSize: 10, color: "#047857", lineHeight: 1.4 }}>{celebrate}</Text>
+                <Text style={{ fontSize: 10, fontFamily: "Helvetica-Bold", color: "#065F46", marginBottom: 4 }}>
+                  Celebrate
+                </Text>
+                <Text style={{ fontSize: 10, color: "#047857", lineHeight: 1.4 }}>{pdfText(celebrate)}</Text>
               </View>
             )}
             {tryActivity && (
               <View style={{ marginBottom: 8, padding: 10, backgroundColor: "#FEF3C7", borderRadius: 6 }}>
-                <Text style={{ fontSize: 10, fontWeight: 700, color: "#92400E", marginBottom: 4 }}>Try at home</Text>
-                <Text style={{ fontSize: 10, color: "#78350F", lineHeight: 1.4 }}>{tryActivity}</Text>
+                <Text style={{ fontSize: 10, fontFamily: "Helvetica-Bold", color: "#92400E", marginBottom: 4 }}>
+                  Try at home
+                </Text>
+                <Text style={{ fontSize: 10, color: "#78350F", lineHeight: 1.4 }}>{pdfText(tryActivity)}</Text>
               </View>
             )}
             {review && (
               <View style={{ padding: 10, backgroundColor: "#EFF6FF", borderRadius: 6 }}>
-                <Text style={{ fontSize: 10, fontWeight: 700, color: "#1E40AF", marginBottom: 4 }}>Review</Text>
-                <Text style={{ fontSize: 10, color: "#1E3A8A", lineHeight: 1.4 }}>{review}</Text>
+                <Text style={{ fontSize: 10, fontFamily: "Helvetica-Bold", color: "#1E40AF", marginBottom: 4 }}>
+                  Review
+                </Text>
+                <Text style={{ fontSize: 10, color: "#1E3A8A", lineHeight: 1.4 }}>{pdfText(review)}</Text>
               </View>
             )}
           </View>
@@ -630,7 +643,7 @@ export function InsightsReportPDF({ childName, insights, summary }: InsightsRepo
             {improving.map((s, i) => (
               <View key={i} style={{ flexDirection: "row", marginBottom: 4, alignItems: "flex-start" }}>
                 <Text style={{ fontSize: 10, color: "#059669", marginRight: 6 }}>•</Text>
-                <Text style={{ fontSize: 10, color: "#374151", flex: 1 }}>{s}</Text>
+                <Text style={{ fontSize: 10, color: "#374151", flex: 1 }}>{pdfText(s)}</Text>
               </View>
             ))}
           </View>
@@ -642,7 +655,7 @@ export function InsightsReportPDF({ childName, insights, summary }: InsightsRepo
             {needsHelp.map((s, i) => (
               <View key={i} style={{ flexDirection: "row", marginBottom: 4, alignItems: "flex-start" }}>
                 <Text style={{ fontSize: 10, color: "#D97706", marginRight: 6 }}>•</Text>
-                <Text style={{ fontSize: 10, color: "#374151", flex: 1 }}>{s}</Text>
+                <Text style={{ fontSize: 10, color: "#374151", flex: 1 }}>{pdfText(s)}</Text>
               </View>
             ))}
           </View>
@@ -654,7 +667,7 @@ export function InsightsReportPDF({ childName, insights, summary }: InsightsRepo
             {mastered.map((s, i) => (
               <View key={i} style={{ flexDirection: "row", marginBottom: 4, alignItems: "flex-start" }}>
                 <Text style={{ fontSize: 10, color: "#7C3AED", marginRight: 6 }}>•</Text>
-                <Text style={{ fontSize: 10, color: "#374151", flex: 1 }}>{s}</Text>
+                <Text style={{ fontSize: 10, color: "#374151", flex: 1 }}>{pdfText(s)}</Text>
               </View>
             ))}
           </View>
@@ -663,14 +676,14 @@ export function InsightsReportPDF({ childName, insights, summary }: InsightsRepo
         {nextWeek && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Next week</Text>
-            <Text style={{ fontSize: 10, color: "#374151", lineHeight: 1.4 }}>{nextWeek}</Text>
+            <Text style={{ fontSize: 10, color: "#374151", lineHeight: 1.4 }}>{pdfText(nextWeek)}</Text>
           </View>
         )}
 
         {!improving.length && !needsHelp.length && !celebrate && !tryActivity && !review && !mastered.length && !nextWeek && (
           <View style={styles.section}>
-            <Text style={{ fontSize: 10, color: "#6B7280", fontStyle: "italic" }}>
-              Complete an assessment and some activities to see AI insights for {childName}.
+            <Text style={{ fontSize: 10, color: "#6B7280" }}>
+              Complete an assessment and some activities to see AI insights for {pdfText(childName)}.
             </Text>
           </View>
         )}
@@ -722,6 +735,14 @@ export function HolisticLearningAssessmentPDF({
   })
   const scoreEntries = Object.entries(scores ?? {})
 
+  const scoreRow = (v: unknown) => {
+    const o = v && typeof v === "object" ? (v as Record<string, unknown>) : {}
+    const pct = typeof o.pct === "number" && Number.isFinite(o.pct) ? o.pct : 0
+    const total = typeof o.total === "number" && Number.isFinite(o.total) ? o.total : 0
+    const max = typeof o.max === "number" && Number.isFinite(o.max) ? o.max : 0
+    return { pct, total, max }
+  }
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -750,42 +771,45 @@ export function HolisticLearningAssessmentPDF({
         {scoreEntries.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Subject snapshot (scores)</Text>
-            {scoreEntries.map(([key, v]) => (
-              <View key={key} style={{ marginBottom: 6, flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ fontSize: 10, color: "#1F2937", flex: 2 }}>{key}</Text>
-                <Text style={{ fontSize: 10, color: "#6B7280" }}>
-                  {v.total}/{v.max} ({Math.round(v.pct)}%)
-                </Text>
-              </View>
-            ))}
+            {scoreEntries.map(([key, v]) => {
+              const { pct, total, max } = scoreRow(v)
+              return (
+                <View key={key} style={{ marginBottom: 6, flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ fontSize: 10, color: "#1F2937", flex: 2 }}>{pdfText(key)}</Text>
+                  <Text style={{ fontSize: 10, color: "#6B7280" }}>
+                    {total}/{max} ({Math.round(pct)}%)
+                  </Text>
+                </View>
+              )
+            })}
           </View>
         )}
 
         {r.learnerType ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Learner type</Text>
-            <Text style={holBody}>{r.learnerType}</Text>
+            <Text style={holBody}>{pdfText(r.learnerType)}</Text>
           </View>
         ) : null}
 
         {r.interestProfile ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Interest profile</Text>
-            <Text style={holBody}>{r.interestProfile}</Text>
+            <Text style={holBody}>{pdfText(r.interestProfile)}</Text>
           </View>
         ) : null}
 
         {r.aptitudeProfile ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Aptitude profile</Text>
-            <Text style={holBody}>{r.aptitudeProfile}</Text>
+            <Text style={holBody}>{pdfText(r.aptitudeProfile)}</Text>
           </View>
         ) : null}
 
         {r.overallSummary ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Overall summary</Text>
-            <Text style={holBody}>{r.overallSummary}</Text>
+            <Text style={holBody}>{pdfText(r.overallSummary)}</Text>
           </View>
         ) : null}
 
@@ -802,21 +826,21 @@ export function HolisticLearningAssessmentPDF({
         {r.strengthsNarrative ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Strengths</Text>
-            <Text style={holBody}>{r.strengthsNarrative}</Text>
+            <Text style={holBody}>{pdfText(r.strengthsNarrative)}</Text>
           </View>
         ) : null}
 
         {r.growthNarrative ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Growth areas</Text>
-            <Text style={holBody}>{r.growthNarrative}</Text>
+            <Text style={holBody}>{pdfText(r.growthNarrative)}</Text>
           </View>
         ) : null}
 
         {r.personalityInsight ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Personality & learning</Text>
-            <Text style={holBody}>{r.personalityInsight}</Text>
+            <Text style={holBody}>{pdfText(r.personalityInsight)}</Text>
           </View>
         ) : null}
 
@@ -826,7 +850,7 @@ export function HolisticLearningAssessmentPDF({
             {r.learningStyleTips.map((tip, i) => (
               <View key={i} style={{ flexDirection: "row", marginBottom: 4, alignItems: "flex-start" }}>
                 <Text style={{ fontSize: 10, color: "#7C3AED", marginRight: 6 }}>•</Text>
-                <Text style={{ fontSize: 10, color: "#374151", flex: 1, lineHeight: 1.45 }}>{tip}</Text>
+                <Text style={{ fontSize: 10, color: "#374151", flex: 1, lineHeight: 1.45 }}>{pdfText(tip)}</Text>
               </View>
             ))}
           </View>
@@ -838,7 +862,7 @@ export function HolisticLearningAssessmentPDF({
             {r.careerPathways.map((c, i) => (
               <View key={i} style={{ flexDirection: "row", marginBottom: 4, alignItems: "flex-start" }}>
                 <Text style={{ fontSize: 10, color: "#059669", marginRight: 6 }}>•</Text>
-                <Text style={{ fontSize: 10, color: "#374151", flex: 1, lineHeight: 1.45 }}>{c}</Text>
+                <Text style={{ fontSize: 10, color: "#374151", flex: 1, lineHeight: 1.45 }}>{pdfText(c)}</Text>
               </View>
             ))}
           </View>
@@ -864,9 +888,9 @@ export function HolisticLearningAssessmentPDF({
             </View>
             {r.subjectRecommendations.map((row, i) => (
               <View key={i} style={styles.tableRow}>
-                <Text style={[styles.tableCell, { flex: 1.2 }]}>{row.subject}</Text>
-                <Text style={[styles.tableCell, { flex: 0.8 }]}>{row.status}</Text>
-                <Text style={[styles.tableCell, { flex: 2 }]}>{row.recommendation}</Text>
+                <Text style={[styles.tableCell, { flex: 1.2 }]}>{pdfText(row.subject)}</Text>
+                <Text style={[styles.tableCell, { flex: 0.8 }]}>{pdfText(row.status)}</Text>
+                <Text style={[styles.tableCell, { flex: 2 }]}>{pdfText(row.recommendation)}</Text>
               </View>
             ))}
           </View>
@@ -875,21 +899,21 @@ export function HolisticLearningAssessmentPDF({
         {r.weeklyPlanSuggestion ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Weekly plan suggestion</Text>
-            <Text style={holBody}>{r.weeklyPlanSuggestion}</Text>
+            <Text style={holBody}>{pdfText(r.weeklyPlanSuggestion)}</Text>
           </View>
         ) : null}
 
         {r.parentMessage ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Message for parents</Text>
-            <Text style={holBody}>{r.parentMessage}</Text>
+            <Text style={holBody}>{pdfText(r.parentMessage)}</Text>
           </View>
         ) : null}
 
         {r.islamicNote ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Islamic lens</Text>
-            <Text style={holBody}>{r.islamicNote}</Text>
+            <Text style={holBody}>{pdfText(r.islamicNote)}</Text>
           </View>
         ) : null}
 

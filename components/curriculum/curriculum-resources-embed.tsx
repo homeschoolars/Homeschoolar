@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { apiFetch } from "@/lib/api-client"
+import { extractYouTubeVideoId } from "@/lib/youtube"
 
 type Resource = {
   id: string
@@ -12,18 +13,6 @@ type Resource = {
   resourceType: string
   title: string
   url: string
-}
-
-function youtubeEmbedId(url: string): string | null {
-  try {
-    const u = new URL(url)
-    if (u.hostname.includes("youtu.be")) return u.pathname.slice(1) || null
-    if (u.searchParams.get("v")) return u.searchParams.get("v")
-    const m = u.pathname.match(/\/embed\/([^/]+)/)
-    return m?.[1] ?? null
-  } catch {
-    return null
-  }
 }
 
 type Props = {
@@ -76,16 +65,18 @@ export function CurriculumResourcesEmbed({ childId, age, subjectName, topicTitle
     <section className="mt-8 rounded-2xl border border-violet-200 bg-white/90 p-6 shadow-sm">
       <h3 className="font-semibold text-violet-800 mb-4">Extra resources for this topic</h3>
       <ul className="space-y-6">
-        {items.map((r) => (
+        {items.map((r) => {
+          const youtubeId = r.resourceType === "youtube" ? extractYouTubeVideoId(r.url) : null
+          return (
           <li key={r.id} className="border-b border-slate-100 pb-6 last:border-0 last:pb-0">
             <p className="font-medium text-slate-900">{r.title}</p>
             <p className="text-xs text-slate-500 capitalize mb-2">{r.resourceType.replace(/_/g, " ")}</p>
-            {r.resourceType === "youtube" && youtubeEmbedId(r.url) ? (
+            {youtubeId ? (
               <div className="aspect-video w-full max-w-2xl overflow-hidden rounded-xl bg-black">
                 <iframe
                   title={r.title}
                   className="h-full w-full"
-                  src={`https://www.youtube.com/embed/${youtubeEmbedId(r.url)}`}
+                  src={`https://www.youtube.com/embed/${encodeURIComponent(youtubeId)}`}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />
@@ -127,7 +118,8 @@ export function CurriculumResourcesEmbed({ childId, age, subjectName, topicTitle
               </a>
             )}
           </li>
-        ))}
+          )
+        })}
       </ul>
     </section>
   )

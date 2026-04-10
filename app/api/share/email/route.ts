@@ -8,6 +8,9 @@ import {
   InsightsReportPDF,
 } from "@/components/pdf/pdf-templates"
 
+export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
+
 export async function POST(request: NextRequest) {
   try {
     const { pdfType, data, email, message, title } = await request.json()

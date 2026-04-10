@@ -9,6 +9,23 @@ import { serializeChild } from "@/lib/serializers"
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+/** List current parent’s children (fresh assessment flags, login codes). */
+export async function GET() {
+  try {
+    const session = await requireRole("parent")
+    const rows = await prisma.child.findMany({
+      where: { parentId: session.user.id },
+      orderBy: { createdAt: "asc" },
+      include: { profile: { select: { dateOfBirth: true } } },
+    })
+    return NextResponse.json({ children: rows.map(serializeChild) })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to load children"
+    const status = message === "Unauthorized" || message === "Forbidden" ? 403 : 500
+    return NextResponse.json({ error: message }, { status })
+  }
+}
+
 const createChildSchema = z.object({
   full_name: z.string().min(1),
   date_of_birth: z.string().min(1),
