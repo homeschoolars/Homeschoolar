@@ -17,14 +17,29 @@ type RoadmapSubject = {
   entry_level: string
   weekly_lessons: number
   teaching_style: string
-  difficulty_progression: string[]
+  /** API / AI schema uses a single enum string; older data may use string[]. */
+  difficulty_progression: string | string[]
   ai_adaptation_strategy: string
-  mastery_timeline_weeks: number
+  mastery_timeline_weeks?: number
+  estimated_mastery_weeks?: number
+}
+
+function difficultyProgressionSteps(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String).filter(Boolean)
+  if (typeof value === "string" && value.trim()) return [value.trim()]
+  return []
+}
+
+function roadmapMasteryWeeks(s: RoadmapSubject): number | null {
+  const w = s.mastery_timeline_weeks ?? s.estimated_mastery_weeks
+  return typeof w === "number" && Number.isFinite(w) ? w : null
 }
 
 type RoadmapData = {
   subjects: Record<string, RoadmapSubject>
   summary?: string
+  /** Stored by AI roadmap generator */
+  student_summary?: string
 }
 
 export function RoadmapViewer({ studentId, studentName }: RoadmapViewerProps) {
@@ -262,9 +277,9 @@ export function RoadmapViewer({ studentId, studentName }: RoadmapViewerProps) {
         </div>
       </CardHeader>
       <CardContent>
-        {roadmap.summary && (
+        {(roadmap.summary ?? roadmap.student_summary) && (
           <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm text-blue-900">{roadmap.summary}</p>
+            <p className="text-sm text-blue-900">{roadmap.summary ?? roadmap.student_summary}</p>
           </div>
         )}
 
@@ -277,7 +292,10 @@ export function RoadmapViewer({ studentId, studentName }: RoadmapViewerProps) {
             ))}
           </TabsList>
 
-          {subjects.map(([subjectName, subjectData]) => (
+          {subjects.map(([subjectName, subjectData]) => {
+            const progSteps = difficultyProgressionSteps(subjectData.difficulty_progression)
+            const masteryWeeks = roadmapMasteryWeeks(subjectData)
+            return (
             <TabsContent key={subjectName} value={subjectName} className="mt-4">
               <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -305,7 +323,7 @@ export function RoadmapViewer({ studentId, studentName }: RoadmapViewerProps) {
                       <span className="text-xs font-medium text-purple-900">Timeline</span>
                     </div>
                     <p className="text-sm font-semibold text-purple-900">
-                      {subjectData.mastery_timeline_weeks} weeks
+                      {masteryWeeks != null ? `${masteryWeeks} weeks` : "—"}
                     </p>
                   </div>
 
@@ -321,9 +339,10 @@ export function RoadmapViewer({ studentId, studentName }: RoadmapViewerProps) {
                 <div className="p-4 bg-slate-50 rounded-lg">
                   <h4 className="font-semibold text-sm mb-2">Difficulty Progression</h4>
                   <div className="flex flex-wrap gap-2">
-                    {subjectData.difficulty_progression.map((step, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-xs">
-                        {idx + 1}. {step}
+                    {progSteps.map((step, idx) => (
+                      <Badge key={`${step}-${idx}`} variant="secondary" className="text-xs">
+                        {progSteps.length > 1 ? `${idx + 1}. ` : ""}
+                        {step.replace(/_/g, " ")}
                       </Badge>
                     ))}
                   </div>
@@ -335,7 +354,8 @@ export function RoadmapViewer({ studentId, studentName }: RoadmapViewerProps) {
                 </div>
               </div>
             </TabsContent>
-          ))}
+            )
+          })}
         </Tabs>
       </CardContent>
     </Card>
