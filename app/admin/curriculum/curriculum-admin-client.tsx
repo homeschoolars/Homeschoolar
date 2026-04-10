@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -21,6 +21,18 @@ type VideoPreviewPayload = {
   lessonTitle?: string
 }
 
+type PickerLesson = { id: string; title: string; slug: string }
+type PickerUnit = { id: string; title: string; slug: string; lessons: PickerLesson[] }
+type PickerSubject = { id: string; name: string; slug: string; units: PickerUnit[] }
+type PickerAgeGroup = {
+  id: string
+  name: string
+  stageName: string
+  ageMin: number
+  ageMax: number
+  subjects: PickerSubject[]
+}
+
 export default function CurriculumAdminClient() {
   const [age, setAge] = useState("8")
   const [subject, setSubject] = useState("")
@@ -32,21 +44,69 @@ export default function CurriculumAdminClient() {
   const [status, setStatus] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  /** Attach validated YouTube metadata to a curriculum lesson (UUID). */
-  const [lessonUuid, setLessonUuid] = useState("")
+  const [pickerTree, setPickerTree] = useState<PickerAgeGroup[] | null>(null)
+  const [pickerTreeLoading, setPickerTreeLoading] = useState(true)
+  const [pickAgeId, setPickAgeId] = useState("")
+  const [pickSubjectId, setPickSubjectId] = useState("")
+  const [pickUnitId, setPickUnitId] = useState("")
+  const [pickLessonId, setPickLessonId] = useState("")
+
   const [lessonYoutubeUrl, setLessonYoutubeUrl] = useState("")
   const [videoPreview, setVideoPreview] = useState<VideoPreviewPayload | null>(null)
   const [videoAttachStatus, setVideoAttachStatus] = useState<string | null>(null)
   const [videoPreviewLoading, setVideoPreviewLoading] = useState(false)
   const [videoSaveLoading, setVideoSaveLoading] = useState(false)
 
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      setPickerTreeLoading(true)
+      try {
+        const res = await apiFetch("/api/admin/curriculum/lesson-picker", { credentials: "include" })
+        const data = (await res.json()) as { ageGroups?: PickerAgeGroup[]; error?: string }
+        if (!cancelled && res.ok && data.ageGroups) {
+          setPickerTree(data.ageGroups)
+        }
+      } catch {
+        if (!cancelled) setPickerTree([])
+      } finally {
+        if (!cancelled) setPickerTreeLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const selectedAge = useMemo(
+    () => pickerTree?.find((g) => g.id === pickAgeId) ?? null,
+    [pickerTree, pickAgeId],
+  )
+  const selectedSubject = useMemo(
+    () => selectedAge?.subjects.find((s) => s.id === pickSubjectId) ?? null,
+    [selectedAge, pickSubjectId],
+  )
+  const selectedUnit = useMemo(
+    () => selectedSubject?.units.find((u) => u.id === pickUnitId) ?? null,
+    [selectedSubject, pickUnitId],
+  )
+  const selectedLesson = useMemo(
+    () => selectedUnit?.lessons.find((l) => l.id === pickLessonId) ?? null,
+    [selectedUnit, pickLessonId],
+  )
+
+  const lessonPickerSummary = useMemo(() => {
+    if (!selectedLesson || !selectedAge) return null
+    return `${selectedAge.stageName} · ${selectedSubject?.name ?? "—"} · ${selectedUnit?.title ?? "—"} · ${selectedLesson.title}`
+  }, [selectedAge, selectedSubject, selectedUnit, selectedLesson])
+
   const fetchVideoPreview = useCallback(
     async (url: string) => {
-      const trimmedLesson = lessonUuid.trim()
+      const trimmedLesson = pickLessonId.trim()
       const trimmedUrl = url.trim()
       setVideoAttachStatus(null)
       if (!trimmedLesson) {
-        setVideoAttachStatus("Enter the curriculum lesson UUID first.")
+        setVideoAttachStatus("Choose age band, subject, unit, and lesson first.")
         return
       }
       if (!trimmedUrl) {
@@ -84,15 +144,15 @@ export default function CurriculumAdminClient() {
         setVideoPreviewLoading(false)
       }
     },
-    [lessonUuid],
+    [pickLessonId],
   )
 
   const saveLessonVideo = async () => {
-    const trimmedLesson = lessonUuid.trim()
+    const trimmedLesson = pickLessonId.trim()
     const trimmedUrl = lessonYoutubeUrl.trim()
     setVideoAttachStatus(null)
     if (!trimmedLesson || !trimmedUrl) {
-      setVideoAttachStatus("Lesson UUID and YouTube URL are required.")
+      setVideoAttachStatus("Choose a lesson and enter a YouTube URL.")
       return
     }
     setVideoSaveLoading(true)
@@ -243,24 +303,123 @@ export default function CurriculumAdminClient() {
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Lesson YouTube video</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Paste a link to fetch title, thumbnail, and duration via the YouTube Data API (server-side{" "}
-            <code className="rounded bg-white/80 px-1 text-xs">YOUTUBE_API_KEY</code>). Students see the embed only when
-            the lesson is unlocked for them; playback uses stored metadata only.
+            Pick the lesson from your curriculum, then paste the video link. Metadata is loaded with{" "}
+            <code className="rounded bg-white/80 px-1 text-xs">YOUTUBE_API_KEY</code> on the server only. Students only see
+            embeds for lessons they can access.
           </p>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="lesson-uuid">Curriculum lesson ID (UUID)</Label>
-          <Input
-            id="lesson-uuid"
-            value={lessonUuid}
-            onChange={(e) => {
-              setLessonUuid(e.target.value)
-              setVideoPreview(null)
-            }}
-            placeholder="e.g. from curriculum_lessons.id"
-            className="font-mono text-sm"
-          />
-        </div>
+
+        {pickerTreeLoading ? (
+          <div className="flex items-center gap-2 text-sm text-violet-900">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading curriculum…
+          </div>
+        ) : !pickerTree?.length ? (
+          <p className="text-sm text-amber-800">No curriculum data found. Seed or import curriculum first.</p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Age band / stage</Label>
+              <Select
+                value={pickAgeId || undefined}
+                onValueChange={(id) => {
+                  setPickAgeId(id)
+                  setPickSubjectId("")
+                  setPickUnitId("")
+                  setPickLessonId("")
+                  setVideoPreview(null)
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select level (e.g. Little Explorers)" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[min(60vh,320px)]">
+                  {pickerTree.map((g) => (
+                    <SelectItem key={g.id} value={g.id}>
+                      {g.stageName} ({g.name}, ages {g.ageMin}–{g.ageMax})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Subject</Label>
+              <Select
+                value={pickSubjectId || undefined}
+                disabled={!selectedAge}
+                onValueChange={(id) => {
+                  setPickSubjectId(id)
+                  setPickUnitId("")
+                  setPickLessonId("")
+                  setVideoPreview(null)
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={selectedAge ? "e.g. Mathematics" : "Select age band first"} />
+                </SelectTrigger>
+                <SelectContent className="max-h-[min(60vh,320px)]">
+                  {(selectedAge?.subjects ?? []).map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Unit</Label>
+              <Select
+                value={pickUnitId || undefined}
+                disabled={!selectedSubject}
+                onValueChange={(id) => {
+                  setPickUnitId(id)
+                  setPickLessonId("")
+                  setVideoPreview(null)
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={selectedSubject ? "Select unit" : "Select subject first"} />
+                </SelectTrigger>
+                <SelectContent className="max-h-[min(60vh,320px)]">
+                  {(selectedSubject?.units ?? []).map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Lesson</Label>
+              <Select
+                value={pickLessonId || undefined}
+                disabled={!selectedUnit}
+                onValueChange={(id) => {
+                  setPickLessonId(id)
+                  setVideoPreview(null)
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={selectedUnit ? "e.g. Counting 1-20" : "Select unit first"} />
+                </SelectTrigger>
+                <SelectContent className="max-h-[min(60vh,360px)]">
+                  {(selectedUnit?.lessons ?? []).map((l) => (
+                    <SelectItem key={l.id} value={l.id}>
+                      {l.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
+        {lessonPickerSummary ? (
+          <p className="rounded-lg border border-violet-200 bg-white/80 px-3 py-2 text-sm text-slate-800">
+            <span className="font-medium text-violet-900">Attaching to:</span> {lessonPickerSummary}
+          </p>
+        ) : null}
+
         <div className="space-y-2">
           <Label htmlFor="lesson-youtube">YouTube URL</Label>
           <Input

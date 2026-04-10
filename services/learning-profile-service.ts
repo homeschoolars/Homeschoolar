@@ -56,8 +56,11 @@ const studentLearningProfileSchema = z.object({
   interest_signals: z.record(z.string(), z.number().min(0).max(100)).describe("Interest level scores (0-100) for each subject/topic"),
   strengths: z.array(strengthItemSchema).describe("Areas where the student excels"),
   gaps: z.array(gapItemSchema).describe("Areas needing improvement with priorities"),
-  evidence: z.array(evidenceItemSchema).default([]).describe("Comprehensive evidence array - always present, can be empty"),
-  recommended_content_style: z.string().optional().describe("Recommended content delivery style (e.g., visual-heavy, story-based)"),
+  // No .default() — OpenAI structured outputs require every property in `required`; defaults omit the key from required.
+  evidence: z.array(evidenceItemSchema).describe("Comprehensive evidence array — always return an array (use [] if none)"),
+  recommended_content_style: z
+    .union([z.string(), z.null()])
+    .describe("Recommended content delivery style; use null if unknown"),
 })
 
 function buildLearningProfilePrompt({
@@ -149,11 +152,11 @@ STRICT OUTPUT REQUIREMENTS:
 7. Evidence: Array of evidence items
    - MUST always be present (can be empty [])
    - Each item must reference provided assessment or memory data
-8. Recommended content style: Optional string
-   - Base on learning style from behavioral memory or infer from patterns
+8. Recommended content style: string or JSON null
+   - Base on learning style from behavioral memory or infer from patterns; use null if unknown
 
 VALIDATION CHECKLIST (VERIFY BEFORE OUTPUT):
-✓ All required top-level keys present
+✓ All required top-level keys present (including recommended_content_style, use null if unknown)
 ✓ student_summary: non-empty string (2-3 sentences)
 ✓ learning_speed: exactly "slow", "average", or "fast"
 ✓ attention_span: exactly "short", "medium", or "long"

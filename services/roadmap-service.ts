@@ -42,14 +42,23 @@ const roadmapSchema = z.object({
     confidence: z.number().min(0).max(100),
   })).describe("Current academic levels by subject"),
   learning_roadmap: z.array(roadmapItemSchema).describe("Structured roadmap items for each subject"),
-  evidence: z.array(z.object({
-    subject: z.string(),
-    source: z.enum(["assessment", "observation", "parent_input", "worksheet", "quiz"]),
-    confidence: z.number().min(0).max(1),
-    description: z.string(),
-  })).default([]).describe("Evidence supporting the roadmap - always present, can be empty"),
+  // No .default() — OpenAI requires `evidence` in `required` alongside other top-level keys.
+  evidence: z
+    .array(
+      z.object({
+        subject: z.string(),
+        source: z.enum(["assessment", "observation", "parent_input", "worksheet", "quiz"]),
+        confidence: z.number().min(0).max(1),
+        description: z.string(),
+      }),
+    )
+    .describe("Evidence supporting the roadmap — always return an array (use [] if none)"),
   subjects: z.record(z.string(), roadmapSubjectSchema).describe("Detailed roadmap for each mandatory subject"),
-  Electives: z.record(z.string(), roadmapSubjectSchema).optional().describe("Elective subjects roadmap (only for age 8-13)"),
+  // .optional() omits key from JSON Schema `required`; use null for ages without electives.
+  Electives: z
+    .record(z.string(), roadmapSubjectSchema)
+    .nullable()
+    .describe("Elective subjects roadmap for age 8-13; use null when not applicable (e.g. age 4-7)"),
 })
 
 function buildRoadmapPrompt({
@@ -192,8 +201,7 @@ STRICT REQUIREMENTS:
    - Reference assessment data from student_profile
 9. subjects: Object with keys matching subject_list exactly
    - Detailed roadmap per mandatory subject
-10. Electives: Object (optional, only if age_band is "8-13")
-    - Keys match elective_subjects exactly
+10. Electives: Object with keys matching elective_subjects when age_band is "8-13"; when age_band is "4-7" or there are no electives, set Electives to null (JSON null, not omitted)
 
 VALIDATION CHECKLIST (VERIFY BEFORE OUTPUT):
 ✓ student_summary: non-empty string (2-4 sentences)
@@ -203,7 +211,7 @@ VALIDATION CHECKLIST (VERIFY BEFORE OUTPUT):
 ✓ evidence: array always present (can be empty)
 ✓ subjects: object with keys matching subject_list exactly (${subjectListJson.length} keys)
 ✓ Each subject entry has all required fields: entry_level, weekly_lessons, teaching_style, difficulty_progression, ai_adaptation_strategy, estimated_mastery_weeks
-✓ Electives: only present if age_band is "8-13", keys match elective_subjects exactly
+✓ Electives: null for age 4-7 or no electives; otherwise object with keys matching elective_subjects exactly
 ✓ All enum values match exactly: entry_level ("Foundation"|"Bridge"|"Advanced"), teaching_style ("story"|"visual"|"logic"|"mix"), difficulty_progression ("linear"|"adaptive"|"intensive")
 ✓ All confidence scores are numbers 0-100
 ✓ All estimated weeks are integers 1-52

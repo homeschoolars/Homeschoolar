@@ -46,18 +46,18 @@ STRICT OUTPUT SCHEMA (ALL KEYS REQUIRED):
     - Each item: {"subject": string, "source": "assessment"|"observation"|"parent_input"|"worksheet"|"quiz", "confidence": number 0-1, "description": string},
   "subjects": object (required, keys must match provided subject names exactly),
     - Each subject key must have: {"entry_level": "Foundation"|"Bridge"|"Advanced", "weekly_lessons": number 3-7, "teaching_style": "story"|"visual"|"logic"|"mix", "difficulty_progression": "linear"|"adaptive"|"intensive", "ai_adaptation_strategy": string, "estimated_mastery_weeks": number 1-52},
-  "Electives": object (optional, only if age_band is "8-13", same structure as "subjects")
+  "Electives": object (same structure as "subjects") OR null — use null for age 4-7 or when there are no electives
 }
 
 VALIDATION CHECKLIST (VERIFY BEFORE OUTPUT):
-✓ All required top-level keys present: student_summary, academic_level_by_subject, learning_roadmap, evidence, subjects
+✓ All required top-level keys present: student_summary, academic_level_by_subject, learning_roadmap, evidence, subjects, Electives
 ✓ All subject names in academic_level_by_subject match provided subject_list exactly
 ✓ All subject names in subjects object match provided subject_list exactly
 ✓ All confidence scores are numbers between 0-100 (academic_level_by_subject) or 0-1 (evidence)
 ✓ All estimated_duration_weeks and estimated_mastery_weeks are integers 1-52
 ✓ All enum values match exactly: entry_level, teaching_style, difficulty_progression, source
 ✓ Evidence array always present (can be empty [])
-✓ Electives only present if age_band is "8-13"
+✓ Electives is null unless age_band is "8-13" with elective subjects; otherwise an object keyed by elective names
 ✓ No invented subject names or data not provided in input
 ✓ All strings are non-empty (except optional fields)
 
@@ -107,11 +107,11 @@ STRICT OUTPUT SCHEMA (ALL KEYS REQUIRED):
     - Each item: {"area": string (non-empty), "priority": "low"|"medium"|"high" (exact match), "evidence": string (non-empty)},
   "evidence": array (required, always present, can be empty []),
     - Each item: {"subject": string (must match provided subject names), "source": "assessment"|"observation"|"parent_input"|"worksheet"|"quiz" (exact match), "confidence": number 0-1, "description": string (non-empty)},
-  "recommended_content_style": string (optional, can be null or empty string)
+  "recommended_content_style": string OR null (required key — use null if unknown)
 }
 
 VALIDATION CHECKLIST (VERIFY BEFORE OUTPUT):
-✓ All required top-level keys present: student_summary, academic_level_by_subject, learning_speed, attention_span, interest_signals, strengths, gaps, evidence
+✓ All required top-level keys present: student_summary, academic_level_by_subject, learning_speed, attention_span, interest_signals, strengths, gaps, evidence, recommended_content_style
 ✓ student_summary is non-empty string (2-3 sentences)
 ✓ learning_speed is exactly one of: "slow", "average", "fast"
 ✓ attention_span is exactly one of: "short", "medium", "long"
