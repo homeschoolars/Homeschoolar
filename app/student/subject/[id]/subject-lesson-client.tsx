@@ -21,18 +21,6 @@ function ageNumericFromBand(band: string): number {
   return m[band] ?? 8
 }
 
-/** Inclusive bounds for matching admin-tagged curriculum file ages to the student's band. */
-function ageBandBounds(band: string): { ageMin: number; ageMax: number } {
-  const m: Record<string, { ageMin: number; ageMax: number }> = {
-    "4-5": { ageMin: 4, ageMax: 5 },
-    "6-7": { ageMin: 6, ageMax: 7 },
-    "8-9": { ageMin: 8, ageMax: 9 },
-    "10-11": { ageMin: 10, ageMax: 11 },
-    "12-13": { ageMin: 12, ageMax: 13 },
-  }
-  return m[band] ?? { ageMin: 8, ageMax: 9 }
-}
-
 const studentAiActionClass =
   "bg-[#7F77DD] text-white shadow-sm hover:bg-[#6C63D5] focus-visible:ring-violet-300 border-transparent"
 
@@ -101,6 +89,7 @@ type WorksheetContent = {
   activities: string[] | WorksheetActivityStructured[]
 }
 
+/** Curriculum focus age: first year of the student's level (e.g. "4-5" → 4), used to match admin-tagged lesson files. */
 function getAgeStart(ageGroup: string) {
   const first = ageGroup.split("-")[0]
   const parsed = Number.parseInt(first, 10)
@@ -999,8 +988,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
               {!lessonLoading && lesson && !lesson.locked && subject && studentId ? (
                 <CurriculumResourcesEmbed
                   childId={studentId}
-                  ageMin={ageBandBounds(internalAgeBand).ageMin}
-                  ageMax={ageBandBounds(internalAgeBand).ageMax}
+                  age={getAgeStart(internalAgeBand)}
                   subjectName={subject.name}
                   topicTitle={lesson.title}
                 />

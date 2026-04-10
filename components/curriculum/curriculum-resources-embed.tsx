@@ -17,14 +17,13 @@ type Resource = {
 
 type Props = {
   childId: string
-  /** Match admin-tagged `curriculum_resources.age` when it falls in this inclusive range (student age band). */
-  ageMin: number
-  ageMax: number
+  /** Curriculum focus age for this student (lower bound of their level, e.g. 4 for Little Explorers 4–5). */
+  age: number
   subjectName: string
   topicTitle: string
 }
 
-export function CurriculumResourcesEmbed({ childId, ageMin, ageMax, subjectName, topicTitle }: Props) {
+export function CurriculumResourcesEmbed({ childId, age, subjectName, topicTitle }: Props) {
   const [items, setItems] = useState<Resource[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -34,8 +33,7 @@ export function CurriculumResourcesEmbed({ childId, ageMin, ageMax, subjectName,
       try {
         const q = new URLSearchParams({
           childId,
-          ageMin: String(ageMin),
-          ageMax: String(ageMax),
+          age: String(age),
           subject: subjectName,
           topic: topicTitle,
         })
@@ -51,7 +49,7 @@ export function CurriculumResourcesEmbed({ childId, ageMin, ageMax, subjectName,
     return () => {
       cancelled = true
     }
-  }, [childId, ageMin, ageMax, subjectName, topicTitle])
+  }, [childId, age, subjectName, topicTitle])
 
   if (loading) {
     return (
@@ -68,8 +66,8 @@ export function CurriculumResourcesEmbed({ childId, ageMin, ageMax, subjectName,
         <h3 className="text-sm font-semibold text-violet-900">Lesson materials (PDF, slides, video)</h3>
         <p className="mt-1 text-xs text-slate-600">
           No files matched this lesson yet. Admin uploads must use the{" "}
-          <span className="font-medium">same subject name and lesson title</span> as you see here, and an age in your
-          band (for example 8 or 9 for ages 8–9).
+          <span className="font-medium">same subject name and lesson title</span> as you see here, and the{" "}
+          <span className="font-medium">same curriculum age</span> as your level (e.g. age 4 for Little Explorers).
         </p>
       </section>
     )

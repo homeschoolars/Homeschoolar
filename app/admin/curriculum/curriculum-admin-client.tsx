@@ -225,12 +225,12 @@ export default function CurriculumAdminClient() {
       setStatus("Select age band, subject, unit, and lesson in the section below first.")
       return
     }
-    const mid = Math.round((selectedAge.ageMin + selectedAge.ageMax) / 2)
-    setAge(String(mid))
+    const focusAge = selectedAge.ageMin
+    setAge(String(focusAge))
     setSubject(selectedSubject.name)
     setTopic(selectedLesson.title)
     setStatus(
-      `Form filled: age ${mid} (any age ${selectedAge.ageMin}–${selectedAge.ageMax} matches students in this band), subject "${selectedSubject.name}", topic "${selectedLesson.title}". Add a title and file, then Save resource.`,
+      `Form filled: curriculum age ${focusAge} (${selectedAge.stageName}), subject "${selectedSubject.name}", topic "${selectedLesson.title}". Add a title and file, then Save resource.`,
     )
   }
 
@@ -252,7 +252,7 @@ export default function CurriculumAdminClient() {
       <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label>Age (years)</Label>
+            <Label>Curriculum age (one integer per level)</Label>
             <Select value={age} onValueChange={setAge}>
               <SelectTrigger>
                 <SelectValue />
@@ -321,8 +321,9 @@ export default function CurriculumAdminClient() {
           </Button>
         </div>
         <p className="text-xs text-slate-500">
-          PDFs and slides appear on the student lesson page when age, subject, and topic match. YouTube for lessons uses the
-          separate &quot;Lesson YouTube video&quot; section (linked by lesson ID).
+          Use one integer age per curriculum level (the focus age: e.g. 4 for Little Explorers 4–5). PDFs and slides show on
+          the student lesson when that age, subject, and lesson title match. Lesson YouTube uses the section below (lesson
+          ID).
         </p>
       </form>
 
