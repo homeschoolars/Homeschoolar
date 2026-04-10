@@ -8,6 +8,10 @@ import {
   fetchYouTubeVideoMetadata,
   YouTubeMetadataError,
 } from "@/services/youtube-metadata-service"
+import {
+  isLessonVideosTableMissingError,
+  LESSON_VIDEOS_MIGRATION_HINT,
+} from "@/lib/prisma-lesson-videos"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -149,6 +153,12 @@ export async function POST(request: Request) {
       },
     })
   } catch (e) {
+    if (isLessonVideosTableMissingError(e)) {
+      return NextResponse.json(
+        { error: LESSON_VIDEOS_MIGRATION_HINT, code: "MIGRATION_REQUIRED" },
+        { status: 503 },
+      )
+    }
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       return NextResponse.json(
         { error: "This video is already attached to this lesson.", code: "DUPLICATE" },

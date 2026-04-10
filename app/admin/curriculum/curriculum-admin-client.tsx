@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { apiFetch } from "@/lib/api-client"
+import { extractYouTubeVideoId } from "@/lib/youtube"
 
 const AGES = Array.from({ length: 10 }, (_, i) => i + 4)
 const TYPES = ["youtube", "pdf", "ppt", "image", "video", "audio", "word"] as const
@@ -430,8 +431,10 @@ export default function CurriculumAdminClient() {
             onPaste={(e) => {
               const pasted = e.clipboardData.getData("text/plain").trim()
               if (pasted) {
-                setLessonYoutubeUrl(pasted)
-                queueMicrotask(() => void fetchVideoPreview(pasted))
+                const id = extractYouTubeVideoId(pasted)
+                const normalized = id ? `https://www.youtube.com/watch?v=${id}` : pasted
+                setLessonYoutubeUrl(normalized)
+                queueMicrotask(() => void fetchVideoPreview(normalized))
               }
             }}
             placeholder="https://www.youtube.com/watch?v=… or youtu.be/…"

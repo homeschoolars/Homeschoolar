@@ -35,31 +35,31 @@ AGE-BASED CONSTRAINTS:
 - Age 8-13: Bridge/Advanced level, mix of teaching styles, 5-7 weekly lessons, longer focus periods
 - Electives only for age 8-13
 
-STRICT OUTPUT SCHEMA (ALL KEYS REQUIRED):
+STRICT OUTPUT SCHEMA (ALL KEYS REQUIRED — use ARRAYS for dynamic subject keys; OpenAI rejects free-form objects):
 {
   "student_summary": string (required, 2-4 sentences),
-  "academic_level_by_subject": object (required, keys must match provided subject names exactly),
-    - Each subject key must have: {"level": string, "confidence": number 0-100},
+  "academic_levels": array (required),
+    - One element per subject in subject_list; each: {"subject": string, "level": string, "confidence": number 0-100},
   "learning_roadmap": array (required, can be empty []),
     - Each item: {"subject": string, "current_level": string, "target_level": string, "recommended_activities": string[], "estimated_duration_weeks": number 1-52},
   "evidence": array (required, can be empty []),
     - Each item: {"subject": string, "source": "assessment"|"observation"|"parent_input"|"worksheet"|"quiz", "confidence": number 0-1, "description": string},
-  "subjects": object (required, keys must match provided subject names exactly),
-    - Each subject key must have: {"entry_level": "Foundation"|"Bridge"|"Advanced", "weekly_lessons": number 3-7, "teaching_style": "story"|"visual"|"logic"|"mix", "difficulty_progression": "linear"|"adaptive"|"intensive", "ai_adaptation_strategy": string, "estimated_mastery_weeks": number 1-52},
-  "Electives": object (same structure as "subjects") OR null — use null for age 4-7 or when there are no electives
+  "subject_plans": array (required),
+    - One element per subject in subject_list; each: {"subject": string, "entry_level": "Foundation"|"Bridge"|"Advanced", "weekly_lessons": number 3-7, "teaching_style": "story"|"visual"|"logic"|"mix", "difficulty_progression": "linear"|"adaptive"|"intensive", "ai_adaptation_strategy": string, "estimated_mastery_weeks": number 1-52},
+  "Electives": array of the same row shape as subject_plans OR null — null for age 4-7 or when there are no electives
 }
 
 VALIDATION CHECKLIST (VERIFY BEFORE OUTPUT):
-✓ All required top-level keys present: student_summary, academic_level_by_subject, learning_roadmap, evidence, subjects, Electives
-✓ All subject names in academic_level_by_subject match provided subject_list exactly
-✓ All subject names in subjects object match provided subject_list exactly
-✓ All confidence scores are numbers between 0-100 (academic_level_by_subject) or 0-1 (evidence)
+✓ All required top-level keys: student_summary, academic_levels, learning_roadmap, evidence, subject_plans, Electives
+✓ academic_levels rows use exact subject names from subject_list
+✓ subject_plans rows use exact subject names from subject_list
+✓ Confidence: 0-100 in academic_levels; 0-1 in evidence
 ✓ All estimated_duration_weeks and estimated_mastery_weeks are integers 1-52
 ✓ All enum values match exactly: entry_level, teaching_style, difficulty_progression, source
 ✓ Evidence array always present (can be empty [])
-✓ Electives is null unless age_band is "8-13" with elective subjects; otherwise an object keyed by elective names
+✓ Electives is null or rows keyed by exact elective_subjects names
 ✓ No invented subject names or data not provided in input
-✓ All strings are non-empty (except optional fields)
+✓ All strings are non-empty where required
 
 ANTI-HALLUCINATION RULES:
 - NEVER invent subject names not in the provided subject_list
@@ -90,17 +90,15 @@ PEDAGOGY RULES:
 - Emphasize interest-aligned subjects
 - Identify learning gaps with actionable priorities
 
-STRICT OUTPUT SCHEMA (ALL KEYS REQUIRED):
+STRICT OUTPUT SCHEMA (ALL KEYS REQUIRED — use ARRAYS for subject-keyed data; OpenAI rejects free-form record schemas):
 {
   "student_summary": string (required, 2-3 sentences, non-empty),
-  "academic_level_by_subject": object (required),
-    - Keys must match provided subject names exactly
-    - Each subject: {"level": string, "confidence": number 0-100, "evidence": string[] (required, can be empty [])},
+  "academic_levels": array (required),
+    - One row per provided subject name; each: {"subject": string, "level": string, "confidence": number 0-100, "evidence": string[] (can be [])},
   "learning_speed": "slow" | "average" | "fast" (required, exact match),
   "attention_span": "short" | "medium" | "long" (required, exact match),
-  "interest_signals": object (required),
-    - Keys: subject/topic names from input only
-    - Values: number 0-100 (integer),
+  "interest_scores": array (required, can be empty []),
+    - Each: {"topic": string, "score": number 0-100} — topics from subjects/interests only
   "strengths": array (required, can be empty []),
     - Each item: {"area": string (non-empty), "evidence": string (non-empty)},
   "gaps": array (required, can be empty []),
@@ -111,18 +109,15 @@ STRICT OUTPUT SCHEMA (ALL KEYS REQUIRED):
 }
 
 VALIDATION CHECKLIST (VERIFY BEFORE OUTPUT):
-✓ All required top-level keys present: student_summary, academic_level_by_subject, learning_speed, attention_span, interest_signals, strengths, gaps, evidence, recommended_content_style
+✓ All required top-level keys: student_summary, academic_levels, learning_speed, attention_span, interest_scores, strengths, gaps, evidence, recommended_content_style
 ✓ student_summary is non-empty string (2-3 sentences)
 ✓ learning_speed is exactly one of: "slow", "average", "fast"
 ✓ attention_span is exactly one of: "short", "medium", "long"
-✓ academic_level_by_subject keys match provided subject names exactly
-✓ Each academic_level_by_subject value has: level (string), confidence (number 0-100), evidence (array, can be empty)
-✓ interest_signals keys are from provided subjects/interests only
-✓ interest_signals values are integers 0-100
-✓ strengths array items have: area (non-empty string), evidence (non-empty string)
-✓ gaps array items have: area (non-empty string), priority ("low"|"medium"|"high"), evidence (non-empty string)
+✓ academic_levels has one row per subject; subject field matches provided names exactly
+✓ Each academic_levels row: level, confidence 0-100, evidence array (can be empty)
+✓ interest_scores topics from provided subjects/interests only
+✓ strengths / gaps / evidence arrays as specified
 ✓ evidence array always present (can be empty [])
-✓ All evidence items have: subject (matches provided names), source (exact enum), confidence (0-1), description (non-empty)
 ✓ No invented subject names or data not in input
 
 ANTI-HALLUCINATION RULES:

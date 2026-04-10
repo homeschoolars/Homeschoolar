@@ -11,23 +11,19 @@ import { withRetry, isSchemaValidationError, isRateLimitError } from "@/lib/open
 import { holisticReportAsPromptAssessments } from "@/lib/assessment/holistic-report-as-prompt-assessments"
 
 /**
- * Production-safe JSON Schema for OpenAI Structured Outputs
- * 
- * Schema Rules:
- * - All required fields are explicitly defined at object level
- * - evidence is always present (never optional) to satisfy OpenAI validation
- * - additionalProperties is handled correctly by Zod's record types
- * - No nested required arrays that cause validation errors
+ * OpenAI Structured Outputs reject `z.record()` JSON Schema (invalid required/additionalProperties mix).
+ * Use arrays of rows with explicit `subject` / `topic`, then normalize to DB records.
  */
-/**
- * Academic level item schema - all fields are required
- * OpenAI Structured Outputs requires all properties to be in the 'required' array
- * when using additionalProperties patterns
- */
-const academicLevelItemSchema = z.object({
+const academicLevelRowSchema = z.object({
+  subject: z.string().describe("Exact subject name from Available Subjects in the prompt"),
   level: z.string().describe("Academic level: beginner, intermediate, or advanced"),
   confidence: z.number().min(0).max(100).describe("Confidence score 0-100"),
-  evidence: z.array(z.string()).describe("Evidence items supporting this level assessment - always include, can be empty array"),
+  evidence: z.array(z.string()).describe("Evidence for this subject; use [] if none"),
+})
+
+const interestScoreRowSchema = z.object({
+  topic: z.string().describe("Subject or interest label from input only"),
+  score: z.number().min(0).max(100).describe("Interest score 0-100"),
 })
 
 const strengthItemSchema = z.object({
@@ -50,14 +46,17 @@ const evidenceItemSchema = z.object({
 
 const studentLearningProfileSchema = z.object({
   student_summary: z.string().describe("Brief summary of the student's overall learning profile"),
-  academic_level_by_subject: z.record(z.string(), academicLevelItemSchema).describe("Academic level for each subject"),
+  academic_levels: z
+    .array(academicLevelRowSchema)
+    .describe("One row per subject in Available Subjects; exact subject names"),
   learning_speed: z.enum(["slow", "average", "fast"]).describe("How quickly the student grasps new concepts"),
   attention_span: z.enum(["short", "medium", "long"]).describe("Student's typical attention span"),
-  interest_signals: z.record(z.string(), z.number().min(0).max(100)).describe("Interest level scores (0-100) for each subject/topic"),
+  interest_scores: z
+    .array(interestScoreRowSchema)
+    .describe("Interest 0-100 per topic; only topics from provided subjects/interests; can be empty []"),
   strengths: z.array(strengthItemSchema).describe("Areas where the student excels"),
   gaps: z.array(gapItemSchema).describe("Areas needing improvement with priorities"),
-  // No .default() — OpenAI structured outputs require every property in `required`; defaults omit the key from required.
-  evidence: z.array(evidenceItemSchema).describe("Comprehensive evidence array — always return an array (use [] if none)"),
+  evidence: z.array(evidenceItemSchema).describe("Comprehensive evidence — always return an array (use [] if none)"),
   recommended_content_style: z
     .union([z.string(), z.null()])
     .describe("Recommended content delivery style; use null if unknown"),
@@ -130,19 +129,19 @@ ${behavioralMemory ? `
 ` : "No behavioral memory data"}
 
 STRICT OUTPUT REQUIREMENTS:
-1. Academic level by subject: For each subject in "Available Subjects", determine level (beginner/intermediate/advanced) with confidence (0-100)
+1. academic_levels: ARRAY with one object per subject in "Available Subjects" (exact names)
+   - Each object: { subject, level, confidence 0-100, evidence: string[] (can be []) }
    - Base ONLY on provided assessment data
    - If no assessment for a subject, set confidence to 0 and evidence to []
-   - Evidence array must always be present (can be empty [])
 2. Learning speed: "slow" | "average" | "fast"
    - Base on assessment completion patterns, learning memory progression, or behavioral memory
    - If no data, default to "average"
 3. Attention span: "short" | "medium" | "long"
    - Base on behavioral memory attentionPattern if available
    - If not available, infer from age band (4-7: typically short/medium, 8-13: typically medium/long)
-4. Interest signals: Object with subject/topic keys and scores (0-100)
+4. interest_scores: ARRAY of { topic, score 0-100 }
    - ONLY use subjects from "Available Subjects" or topics from "Interests"
-   - Base on provided interests and assessment performance
+   - Base on provided interests and assessment performance; can be empty []
 5. Strengths: Array of {area, evidence}
    - Base ONLY on assessment strengths and learning memory
    - Each strength must have evidence from provided data
@@ -160,9 +159,8 @@ VALIDATION CHECKLIST (VERIFY BEFORE OUTPUT):
 ✓ student_summary: non-empty string (2-3 sentences)
 ✓ learning_speed: exactly "slow", "average", or "fast"
 ✓ attention_span: exactly "short", "medium", or "long"
-✓ academic_level_by_subject: object with keys matching "Available Subjects" exactly
-✓ Each academic_level entry has: level (string), confidence (0-100), evidence (array, can be empty)
-✓ interest_signals: object with keys from provided subjects/interests only
+✓ academic_levels: array with one row per "Available Subjects" name; each row has subject, level, confidence, evidence[]
+✓ interest_scores: array of {topic, score}; topics from subjects/interests only
 ✓ strengths: array (can be empty), items have area and evidence
 ✓ gaps: array (can be empty), items have area, priority (exact enum), evidence
 ✓ evidence: array always present (can be empty)
@@ -361,18 +359,22 @@ export async function generateStudentLearningProfile(
     )
   }
 
-  // Ensure evidence array exists (default to empty if not provided)
-  // Also ensure evidence exists in each academic_level_by_subject item
   const evidence = result.object.evidence ?? []
-  
-  // Normalize academic_level_by_subject to ensure evidence arrays exist
+
   const normalizedAcademicLevels: Record<string, { level: string; confidence: number; evidence: string[] }> = {}
-  for (const [subject, data] of Object.entries(result.object.academic_level_by_subject)) {
-    normalizedAcademicLevels[subject] = {
-      level: data.level,
-      confidence: data.confidence,
-      evidence: Array.isArray(data.evidence) ? data.evidence : [],
+  for (const row of result.object.academic_levels) {
+    if (!row.subject?.trim()) continue
+    normalizedAcademicLevels[row.subject] = {
+      level: row.level,
+      confidence: row.confidence,
+      evidence: Array.isArray(row.evidence) ? row.evidence : [],
     }
+  }
+
+  const interestSignals: Record<string, number> = {}
+  for (const row of result.object.interest_scores) {
+    if (!row.topic?.trim()) continue
+    interestSignals[row.topic] = row.score
   }
 
   // Save or update learning profile
@@ -382,7 +384,7 @@ export async function generateStudentLearningProfile(
       academicLevelBySubject: normalizedAcademicLevels as unknown as object,
       learningSpeed: result.object.learning_speed,
       attentionSpan: result.object.attention_span,
-      interestSignals: result.object.interest_signals as unknown as object,
+      interestSignals: interestSignals as unknown as object,
       strengths: result.object.strengths as unknown as object,
       gaps: result.object.gaps as unknown as object,
       recommendedContentStyle: result.object.recommended_content_style ?? null,
@@ -394,7 +396,7 @@ export async function generateStudentLearningProfile(
       academicLevelBySubject: normalizedAcademicLevels as unknown as object,
       learningSpeed: result.object.learning_speed,
       attentionSpan: result.object.attention_span,
-      interestSignals: result.object.interest_signals as unknown as object,
+      interestSignals: interestSignals as unknown as object,
       strengths: result.object.strengths as unknown as object,
       gaps: result.object.gaps as unknown as object,
       recommendedContentStyle: result.object.recommended_content_style ?? null,

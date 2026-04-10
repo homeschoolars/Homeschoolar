@@ -3,6 +3,7 @@
 # --- Prisma migrate (optional, step 0) ---
 # Uses substitution _DATABASE_URL (no Secret Manager required).
 # - Leave empty (default): migrate is SKIPPED; build + deploy still succeed.
+#   (New tables e.g. lesson_videos will NOT exist until you migrate.)
 # - Set in Cloud Build trigger → Substitution variables: _DATABASE_URL = your production
 #   PostgreSQL URL (same as Cloud Run DATABASE_URL). Then each deploy runs migrate deploy first.
 # Prefer Secret Manager + API enabled for production; until then this avoids disabled API errors.

@@ -11,14 +11,10 @@ import { segmentPrompt, hashStudentData, shouldRegenerateRoadmap, TOKEN_LIMITS }
 import { withRetry, isSchemaValidationError, isRateLimitError } from "@/lib/openai-retry"
 
 /**
- * Production-safe JSON Schema for OpenAI Structured Outputs - Roadmap
- * 
- * Schema Rules:
- * - All required fields are explicitly defined
- * - No optional fields in nested objects that cause validation issues
- * - additionalProperties handled correctly by Zod record types
+ * OpenAI Structured Outputs reject `z.record()`; use explicit rows with `subject`, then map to objects for storage.
  */
-const roadmapSubjectSchema = z.object({
+const roadmapSubjectRowSchema = z.object({
+  subject: z.string().describe("Exact subject name from subject_list or elective_subjects"),
   entry_level: z.enum(["Foundation", "Bridge", "Advanced"]).describe("Starting level for this subject"),
   weekly_lessons: z.number().min(3).max(7).int().describe("Number of lessons per week (3-7)"),
   teaching_style: z.enum(["story", "visual", "logic", "mix"]).describe("Preferred teaching approach"),
@@ -35,14 +31,18 @@ const roadmapItemSchema = z.object({
   estimated_duration_weeks: z.number().min(1).max(52).int().describe("Estimated duration in weeks to reach target level"),
 })
 
+const roadmapAcademicRowSchema = z.object({
+  subject: z.string(),
+  level: z.string(),
+  confidence: z.number().min(0).max(100),
+})
+
 const roadmapSchema = z.object({
   student_summary: z.string().describe("Brief summary of the student's learning roadmap"),
-  academic_level_by_subject: z.record(z.string(), z.object({
-    level: z.string(),
-    confidence: z.number().min(0).max(100),
-  })).describe("Current academic levels by subject"),
+  academic_levels: z
+    .array(roadmapAcademicRowSchema)
+    .describe("One row per subject in subject_list; exact subject names"),
   learning_roadmap: z.array(roadmapItemSchema).describe("Structured roadmap items for each subject"),
-  // No .default() — OpenAI requires `evidence` in `required` alongside other top-level keys.
   evidence: z
     .array(
       z.object({
@@ -53,13 +53,23 @@ const roadmapSchema = z.object({
       }),
     )
     .describe("Evidence supporting the roadmap — always return an array (use [] if none)"),
-  subjects: z.record(z.string(), roadmapSubjectSchema).describe("Detailed roadmap for each mandatory subject"),
-  // .optional() omits key from JSON Schema `required`; use null for ages without electives.
+  subject_plans: z
+    .array(roadmapSubjectRowSchema)
+    .describe("One row per mandatory subject in subject_list"),
   Electives: z
-    .record(z.string(), roadmapSubjectSchema)
-    .nullable()
-    .describe("Elective subjects roadmap for age 8-13; use null when not applicable (e.g. age 4-7)"),
+    .union([z.array(roadmapSubjectRowSchema), z.null()])
+    .describe("Rows for elective_subjects when age 8-13; null for age 4-7 or no electives"),
 })
+
+function rowsToSubjectRecord(rows: z.infer<typeof roadmapSubjectRowSchema>[]) {
+  const out: Record<string, Omit<z.infer<typeof roadmapSubjectRowSchema>, "subject">> = {}
+  for (const r of rows) {
+    if (!r.subject?.trim()) continue
+    const { subject, ...rest } = r
+    out[subject] = rest
+  }
+  return out
+}
 
 function buildRoadmapPrompt({
   age,
@@ -190,8 +200,8 @@ STRICT REQUIREMENTS:
 3. Adapt teaching style based on preferred_content_style from student_profile
 4. Reduce cognitive load on weak areas (from gaps in student_profile)
 5. Emphasize subjects aligned with interest_signals (high scores in student_profile)
-6. academic_level_by_subject: Object with keys matching subject_list exactly
-   - Each entry: {level: string, confidence: number 0-100}
+6. academic_levels: ARRAY — one row per subject in subject_list (exact names)
+   - Each row: {subject, level, confidence 0-100}
    - Base on academic_level_by_subject from student_profile
 7. learning_roadmap: Array of roadmap items
    - Each item: {subject, current_level, target_level, recommended_activities[], estimated_duration_weeks}
@@ -199,19 +209,18 @@ STRICT REQUIREMENTS:
 8. evidence: Array of evidence items
    - MUST always be present (can be empty [])
    - Reference assessment data from student_profile
-9. subjects: Object with keys matching subject_list exactly
-   - Detailed roadmap per mandatory subject
-10. Electives: Object with keys matching elective_subjects when age_band is "8-13"; when age_band is "4-7" or there are no electives, set Electives to null (JSON null, not omitted)
+9. subject_plans: ARRAY — one row per subject in subject_list
+   - Each row: {subject, entry_level, weekly_lessons, teaching_style, difficulty_progression, ai_adaptation_strategy, estimated_mastery_weeks}
+10. Electives: ARRAY of same row shape as subject_plans for elective_subjects when age_band is "8-13"; JSON null when age 4-7 or no electives
 
 VALIDATION CHECKLIST (VERIFY BEFORE OUTPUT):
 ✓ student_summary: non-empty string (2-4 sentences)
-✓ academic_level_by_subject: object with keys matching subject_list exactly (${subjectListJson.length} keys)
-✓ Each academic_level entry has: level (string), confidence (number 0-100)
+✓ academic_levels: ${subjectListJson.length} rows with subject names matching subject_list exactly
+✓ Each academic_levels row: level (string), confidence (number 0-100)
 ✓ learning_roadmap: array (can be empty, but items must reference valid subjects)
 ✓ evidence: array always present (can be empty)
-✓ subjects: object with keys matching subject_list exactly (${subjectListJson.length} keys)
-✓ Each subject entry has all required fields: entry_level, weekly_lessons, teaching_style, difficulty_progression, ai_adaptation_strategy, estimated_mastery_weeks
-✓ Electives: null for age 4-7 or no electives; otherwise object with keys matching elective_subjects exactly
+✓ subject_plans: ${subjectListJson.length} rows; each includes subject + entry_level, weekly_lessons, teaching_style, difficulty_progression, ai_adaptation_strategy, estimated_mastery_weeks
+✓ Electives: null for age 4-7 or no electives; otherwise one row per elective_subjects name
 ✓ All enum values match exactly: entry_level ("Foundation"|"Bridge"|"Advanced"), teaching_style ("story"|"visual"|"logic"|"mix"), difficulty_progression ("linear"|"adaptive"|"intensive")
 ✓ All confidence scores are numbers 0-100
 ✓ All estimated weeks are integers 1-52
@@ -513,10 +522,17 @@ export async function generateLearningRoadmap(
     )
   }
 
-  // Ensure evidence array exists (default to empty if not provided)
+  const electiveRows = result.object.Electives
   const roadmapData = {
-    ...result.object,
+    student_summary: result.object.student_summary,
+    academic_level_by_subject: Object.fromEntries(
+      result.object.academic_levels.map((r) => [r.subject, { level: r.level, confidence: r.confidence }]),
+    ),
+    learning_roadmap: result.object.learning_roadmap,
     evidence: result.object.evidence ?? [],
+    subjects: rowsToSubjectRecord(result.object.subject_plans),
+    Electives:
+      electiveRows === null ? null : rowsToSubjectRecord(electiveRows),
   }
 
   // Save or update roadmap

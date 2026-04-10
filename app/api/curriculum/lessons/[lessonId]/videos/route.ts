@@ -4,6 +4,10 @@ import { enforceParentOrStudentChildAccess } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 import { getCurriculumLesson } from "@/services/curriculum-structured-service"
 import { getStudentLessonState } from "@/services/progression"
+import {
+  isLessonVideosTableMissingError,
+  LESSON_VIDEOS_MIGRATION_HINT,
+} from "@/lib/prisma-lesson-videos"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -99,6 +103,12 @@ export async function GET(
       videos: rows.map((v) => ({ ...v, createdAt: v.createdAt.toISOString() })),
     })
   } catch (e) {
+    if (isLessonVideosTableMissingError(e)) {
+      return NextResponse.json(
+        { videos: [], error: LESSON_VIDEOS_MIGRATION_HINT, code: "MIGRATION_REQUIRED" },
+        { status: 503 },
+      )
+    }
     const message = e instanceof Error ? e.message : "Failed to load videos"
     if (message === "Unauthorized") {
       return NextResponse.json({ error: message }, { status: 401 })

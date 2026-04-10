@@ -9,6 +9,26 @@ export function isValidYouTubeVideoId(id: string): boolean {
 }
 
 /**
+ * Find the first valid video id anywhere in the string (handles double-pasted URLs,
+ * trailing junk, or missing https://).
+ */
+function extractVideoIdLooseScan(s: string): string | null {
+  // Fixed {11} captures exactly the id; works when two URLs are pasted back-to-back (e.g. …jpQhttps…).
+  const patterns = [
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/i,
+    /[?&]v=([a-zA-Z0-9_-]{11})/i,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/i,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/i,
+    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/i,
+  ]
+  for (const re of patterns) {
+    const m = s.match(re)
+    if (m?.[1] && isValidYouTubeVideoId(m[1])) return m[1]
+  }
+  return null
+}
+
+/**
  * Extract YouTube video id from watch, youtu.be, embed, shorts, or legacy /v/ URLs.
  * Returns null if the string is not a recognizable YouTube URL or id.
  */
@@ -17,6 +37,9 @@ export function extractYouTubeVideoId(input: string): string | null {
   if (!raw) return null
 
   if (isValidYouTubeVideoId(raw)) return raw
+
+  const loose = extractVideoIdLooseScan(raw)
+  if (loose) return loose
 
   try {
     let url = new URL(raw)
