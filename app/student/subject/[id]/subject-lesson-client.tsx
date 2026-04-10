@@ -21,6 +21,21 @@ function ageNumericFromBand(band: string): number {
   return m[band] ?? 8
 }
 
+/** Inclusive bounds for matching admin-tagged curriculum file ages to the student's band. */
+function ageBandBounds(band: string): { ageMin: number; ageMax: number } {
+  const m: Record<string, { ageMin: number; ageMax: number }> = {
+    "4-5": { ageMin: 4, ageMax: 5 },
+    "6-7": { ageMin: 6, ageMax: 7 },
+    "8-9": { ageMin: 8, ageMax: 9 },
+    "10-11": { ageMin: 10, ageMax: 11 },
+    "12-13": { ageMin: 12, ageMax: 13 },
+  }
+  return m[band] ?? { ageMin: 8, ageMax: 9 }
+}
+
+const studentAiActionClass =
+  "bg-[#7F77DD] text-white shadow-sm hover:bg-[#6C63D5] focus-visible:ring-violet-300 border-transparent"
+
 type CurriculumLesson = {
   id: string
   title: string
@@ -984,7 +999,8 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
               {!lessonLoading && lesson && !lesson.locked && subject && studentId ? (
                 <CurriculumResourcesEmbed
                   childId={studentId}
-                  age={ageNumericFromBand(internalAgeBand)}
+                  ageMin={ageBandBounds(internalAgeBand).ageMin}
+                  ageMax={ageBandBounds(internalAgeBand).ageMax}
                   subjectName={subject.name}
                   topicTitle={lesson.title}
                 />
@@ -1009,6 +1025,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                 <Button
                   onClick={() => handleGenerate("activity")}
                   disabled={disableStudentAi}
+                  className={studentAiActionClass}
                 >
                   {generatingType === "activity" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Generate activity
@@ -1016,7 +1033,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                 <Button
                   onClick={() => handleGenerate("worksheet")}
                   disabled={disableWorksheetAi}
-                  variant="secondary"
+                  className={studentAiActionClass}
                   title={lecturesBlockWorksheet ? "Finish all lectures before generating a worksheet." : undefined}
                 >
                   {generatingType === "worksheet" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -1025,7 +1042,7 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
                 <Button
                   onClick={() => handleGenerate("quiz")}
                   disabled={disableStudentAi}
-                  variant="outline"
+                  className={studentAiActionClass}
                 >
                   {generatingType === "quiz" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Generate Quiz

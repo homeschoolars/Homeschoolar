@@ -17,12 +17,14 @@ type Resource = {
 
 type Props = {
   childId: string
-  age: number
+  /** Match admin-tagged `curriculum_resources.age` when it falls in this inclusive range (student age band). */
+  ageMin: number
+  ageMax: number
   subjectName: string
   topicTitle: string
 }
 
-export function CurriculumResourcesEmbed({ childId, age, subjectName, topicTitle }: Props) {
+export function CurriculumResourcesEmbed({ childId, ageMin, ageMax, subjectName, topicTitle }: Props) {
   const [items, setItems] = useState<Resource[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -32,7 +34,8 @@ export function CurriculumResourcesEmbed({ childId, age, subjectName, topicTitle
       try {
         const q = new URLSearchParams({
           childId,
-          age: String(age),
+          ageMin: String(ageMin),
+          ageMax: String(ageMax),
           subject: subjectName,
           topic: topicTitle,
         })
@@ -48,7 +51,7 @@ export function CurriculumResourcesEmbed({ childId, age, subjectName, topicTitle
     return () => {
       cancelled = true
     }
-  }, [childId, age, subjectName, topicTitle])
+  }, [childId, ageMin, ageMax, subjectName, topicTitle])
 
   if (loading) {
     return (
@@ -59,11 +62,22 @@ export function CurriculumResourcesEmbed({ childId, age, subjectName, topicTitle
     )
   }
 
-  if (items.length === 0) return null
+  if (items.length === 0) {
+    return (
+      <section className="mt-8 rounded-2xl border border-dashed border-violet-200 bg-violet-50/30 p-4">
+        <h3 className="text-sm font-semibold text-violet-900">Lesson materials (PDF, slides, video)</h3>
+        <p className="mt-1 text-xs text-slate-600">
+          No files matched this lesson yet. Admin uploads must use the{" "}
+          <span className="font-medium">same subject name and lesson title</span> as you see here, and an age in your
+          band (for example 8 or 9 for ages 8–9).
+        </p>
+      </section>
+    )
+  }
 
   return (
     <section className="mt-8 rounded-2xl border border-violet-200 bg-white/90 p-6 shadow-sm">
-      <h3 className="font-semibold text-violet-800 mb-4">Extra resources for this topic</h3>
+      <h3 className="font-semibold text-violet-800 mb-4">Lesson materials & extra resources</h3>
       <ul className="space-y-6">
         {items.map((r) => {
           const youtubeId = r.resourceType === "youtube" ? extractYouTubeVideoId(r.url) : null

@@ -220,12 +220,29 @@ export default function CurriculumAdminClient() {
     }
   }
 
+  const applyLessonPickerToResourceForm = () => {
+    if (!selectedAge || !selectedSubject || !selectedLesson) {
+      setStatus("Select age band, subject, unit, and lesson in the section below first.")
+      return
+    }
+    const mid = Math.round((selectedAge.ageMin + selectedAge.ageMax) / 2)
+    setAge(String(mid))
+    setSubject(selectedSubject.name)
+    setTopic(selectedLesson.title)
+    setStatus(
+      `Form filled: age ${mid} (any age ${selectedAge.ageMin}–${selectedAge.ageMax} matches students in this band), subject "${selectedSubject.name}", topic "${selectedLesson.title}". Add a title and file, then Save resource.`,
+    )
+  }
+
   return (
     <div className="mx-auto max-w-2xl space-y-8 p-6 md:p-10">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Curriculum resources</h1>
-          <p className="text-sm text-slate-600">Tag uploads by age, subject, and topic.</p>
+          <p className="text-sm text-slate-600">
+            Tag uploads by age, subject, and topic. Topic must match the lesson title exactly; use the button below to copy
+            from the lesson picker.
+          </p>
         </div>
         <Button variant="outline" asChild>
           <Link href="/admin">← Admin</Link>
@@ -295,9 +312,18 @@ export default function CurriculumAdminClient() {
           </div>
         )}
         {status && <p className="text-sm text-slate-700">{status}</p>}
-        <Button type="submit" disabled={loading} className="w-full sm:w-auto">
-          {loading ? "Saving…" : "Save resource"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="secondary" onClick={applyLessonPickerToResourceForm}>
+            Fill from lesson picker (below)
+          </Button>
+          <Button type="submit" disabled={loading} className="w-full sm:w-auto">
+            {loading ? "Saving…" : "Save resource"}
+          </Button>
+        </div>
+        <p className="text-xs text-slate-500">
+          PDFs and slides appear on the student lesson page when age, subject, and topic match. YouTube for lessons uses the
+          separate &quot;Lesson YouTube video&quot; section (linked by lesson ID).
+        </p>
       </form>
 
       <section className="space-y-4 rounded-2xl border border-violet-200 bg-violet-50/40 p-6 shadow-sm">
