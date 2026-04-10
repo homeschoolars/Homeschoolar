@@ -283,10 +283,15 @@ export function RoadmapViewer({ studentId, studentName }: RoadmapViewerProps) {
           </div>
         )}
 
-        <Tabs defaultValue={subjects[0]?.[0]} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-3">
+        <Tabs defaultValue={subjects[0]?.[0]} className="w-full gap-4">
+          {/* TabsList defaults include h-9; multi-row subject grids need h-auto or the second row is clipped and covered by content below. */}
+          <TabsList className="relative z-10 !h-auto min-h-9 w-full grid grid-cols-2 gap-1.5 p-1.5 sm:grid-cols-3 items-stretch">
             {subjects.map(([subjectName]) => (
-              <TabsTrigger key={subjectName} value={subjectName} className="text-xs">
+              <TabsTrigger
+                key={subjectName}
+                value={subjectName}
+                className="h-auto min-h-9 whitespace-normal px-2 py-2 text-center text-xs leading-snug"
+              >
                 {subjectName}
               </TabsTrigger>
             ))}
@@ -296,7 +301,7 @@ export function RoadmapViewer({ studentId, studentName }: RoadmapViewerProps) {
             const progSteps = difficultyProgressionSteps(subjectData.difficulty_progression)
             const masteryWeeks = roadmapMasteryWeeks(subjectData)
             return (
-            <TabsContent key={subjectName} value={subjectName} className="mt-4">
+            <TabsContent key={subjectName} value={subjectName} className="mt-0 pt-2">
               <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="p-3 bg-blue-50 rounded-lg">

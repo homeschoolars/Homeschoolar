@@ -683,7 +683,9 @@ export async function generateCurriculumFromAssessment(
   })
 
   if (input.length === 0) {
-    return { paths: [] }
+    throw new Error(
+      "No completed assessments found for this student. Complete at least one assessment quiz, then generate a curriculum plan."
+    )
   }
 
   const prompt = buildCurriculumFromAssessmentPrompt({

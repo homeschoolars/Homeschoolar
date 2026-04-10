@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Sparkles, TrendingUp, TrendingDown, AlertCircle, Lightbulb, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Sparkles, TrendingUp, TrendingDown, AlertCircle, Lightbulb, Loader2, RefreshCw } from "lucide-react"
 import { apiFetch } from "@/lib/api-client"
 
 interface WeeklyAIInsightsProps {
@@ -22,12 +23,16 @@ type ParentInsightsResponse = {
   insights?: {
     strengths?: string[]
     weaknesses?: string[]
+    learning_style_summary?: string
+    recommendations?: Array<{ title?: string; reason?: string } | string>
     weekly_summary?: {
       mastered?: string[]
       improving?: string[]
       needs_attention?: string[]
       try_this_activity?: string
       review_concept?: string
+      celebrate?: string
+      next_week_preview?: string
     }
   } | Insight[]
 }
@@ -42,11 +47,32 @@ function normalizeInsights(payload: ParentInsightsResponse): Insight[] {
 
   const normalized: Insight[] = []
 
+  const learningStyle = structured.learning_style_summary?.trim()
+  if (learningStyle) {
+    normalized.push({ type: "improvement", summary: learningStyle })
+  }
+
   for (const item of structured.strengths ?? []) {
+    normalized.push({ type: "strength", summary: item })
+  }
+  for (const item of structured.weekly_summary?.mastered ?? []) {
     normalized.push({ type: "strength", summary: item })
   }
   for (const item of structured.weaknesses ?? []) {
     normalized.push({ type: "weakness", summary: item })
+  }
+  for (const rec of structured.recommendations ?? []) {
+    if (typeof rec === "string" && rec.trim()) {
+      normalized.push({ type: "recommendation", summary: rec })
+    } else if (rec && typeof rec === "object") {
+      const title = rec.title?.trim() || "Recommendation"
+      const reason = rec.reason?.trim()
+      normalized.push({
+        type: "recommendation",
+        summary: title,
+        ...(reason ? { suggested_action: reason } : {}),
+      })
+    }
   }
   for (const item of structured.weekly_summary?.improving ?? []) {
     normalized.push({ type: "improvement", summary: item })
@@ -68,6 +94,16 @@ function normalizeInsights(payload: ParentInsightsResponse): Insight[] {
       suggested_action: structured.weekly_summary.review_concept,
     })
   }
+  if (structured.weekly_summary?.celebrate?.trim()) {
+    normalized.push({ type: "strength", summary: structured.weekly_summary.celebrate })
+  }
+  if (structured.weekly_summary?.next_week_preview?.trim()) {
+    normalized.push({
+      type: "recommendation",
+      summary: "Next week",
+      suggested_action: structured.weekly_summary.next_week_preview,
+    })
+  }
 
   return normalized
 }
@@ -75,10 +111,11 @@ function normalizeInsights(payload: ParentInsightsResponse): Insight[] {
 export function WeeklyAIInsights({ studentId, studentName }: WeeklyAIInsightsProps) {
   const [insights, setInsights] = useState<Insight[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchInsights = async () => {
+  const loadInsights = useCallback(
+    async (opts?: { refresh?: boolean }) => {
       if (!studentId) {
         setInsights([])
         setLoading(false)
@@ -87,16 +124,20 @@ export function WeeklyAIInsights({ studentId, studentName }: WeeklyAIInsightsPro
       }
 
       try {
-        setLoading(true)
+        if (opts?.refresh) {
+          setRefreshing(true)
+        } else {
+          setLoading(true)
+        }
         setError(null)
-        const response = await apiFetch(`/api/parent/children/${encodeURIComponent(studentId)}/insights`)
+        const q = opts?.refresh ? "?refresh=1" : ""
+        const response = await apiFetch(`/api/parent/children/${encodeURIComponent(studentId)}/insights${q}`)
         if (response.ok) {
           const directData = (await response.json()) as ParentInsightsResponse
           setInsights(normalizeInsights(directData))
           return
         }
 
-        // Quietly degrade for expected non-critical statuses.
         if (response.status === 400 || response.status === 404 || response.status === 408) {
           setInsights([])
           return
@@ -106,14 +147,17 @@ export function WeeklyAIInsights({ studentId, studentName }: WeeklyAIInsightsPro
         setError(err instanceof Error ? err.message : "Failed to load insights")
       } finally {
         setLoading(false)
+        setRefreshing(false)
       }
-    }
+    },
+    [studentId]
+  )
 
-    fetchInsights()
-    // Refresh weekly
-    const interval = setInterval(fetchInsights, 7 * 24 * 60 * 60 * 1000)
+  useEffect(() => {
+    void loadInsights()
+    const interval = setInterval(() => void loadInsights(), 7 * 24 * 60 * 60 * 1000)
     return () => clearInterval(interval)
-  }, [studentId])
+  }, [loadInsights])
 
   const getInsightIcon = (type: Insight["type"]) => {
     switch (type) {
@@ -182,12 +226,18 @@ export function WeeklyAIInsights({ studentId, studentName }: WeeklyAIInsightsPro
   if (error) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Sparkles className="mr-2 h-5 w-5" />
-            Weekly AI Insights
-          </CardTitle>
-          <CardDescription>AI-powered insights for {studentName}</CardDescription>
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle className="flex items-center">
+              <Sparkles className="mr-2 h-5 w-5" />
+              Weekly AI Insights
+            </CardTitle>
+            <CardDescription>AI-powered insights for {studentName}</CardDescription>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => void loadInsights({ refresh: true })} disabled={refreshing}>
+            {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            <span className="ml-2">Retry</span>
+          </Button>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">{error}</p>
@@ -199,16 +249,24 @@ export function WeeklyAIInsights({ studentId, studentName }: WeeklyAIInsightsPro
   if (insights.length === 0) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Sparkles className="mr-2 h-5 w-5" />
-            Weekly AI Insights
-          </CardTitle>
-          <CardDescription>AI-powered insights for {studentName}</CardDescription>
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle className="flex items-center">
+              <Sparkles className="mr-2 h-5 w-5" />
+              Weekly AI Insights
+            </CardTitle>
+            <CardDescription>AI-powered insights for {studentName}</CardDescription>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => void loadInsights({ refresh: true })} disabled={refreshing}>
+            {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            <span className="ml-2">Refresh insights</span>
+          </Button>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground text-center py-8">
-            No insights available yet. Complete some assessments to get AI-powered insights!
+          <p className="text-sm text-muted-foreground text-center py-6">
+            No insights to show yet. If you already have a learning profile or roadmap, try{" "}
+            <span className="font-medium">Refresh insights</span> to generate a summary. Otherwise, complete an
+            assessment or some learning activities so we have data to summarize.
           </p>
         </CardContent>
       </Card>
@@ -217,12 +275,18 @@ export function WeeklyAIInsights({ studentId, studentName }: WeeklyAIInsightsPro
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          <Sparkles className="mr-2 h-5 w-5" />
-          Weekly AI Insights
-        </CardTitle>
-        <CardDescription>AI-powered insights for {studentName}</CardDescription>
+      <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <CardTitle className="flex items-center">
+            <Sparkles className="mr-2 h-5 w-5" />
+            Weekly AI Insights
+          </CardTitle>
+          <CardDescription>AI-powered insights for {studentName}</CardDescription>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => void loadInsights({ refresh: true })} disabled={refreshing}>
+          {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          <span className="ml-2">Refresh</span>
+        </Button>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">

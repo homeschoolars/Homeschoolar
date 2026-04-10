@@ -80,24 +80,53 @@ export async function getChildInsights(childId: string, options?: { refresh?: bo
     }
   }
 
-  const assessments = await prisma.assessment.findMany({
-    where: { childId },
-    include: { assessmentResult: true, subject: true },
-    orderBy: { createdAt: "desc" },
-    take: 10,
-  })
-  const memories = await prisma.learningMemory.findMany({ where: { childId } })
-  const recommendations = await prisma.aIRecommendation.findMany({ where: { childId }, take: 5 })
+  const [assessments, memories, recommendations, learningProfile, latestRoadmap] = await Promise.all([
+    prisma.assessment.findMany({
+      where: { childId },
+      include: { assessmentResult: true, subject: true },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+    prisma.learningMemory.findMany({ where: { childId } }),
+    prisma.aIRecommendation.findMany({ where: { childId }, take: 5 }),
+    prisma.studentLearningProfile.findUnique({ where: { studentId: childId } }),
+    prisma.learningRoadmap.findFirst({
+      where: { studentId: childId },
+      orderBy: { lastUpdated: "desc" },
+      select: { roadmapJson: true },
+    }),
+  ])
 
-  // Return a fast fallback when there's no meaningful data yet.
-  if (assessments.length === 0 && memories.length === 0 && recommendations.length === 0) {
+  const hasSignals =
+    assessments.length > 0 ||
+    memories.length > 0 ||
+    recommendations.length > 0 ||
+    learningProfile != null ||
+    latestRoadmap != null
+
+  if (!hasSignals) {
     return EMPTY_INSIGHTS
   }
+
+  const profileSnippet = learningProfile
+    ? {
+        academicLevelBySubject: learningProfile.academicLevelBySubject,
+        learningSpeed: learningProfile.learningSpeed,
+        attentionSpan: learningProfile.attentionSpan,
+        strengths: learningProfile.strengths,
+        gaps: learningProfile.gaps,
+        recommendedContentStyle: learningProfile.recommendedContentStyle,
+      }
+    : null
 
   // Build segmented prompt: static (cacheable) + dynamic (non-cached)
   const dynamicContent = `Assessments: ${JSON.stringify(assessments)}
 Learning memory: ${JSON.stringify(memories)}
-Recommendations: ${JSON.stringify(recommendations)}
+Stored recommendations: ${JSON.stringify(recommendations)}
+Student learning profile: ${profileSnippet ? JSON.stringify(profileSnippet) : "none"}
+Learning roadmap JSON: ${latestRoadmap?.roadmapJson != null ? JSON.stringify(latestRoadmap.roadmapJson) : "none"}
+
+When formal assessment rows are empty or sparse, infer weekly insights from the learning profile and roadmap above. Keep language parent-friendly.
 
 Return timeline, strengths, weaknesses, recommendations with reasons, learning_style_summary, and weekly_summary (mastered, improving, needs_attention, try_this_activity, review_concept, celebrate, next_week_preview).`
 

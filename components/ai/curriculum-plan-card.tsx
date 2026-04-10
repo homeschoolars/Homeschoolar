@@ -101,11 +101,11 @@ export function CurriculumPlanCard({ childId, childName }: CurriculumPlanCardPro
             variant="outline"
             size="sm"
             onClick={handleRegenerate}
-            disabled={isRegenerating || plan.length === 0}
+            disabled={isRegenerating}
             className="bg-white"
           >
             {isRegenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            <span className="ml-2">Regenerate</span>
+            <span className="ml-2">{plan.length === 0 ? "Generate plan" : "Regenerate"}</span>
           </Button>
         </div>
       </CardHeader>
@@ -116,7 +116,8 @@ export function CurriculumPlanCard({ childId, childName }: CurriculumPlanCardPro
         {summary && <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">{summary}</p>}
         {plan.length === 0 && !error ? (
           <p className="text-sm text-gray-500 text-center py-6">
-            No curriculum plan yet. Complete the assessment quiz first.
+            No curriculum plan stored yet. Use <span className="font-medium">Generate plan</span> after your child has
+            completed at least one assessment, or complete a quiz first if none are on file.
           </p>
         ) : (
           <div className="space-y-3">
