@@ -9,6 +9,10 @@
 # Prefer Secret Manager + API enabled for production; until then this avoids disabled API errors.
 #
 # Cloud Run: failureThreshold × periodSeconds ≤ 240. Startup probe uses TCP on PORT 8080.
+#
+# If deploy fails with: "Conflict for resource ... version X was specified but current version is Y"
+# → two deploys raced (retry below usually fixes it). In Cloud Build triggers, prefer max 1 concurrent
+# build per branch, and avoid editing the service in console while a deploy runs.
 
 substitutions:
   _DATABASE_URL: ""
@@ -50,18 +54,32 @@ steps:
     args:
       - -ceu
       - |
-        gcloud run deploy homeschoolar \
-          --project="$PROJECT_ID" \
-          --region=europe-west1 \
-          --image="europe-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/homeschoolar/homeschoolar:$COMMIT_SHA" \
-          --platform=managed \
-          --allow-unauthenticated \
-          --memory=4Gi \
-          --cpu=1 \
-          --cpu-boost \
-          --port=8080 \
-          --startup-probe=initialDelaySeconds=30,timeoutSeconds=5,periodSeconds=5,failureThreshold=48,tcpSocket.port=8080 \
-          --quiet
+        set -euo pipefail
+        deploy() {
+          gcloud run deploy homeschoolar \
+            --project="$PROJECT_ID" \
+            --region=europe-west1 \
+            --image="europe-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/homeschoolar/homeschoolar:$COMMIT_SHA" \
+            --platform=managed \
+            --allow-unauthenticated \
+            --memory=4Gi \
+            --cpu=1 \
+            --cpu-boost \
+            --port=8080 \
+            --startup-probe=initialDelaySeconds=30,timeoutSeconds=5,periodSeconds=5,failureThreshold=48,tcpSocket.port=8080 \
+            --quiet
+        }
+        max=5
+        n=1
+        until deploy; do
+          if [ "$n" -ge "$max" ]; then
+            echo "gcloud run deploy failed after $max attempts (e.g. version conflict — retry build or reduce concurrent deploys)."
+            exit 1
+          fi
+          echo "Deploy attempt $n failed; retrying in $((n * 15))s (Cloud Run optimistic-lock conflict is often transient)..."
+          sleep $((n * 15))
+          n=$((n + 1))
+        done
 
 options:
   logging: CLOUD_LOGGING_ONLY
