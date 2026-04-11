@@ -16,6 +16,7 @@ export function QuickContentActions({
   childLearningClass,
   onWorksheetCreated,
   onQuizCreated,
+  onStatsRefresh,
 }: {
   childId: string
   subjects: Subject[]
@@ -24,6 +25,8 @@ export function QuickContentActions({
   childLearningClass?: string
   onWorksheetCreated?: () => void
   onQuizCreated?: () => void
+  /** Called after worksheet, quiz, or activity generation succeeds (e.g. refresh parent dashboard stats). */
+  onStatsRefresh?: () => void
 }) {
   const [subjectId, setSubjectId] = useState("")
   const [units, setUnits] = useState<Array<{ unitId: string; title: string; isCompleted: boolean; totalLessons: number; completedLessons: number }>>([])
@@ -39,7 +42,7 @@ export function QuickContentActions({
   const [message, setMessage] = useState<string | null>(null)
 
   const selectedUnit = units.find((u) => u.unitId === unitId)
-  const canGenerateForUnit = Boolean(selectedUnit?.isCompleted)
+  const hasUnitSelection = Boolean(subjectId && unitId)
   const allUnitsCompleted = units.length > 0 && units.every((u) => u.isCompleted)
 
   const loadUnitCompletion = async (nextSubjectId: string) => {
@@ -91,7 +94,7 @@ export function QuickContentActions({
   }
 
   const generateWorksheet = async () => {
-    if (!subjectId || !unitId || !canGenerateForUnit) return
+    if (!subjectId || !unitId) return
     setBusy("worksheet")
     setMessage(null)
     try {
@@ -109,6 +112,7 @@ export function QuickContentActions({
       if (!res.ok) throw new Error(payload.error ?? "Failed to generate worksheet")
       setMessage("Worksheet generated and shared to student dashboard.")
       onWorksheetCreated?.()
+      onStatsRefresh?.()
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Failed to generate worksheet")
     } finally {
@@ -117,7 +121,7 @@ export function QuickContentActions({
   }
 
   const generateActivityPack = async () => {
-    if (!subjectId || !unitId || !canGenerateForUnit) return
+    if (!subjectId || !unitId) return
     setBusy("activity")
     setMessage(null)
     try {
@@ -134,6 +138,7 @@ export function QuickContentActions({
       const payload = (await res.json()) as { error?: string }
       if (!res.ok) throw new Error(payload.error ?? "Failed to generate activities")
       setMessage("Activities generated and shared to student dashboard.")
+      onStatsRefresh?.()
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Failed to generate activities")
     } finally {
@@ -142,7 +147,7 @@ export function QuickContentActions({
   }
 
   const generateQuiz = async () => {
-    if (!subjectId || !unitId || !canGenerateForUnit) return
+    if (!subjectId || !unitId) return
     setBusy("quiz")
     setMessage(null)
     try {
@@ -160,6 +165,7 @@ export function QuickContentActions({
       if (!res.ok) throw new Error(payload.error ?? "Failed to generate quiz")
       setMessage("Quiz generated and shared to student dashboard.")
       onQuizCreated?.()
+      onStatsRefresh?.()
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Failed to generate quiz")
     } finally {
@@ -235,19 +241,34 @@ export function QuickContentActions({
             </SelectContent>
           </Select>
         </div>
-        {subjectId && unitId && !canGenerateForUnit ? (
-          <p className="text-xs text-amber-700">Complete all lessons in this unit before generating quiz/worksheet.</p>
+        {subjectId && unitId && selectedUnit && !selectedUnit.isCompleted ? (
+          <p className="text-xs text-slate-600">
+            Progress: {selectedUnit.completedLessons}/{selectedUnit.totalLessons} lessons in this unit. You can still
+            generate practice content below.
+          </p>
         ) : null}
         <div className="flex flex-wrap gap-2">
-          <Button onClick={generateWorksheet} disabled={!subjectId || !unitId || !canGenerateForUnit || busy !== null}>
+          <Button
+            className="bg-teal-600 text-white hover:bg-teal-700"
+            onClick={generateWorksheet}
+            disabled={!hasUnitSelection || busy !== null}
+          >
             {busy === "worksheet" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Generate Worksheet
           </Button>
-          <Button variant="secondary" onClick={generateQuiz} disabled={!subjectId || !unitId || !canGenerateForUnit || busy !== null}>
+          <Button
+            className="bg-teal-600 text-white hover:bg-teal-700"
+            onClick={generateQuiz}
+            disabled={!hasUnitSelection || busy !== null}
+          >
             {busy === "quiz" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Generate Quiz
           </Button>
-          <Button variant="outline" onClick={generateActivityPack} disabled={!subjectId || !unitId || !canGenerateForUnit || busy !== null}>
+          <Button
+            className="bg-teal-600 text-white hover:bg-teal-700"
+            onClick={generateActivityPack}
+            disabled={!hasUnitSelection || busy !== null}
+          >
             {busy === "activity" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Generate activities
           </Button>

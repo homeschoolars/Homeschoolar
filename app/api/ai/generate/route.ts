@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     const isAdmin = session?.user?.role === "admin"
     if (!isParent && !isAdmin) {
       if (!studentMeetsLessonAiAge(child.profile?.ageYears ?? null, child.ageGroup)) {
-        return fail("AI generation is available for students older than 7", 403)
+        return fail("AI generation is available for students age 4 and up", 403)
       }
       await assertStudentLessonContentAccess(body.childId, lessonId)
     } else if (!isAdmin) {

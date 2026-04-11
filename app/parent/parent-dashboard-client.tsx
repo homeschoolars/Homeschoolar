@@ -135,6 +135,30 @@ export default function ParentDashboardClient({
   const [curriculumSubjects, setCurriculumSubjects] = useState<CurriculumSubjectSummary[]>([])
   const [curriculumLoading, setCurriculumLoading] = useState(false)
   const [copiedLoginChildId, setCopiedLoginChildId] = useState<string | null>(null)
+  const [dashboardStats, setDashboardStats] = useState({
+    worksheetsAssigned: 0,
+    averageScorePct: 0,
+    thisWeekActivity: 0,
+  })
+
+  const childrenIdsKey = useMemo(() => children.map((c) => c.id).sort().join(","), [children])
+
+  const loadDashboardStats = useCallback(async () => {
+    try {
+      const res = await apiFetch("/api/parent/dashboard-summary")
+      const json = (await res.json()) as {
+        success?: boolean
+        data?: { worksheetsAssigned: number; averageScorePct: number; thisWeekActivity: number }
+      }
+      if (json.success && json.data) setDashboardStats(json.data)
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadDashboardStats()
+  }, [loadDashboardStats, childrenIdsKey])
 
   const refreshChildren = useCallback(async () => {
     try {
@@ -153,11 +177,14 @@ export default function ParentDashboardClient({
 
   useEffect(() => {
     const onVis = () => {
-      if (document.visibilityState === "visible") void refreshChildren()
+      if (document.visibilityState === "visible") {
+        void refreshChildren()
+        void loadDashboardStats()
+      }
     }
     document.addEventListener("visibilitychange", onVis)
     return () => document.removeEventListener("visibilitychange", onVis)
-  }, [refreshChildren])
+  }, [refreshChildren, loadDashboardStats])
 
   const copyLoginCode = async (e: React.MouseEvent, code: string, childId: string) => {
     e.stopPropagation()
@@ -377,9 +404,27 @@ export default function ParentDashboardClient({
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
           {[
             { icon: Users, label: "Children", value: children.length, gradient: "from-violet-500 to-indigo-600", iconShadow: "shadow-violet-500/30" },
-            { icon: BookOpen, label: "Worksheets Assigned", value: 0, gradient: "from-fuchsia-500 to-rose-500", iconShadow: "shadow-fuchsia-500/30" },
-            { icon: TrendingUp, label: "Average Score", value: "0%", gradient: "from-emerald-500 to-teal-600", iconShadow: "shadow-emerald-500/30" },
-            { icon: Calendar, label: "This Week", value: 0, gradient: "from-amber-500 to-orange-500", iconShadow: "shadow-amber-500/30" },
+            {
+              icon: BookOpen,
+              label: "Worksheets Assigned",
+              value: dashboardStats.worksheetsAssigned,
+              gradient: "from-fuchsia-500 to-rose-500",
+              iconShadow: "shadow-fuchsia-500/30",
+            },
+            {
+              icon: TrendingUp,
+              label: "Average Score",
+              value: `${dashboardStats.averageScorePct}%`,
+              gradient: "from-emerald-500 to-teal-600",
+              iconShadow: "shadow-emerald-500/30",
+            },
+            {
+              icon: Calendar,
+              label: "This Week",
+              value: dashboardStats.thisWeekActivity,
+              gradient: "from-amber-500 to-orange-500",
+              iconShadow: "shadow-amber-500/30",
+            },
           ].map((stat) => (
             <Card
               key={stat.label}
@@ -797,6 +842,7 @@ export default function ParentDashboardClient({
                     subjects={selectedChildSubjects}
                     childAgeGroup={selectedChild.age_group}
                     childLearningClass={selectedChild.learning_class}
+                    onStatsRefresh={loadDashboardStats}
                   />
                 ) : (
                   <Card className="border border-dashed border-slate-300 rounded-2xl bg-white">
@@ -909,12 +955,7 @@ export default function ParentDashboardClient({
                       subjects={selectedChildSubjects}
                       childAgeGroup={selectedChild?.age_group}
                       childLearningClass={selectedChild?.learning_class}
-                      onWorksheetCreated={() => {
-                        // Optional future enhancement: refresh parent-side assignment counters.
-                      }}
-                      onQuizCreated={() => {
-                        // Student will see generated quiz in their dashboard flow.
-                      }}
+                      onStatsRefresh={loadDashboardStats}
                     />
                   </div>
                 ) : null}

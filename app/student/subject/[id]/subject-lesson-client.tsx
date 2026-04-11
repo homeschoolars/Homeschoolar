@@ -15,6 +15,7 @@ import { AdaptiveActivityViewer } from "@/components/learning/adaptive-activity-
 import { AdaptiveWorksheetViewer, type WorksheetViewModel } from "@/components/learning/adaptive-worksheet-viewer"
 import { CurriculumResourcesEmbed } from "@/components/curriculum/curriculum-resources-embed"
 import { LessonVideosEmbed } from "@/components/curriculum/lesson-videos-embed"
+import { studentMeetsLessonAiBand } from "@/lib/student-ai-eligibility"
 
 function ageNumericFromBand(band: string): number {
   const m: Record<string, number> = { "4-5": 5, "6-7": 7, "8-9": 9, "10-11": 11, "12-13": 13 }
@@ -455,8 +456,8 @@ export function SubjectLessonClient({ subjectId }: { subjectId: string }) {
   )
 
   const ageStart = getAgeStart(internalAgeBand)
-  /** AI self-serve buttons: age > 7 (aligned with API). */
-  const supportsStudentAiGeneration = ageStart >= 8
+  /** Aligned with `/api/ai/generate` + `studentMeetsLessonAiAge` (age 4+). */
+  const supportsStudentAiGeneration = studentMeetsLessonAiBand(internalAgeBand)
   const supportsProject = ageStart >= 8
   const supportsResearch = ageStart >= 10
   const supportsDebate = ageStart >= 11
