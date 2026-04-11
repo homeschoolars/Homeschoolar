@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiFetch } from "@/lib/api-client"
 import { extractYouTubeVideoId } from "@/lib/youtube"
 
-const AGES = Array.from({ length: 10 }, (_, i) => i + 4)
 const TYPES = ["youtube", "pdf", "ppt", "image", "video", "audio", "word"] as const
 
 type VideoPreviewPayload = {
@@ -34,11 +33,166 @@ type PickerAgeGroup = {
   subjects: PickerSubject[]
 }
 
+function CurriculumLessonPicker(props: {
+  pickerTree: PickerAgeGroup[] | null
+  pickerTreeLoading: boolean
+  pickAgeId: string
+  setPickAgeId: (id: string) => void
+  pickSubjectId: string
+  setPickSubjectId: (id: string) => void
+  pickUnitId: string
+  setPickUnitId: (id: string) => void
+  pickLessonId: string
+  setPickLessonId: (id: string) => void
+  selectedAge: PickerAgeGroup | null
+  selectedSubject: PickerSubject | null
+  selectedUnit: PickerUnit | null
+  selectedLesson: PickerLesson | null
+  onLessonChange?: () => void
+}) {
+  const {
+    pickerTree,
+    pickerTreeLoading,
+    pickAgeId,
+    setPickAgeId,
+    pickSubjectId,
+    setPickSubjectId,
+    pickUnitId,
+    setPickUnitId,
+    pickLessonId,
+    setPickLessonId,
+    selectedAge,
+    selectedSubject,
+    selectedUnit,
+    selectedLesson,
+    onLessonChange,
+  } = props
+
+  if (pickerTreeLoading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-slate-700">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading all age bands, subjects, units, and lessons…
+      </div>
+    )
+  }
+
+  if (!pickerTree?.length) {
+    return <p className="text-sm text-amber-800">No curriculum data found. Seed or import curriculum first.</p>
+  }
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div className="space-y-2 sm:col-span-2">
+        <Label>Age band / stage</Label>
+        <Select
+          value={pickAgeId || undefined}
+          onValueChange={(id) => {
+            setPickAgeId(id)
+            setPickSubjectId("")
+            setPickUnitId("")
+            setPickLessonId("")
+            onLessonChange?.()
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select level (e.g. Little Explorers)" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[min(60vh,320px)]">
+            {pickerTree.map((g) => (
+              <SelectItem key={g.id} value={g.id}>
+                {g.stageName} ({g.name}, focus age {g.ageMin})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2 sm:col-span-2">
+        <Label>Subject</Label>
+        <Select
+          value={pickSubjectId || undefined}
+          disabled={!selectedAge}
+          onValueChange={(id) => {
+            setPickSubjectId(id)
+            setPickUnitId("")
+            setPickLessonId("")
+            onLessonChange?.()
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder={selectedAge ? "Select subject" : "Select age band first"} />
+          </SelectTrigger>
+          <SelectContent className="max-h-[min(60vh,320px)]">
+            {(selectedAge?.subjects ?? []).map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2 sm:col-span-2">
+        <Label>Unit</Label>
+        <Select
+          value={pickUnitId || undefined}
+          disabled={!selectedSubject}
+          onValueChange={(id) => {
+            setPickUnitId(id)
+            setPickLessonId("")
+            onLessonChange?.()
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder={selectedSubject ? "Select unit" : "Select subject first"} />
+          </SelectTrigger>
+          <SelectContent className="max-h-[min(60vh,320px)]">
+            {(selectedSubject?.units ?? []).map((u) => (
+              <SelectItem key={u.id} value={u.id}>
+                {u.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2 sm:col-span-2">
+        <Label>Lesson (maps to student lesson page)</Label>
+        <Select
+          value={pickLessonId || undefined}
+          disabled={!selectedUnit}
+          onValueChange={(id) => {
+            setPickLessonId(id)
+            onLessonChange?.()
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder={selectedUnit ? "Select lesson" : "Select unit first"} />
+          </SelectTrigger>
+          <SelectContent className="max-h-[min(60vh,360px)]">
+            {(selectedUnit?.lessons ?? []).map((l) => (
+              <SelectItem key={l.id} value={l.id}>
+                {l.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {selectedLesson && selectedAge && selectedSubject ? (
+        <div className="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2 text-sm text-slate-800">
+          <p className="font-medium text-slate-900">Tagged for student view</p>
+          <p className="mt-1 text-xs text-slate-600">
+            <span className="font-semibold text-slate-800">Curriculum age {selectedAge.ageMin}</span> (focus age for{" "}
+            {selectedAge.stageName}) · <span className="font-semibold text-slate-800">Subject:</span> {selectedSubject.name}{" "}
+            · <span className="font-semibold text-slate-800">Lesson title:</span> {selectedLesson.title}
+          </p>
+          <p className="mt-1 font-mono text-[11px] text-slate-500">Lesson ID: {selectedLesson.id}</p>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export default function CurriculumAdminClient() {
-  const [age, setAge] = useState("8")
-  const [subject, setSubject] = useState("")
-  const [topic, setTopic] = useState("")
-  const [resourceType, setResourceType] = useState<(typeof TYPES)[number]>("youtube")
+  const [resourceType, setResourceType] = useState<(typeof TYPES)[number]>("pdf")
   const [title, setTitle] = useState("")
   const [youtubeUrl, setYoutubeUrl] = useState("")
   const [file, setFile] = useState<File | null>(null)
@@ -100,6 +254,12 @@ export default function CurriculumAdminClient() {
     if (!selectedLesson || !selectedAge) return null
     return `${selectedAge.stageName} · ${selectedSubject?.name ?? "—"} · ${selectedUnit?.title ?? "—"} · ${selectedLesson.title}`
   }, [selectedAge, selectedSubject, selectedUnit, selectedLesson])
+
+  useEffect(() => {
+    if (selectedLesson?.title) {
+      setTitle(selectedLesson.title)
+    }
+  }, [selectedLesson?.id, selectedLesson?.title])
 
   const fetchVideoPreview = useCallback(
     async (url: string) => {
@@ -184,15 +344,35 @@ export default function CurriculumAdminClient() {
     }
   }
 
-  const submit = async (e: React.FormEvent) => {
+  const submitResource = async (e: React.FormEvent) => {
     e.preventDefault()
     setStatus(null)
+    if (!selectedAge || !selectedSubject || !selectedLesson) {
+      setStatus("Select age band, subject, unit, and lesson above first.")
+      return
+    }
+    const ageStr = String(selectedAge.ageMin)
+    const subjectStr = selectedSubject.name.trim()
+    const topicStr = selectedLesson.title.trim()
+    if (!title.trim()) {
+      setStatus("Enter a title for this resource.")
+      return
+    }
+    if (resourceType === "youtube" && !youtubeUrl.trim()) {
+      setStatus("Enter a YouTube URL.")
+      return
+    }
+    if (resourceType !== "youtube" && !file) {
+      setStatus("Choose a file to upload.")
+      return
+    }
+
     setLoading(true)
     try {
       const form = new FormData()
-      form.append("age", age)
-      form.append("subject", subject.trim())
-      form.append("topic", topic.trim())
+      form.append("age", ageStr)
+      form.append("subject", subjectStr)
+      form.append("topic", topicStr)
       form.append("resourceType", resourceType)
       form.append("title", title.trim())
       if (resourceType === "youtube") {
@@ -210,7 +390,7 @@ export default function CurriculumAdminClient() {
         setStatus(data.error ?? "Upload failed")
         return
       }
-      setStatus(`Saved. URL: ${data.resource?.url ?? "ok"}`)
+      setStatus(`Saved for lesson "${topicStr}" (${subjectStr}, age ${ageStr}). URL: ${data.resource?.url ?? "ok"}`)
       setFile(null)
       setYoutubeUrl("")
     } catch {
@@ -220,28 +400,14 @@ export default function CurriculumAdminClient() {
     }
   }
 
-  const applyLessonPickerToResourceForm = () => {
-    if (!selectedAge || !selectedSubject || !selectedLesson) {
-      setStatus("Select age band, subject, unit, and lesson in the section below first.")
-      return
-    }
-    const focusAge = selectedAge.ageMin
-    setAge(String(focusAge))
-    setSubject(selectedSubject.name)
-    setTopic(selectedLesson.title)
-    setStatus(
-      `Form filled: curriculum age ${focusAge} (${selectedAge.stageName}), subject "${selectedSubject.name}", topic "${selectedLesson.title}". Add a title and file, then Save resource.`,
-    )
-  }
-
   return (
     <div className="mx-auto max-w-2xl space-y-8 p-6 md:p-10">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Curriculum resources</h1>
           <p className="text-sm text-slate-600">
-            Tag uploads by age, subject, and topic. Topic must match the lesson title exactly; use the button below to copy
-            from the lesson picker.
+            Choose a lesson from your live curriculum tree. PDFs, slides, and extra YouTube links are stored with the same
+            subject name and lesson title students see—no manual typing.
           </p>
         </div>
         <Button variant="outline" asChild>
@@ -249,23 +415,44 @@ export default function CurriculumAdminClient() {
         </Button>
       </div>
 
-      <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">1. Select lesson</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Data is loaded from <code className="rounded bg-slate-100 px-1 text-xs">/api/admin/curriculum/lesson-picker</code>{" "}
+            (all bands, subjects, units, lessons).
+          </p>
+        </div>
+        <CurriculumLessonPicker
+          pickerTree={pickerTree}
+          pickerTreeLoading={pickerTreeLoading}
+          pickAgeId={pickAgeId}
+          setPickAgeId={setPickAgeId}
+          pickSubjectId={pickSubjectId}
+          setPickSubjectId={setPickSubjectId}
+          pickUnitId={pickUnitId}
+          setPickUnitId={setPickUnitId}
+          pickLessonId={pickLessonId}
+          setPickLessonId={setPickLessonId}
+          selectedAge={selectedAge}
+          selectedSubject={selectedSubject}
+          selectedUnit={selectedUnit}
+          selectedLesson={selectedLesson}
+          onLessonChange={() => {
+            setVideoPreview(null)
+            setVideoAttachStatus(null)
+          }}
+        />
+      </section>
+
+      <form onSubmit={submitResource} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">2. Upload file or extra YouTube link</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            For the lesson selected above. This is separate from &quot;Save to lesson&quot; YouTube embeds (lesson ID table).
+          </p>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Curriculum age (one integer per level)</Label>
-            <Select value={age} onValueChange={setAge}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {AGES.map((a) => (
-                  <SelectItem key={a} value={String(a)}>
-                    {a}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
           <div className="space-y-2">
             <Label>Resource type</Label>
             <Select value={resourceType} onValueChange={(v) => setResourceType(v as (typeof TYPES)[number])}>
@@ -283,16 +470,8 @@ export default function CurriculumAdminClient() {
           </div>
         </div>
         <div className="space-y-2">
-          <Label>Subject (label)</Label>
-          <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. Science" required />
-        </div>
-        <div className="space-y-2">
-          <Label>Topic (match lesson title)</Label>
-          <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. Plants and sunlight" required />
-        </div>
-        <div className="space-y-2">
           <Label>Title</Label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} required />
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Shown to students / in lists" />
         </div>
         {resourceType === "youtube" ? (
           <div className="space-y-2">
@@ -302,151 +481,46 @@ export default function CurriculumAdminClient() {
               value={youtubeUrl}
               onChange={(e) => setYoutubeUrl(e.target.value)}
               placeholder="https://www.youtube.com/watch?v=..."
-              required
             />
           </div>
         ) : (
           <div className="space-y-2">
             <Label>File</Label>
-            <Input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} required />
+            <Input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           </div>
         )}
         {status && <p className="text-sm text-slate-700">{status}</p>}
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" onClick={applyLessonPickerToResourceForm}>
-            Fill from lesson picker (below)
-          </Button>
-          <Button type="submit" disabled={loading} className="w-full sm:w-auto">
-            {loading ? "Saving…" : "Save resource"}
-          </Button>
-        </div>
+        <Button
+          type="submit"
+          disabled={loading || !selectedLesson}
+          className="w-full sm:w-auto"
+          title={!selectedLesson ? "Select a lesson in step 1 first" : undefined}
+        >
+          {loading ? "Saving…" : "Save resource"}
+        </Button>
         <p className="text-xs text-slate-500">
-          Use one integer age per curriculum level (the focus age: e.g. 4 for Little Explorers 4–5). PDFs and slides show on
-          the student lesson when that age, subject, and lesson title match. Lesson YouTube uses the section below (lesson
-          ID).
+          Students see these under &quot;Lesson materials&quot; when their level matches curriculum age {selectedAge?.ageMin ?? "—"},{" "}
+          subject matches, and they open this exact lesson.
         </p>
       </form>
 
       <section className="space-y-4 rounded-2xl border border-violet-200 bg-violet-50/40 p-6 shadow-sm">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Lesson YouTube video</h2>
+          <h2 className="text-lg font-semibold text-slate-900">3. Lesson YouTube video (embed by lesson ID)</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Pick the lesson from your curriculum, then paste the video link. Metadata is loaded with{" "}
+            Uses the same lesson as in step 1. Metadata is loaded with{" "}
             <code className="rounded bg-white/80 px-1 text-xs">YOUTUBE_API_KEY</code> on the server only. Students only see
             embeds for lessons they can access.
           </p>
         </div>
 
-        {pickerTreeLoading ? (
-          <div className="flex items-center gap-2 text-sm text-violet-900">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading curriculum…
-          </div>
-        ) : !pickerTree?.length ? (
-          <p className="text-sm text-amber-800">No curriculum data found. Seed or import curriculum first.</p>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
-              <Label>Age band / stage</Label>
-              <Select
-                value={pickAgeId || undefined}
-                onValueChange={(id) => {
-                  setPickAgeId(id)
-                  setPickSubjectId("")
-                  setPickUnitId("")
-                  setPickLessonId("")
-                  setVideoPreview(null)
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select level (e.g. Little Explorers)" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[min(60vh,320px)]">
-                  {pickerTree.map((g) => (
-                    <SelectItem key={g.id} value={g.id}>
-                      {g.stageName} ({g.name}, ages {g.ageMin}–{g.ageMax})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label>Subject</Label>
-              <Select
-                value={pickSubjectId || undefined}
-                disabled={!selectedAge}
-                onValueChange={(id) => {
-                  setPickSubjectId(id)
-                  setPickUnitId("")
-                  setPickLessonId("")
-                  setVideoPreview(null)
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={selectedAge ? "e.g. Mathematics" : "Select age band first"} />
-                </SelectTrigger>
-                <SelectContent className="max-h-[min(60vh,320px)]">
-                  {(selectedAge?.subjects ?? []).map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label>Unit</Label>
-              <Select
-                value={pickUnitId || undefined}
-                disabled={!selectedSubject}
-                onValueChange={(id) => {
-                  setPickUnitId(id)
-                  setPickLessonId("")
-                  setVideoPreview(null)
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={selectedSubject ? "Select unit" : "Select subject first"} />
-                </SelectTrigger>
-                <SelectContent className="max-h-[min(60vh,320px)]">
-                  {(selectedSubject?.units ?? []).map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label>Lesson</Label>
-              <Select
-                value={pickLessonId || undefined}
-                disabled={!selectedUnit}
-                onValueChange={(id) => {
-                  setPickLessonId(id)
-                  setVideoPreview(null)
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={selectedUnit ? "e.g. Counting 1-20" : "Select unit first"} />
-                </SelectTrigger>
-                <SelectContent className="max-h-[min(60vh,360px)]">
-                  {(selectedUnit?.lessons ?? []).map((l) => (
-                    <SelectItem key={l.id} value={l.id}>
-                      {l.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
-
         {lessonPickerSummary ? (
           <p className="rounded-lg border border-violet-200 bg-white/80 px-3 py-2 text-sm text-slate-800">
             <span className="font-medium text-violet-900">Attaching to:</span> {lessonPickerSummary}
           </p>
-        ) : null}
+        ) : (
+          <p className="text-sm text-amber-800">Select a full lesson in step 1 to enable saving.</p>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="lesson-youtube">YouTube URL</Label>
@@ -484,7 +558,7 @@ export default function CurriculumAdminClient() {
               "Preview"
             )}
           </Button>
-          <Button type="button" disabled={videoSaveLoading || !videoPreview} onClick={() => void saveLessonVideo()}>
+          <Button type="button" disabled={videoSaveLoading || !videoPreview || !pickLessonId} onClick={() => void saveLessonVideo()}>
             {videoSaveLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
